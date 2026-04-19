@@ -990,6 +990,20 @@
       <option value="unlisted">Not Listed</option>
       <option value="listed">Listed on eBay</option>
     </select>
+    <select class="filter-select" onchange="filterCards()" id="sortSelect">
+      <option value="date-desc">Newest First</option>
+      <option value="date-asc">Oldest First</option>
+      <option value="player-asc">Player A–Z</option>
+      <option value="player-desc">Player Z–A</option>
+      <option value="value-desc">Value High–Low</option>
+      <option value="value-asc">Value Low–High</option>
+      <option value="grade-desc">Grade High–Low</option>
+      <option value="grade-asc">Grade Low–High</option>
+    </select>
+  </div>
+  <div id="tagFilterRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;">
+    <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Filter by tag:</span>
+    <div class="tag" onclick="clearTagFilter()" id="tagFilterAll" style="background:rgba(74,156,201,0.25);border-color:var(--ice-dark);">All</div>
   </div>
   <div class="cards-grid" id="cardsGrid">
     <div class="empty-state">
@@ -1432,17 +1446,43 @@ function saveCard() {
 }
 
 // COLLECTION
+let activeTagFilter = null;
+
 function renderCollection() {
   updateHeaderStats();
+  renderTagFilterRow();
+  filterCards();
+}
+
+function getAllTags() {
+  const tags = new Set();
+  collection.forEach(c => (c.tags || []).forEach(t => tags.add(t)));
+  return [...tags].sort();
+}
+
+function renderTagFilterRow() {
+  const allTags = getAllTags();
+  const row = document.getElementById('tagFilterRow');
+  if (allTags.length === 0) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  row.innerHTML = `<span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;align-self:center;">Tags:</span>
+    <div class="tag" onclick="setTagFilter(null)" style="${!activeTagFilter ? 'background:rgba(74,156,201,0.25);border-color:var(--ice-dark);' : ''}">All</div>
+    ${allTags.map(t => `<div class="tag" onclick="setTagFilter('${t}')" style="${activeTagFilter===t ? 'background:rgba(74,156,201,0.25);border-color:var(--ice-dark);' : ''}">${t}</div>`).join('')}`;
+}
+
+function setTagFilter(tag) {
+  activeTagFilter = tag;
+  renderTagFilterRow();
   filterCards();
 }
 
 function filterCards() {
-  const search = document.getElementById('searchInput').value.toLowerCase();
+  const search = (document.getElementById('searchInput').value || '').toLowerCase();
   const col = document.getElementById('collectionFilter').value;
   const status = document.getElementById('statusFilter').value;
+  const sort = document.getElementById('sortSelect').value;
 
-  const filtered = collection.filter(c => {
+  let filtered = collection.filter(c => {
     const matchSearch = !search || c.player.toLowerCase().includes(search) ||
       (c.brand||'').toLowerCase().includes(search) ||
       (c.year||'').includes(search) ||
@@ -1450,7 +1490,22 @@ function filterCards() {
       (c.tags||[]).some(t => t.toLowerCase().includes(search));
     const matchCol = !col || c.collection === col;
     const matchStatus = !status || (status === 'listed' ? c.listedOnEbay : !c.listedOnEbay);
-    return matchSearch && matchCol && matchStatus;
+    const matchTag = !activeTagFilter || (c.tags||[]).includes(activeTagFilter);
+    return matchSearch && matchCol && matchStatus && matchTag;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    switch(sort) {
+      case 'date-asc': return new Date(a.addedAt) - new Date(b.addedAt);
+      case 'player-asc': return (a.player||'').localeCompare(b.player||'');
+      case 'player-desc': return (b.player||'').localeCompare(a.player||'');
+      case 'value-desc': return (parseFloat(b.estimatedValue)||0) - (parseFloat(a.estimatedValue)||0);
+      case 'value-asc': return (parseFloat(a.estimatedValue)||0) - (parseFloat(b.estimatedValue)||0);
+      case 'grade-desc': return (parseFloat(b.grade?.overall)||0) - (parseFloat(a.grade?.overall)||0);
+      case 'grade-asc': return (parseFloat(a.grade?.overall)||0) - (parseFloat(b.grade?.overall)||0);
+      default: return new Date(b.addedAt) - new Date(a.addedAt);
+    }
   });
 
   const grid = document.getElementById('cardsGrid');
@@ -1468,6 +1523,7 @@ function filterCards() {
       <div class="card-info">
         <div class="card-player">${c.player}</div>
         <div class="card-meta">${c.year || ''} ${c.brand || ''}</div>
+        ${c.tags && c.tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${c.tags.map(t=>`<span style="padding:1px 6px;background:rgba(74,156,201,0.12);border:1px solid rgba(74,156,201,0.25);border-radius:10px;font-size:10px;color:var(--ice-dark);">${t}</span>`).join('')}</div>` : ''}
         <div class="card-bottom">
           ${c.grade ? `<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">PSA ${c.grade.overall}</span>` : '<span></span>'}
           <span class="card-status ${c.listedOnEbay ? 'listed' : ''}">${c.listedOnEbay ? '● Listed' : c.estimatedValue ? '$' + c.estimatedValue : ''}</span>
@@ -1502,7 +1558,27 @@ function openCardDetail(id) {
       </div>
       <div class="grade-rationale" style="margin-top:8px;">${c.grade.rationale || ''}</div>
     </div>` : '';
-  const tagHtml = c.tags && c.tags.length ? `<div class="tag-input-row" style="margin-top:8px;">${c.tags.map(t=>`<div class="tag">${t}</div>`).join('')}</div>` : '';
+
+  const tagsHtml = `
+    <div style="margin-top:10px;">
+      <div class="result-label">Tags</div>
+      <div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+        ${(c.tags||[]).map(t => `<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}
+        <div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div>
+      </div>
+    </div>`;
+
+  const collectionHtml = `
+    <div style="margin-top:8px;">
+      <div class="result-label">Collection</div>
+      <select class="result-select" onchange="updateCardCollection(${c.id}, this.value)">
+        <option ${c.collection==='Personal'?'selected':''}>Personal Collection</option>
+        <option ${c.collection==='For Sale'?'selected':''}>For Sale</option>
+        <option ${c.collection==='Trade'?'selected':''}>Trade Binder</option>
+        <option ${c.collection==='Graded'?'selected':''}>Graded Cards</option>
+        <option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option>
+      </select>
+    </div>`;
 
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-player">${c.player}</div>
@@ -1514,11 +1590,11 @@ function openCardDetail(id) {
       <div>
         <div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber || '—'}</span></div>
         <div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel || 'Base'}</span></div>
-        <div class="detail-row"><span class="detail-key">Collection</span><span class="detail-val">${c.collection || '—'}</span></div>
         <div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue ? '$'+c.estimatedValue : '—'}</span></div>
         <div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay ? 'var(--green)' : 'var(--text-muted)'}">${c.listedOnEbay ? '● Listed' : 'Not listed'}</span></div>
         <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
-        ${tagHtml}
+        ${tagsHtml}
+        ${collectionHtml}
         ${gradeHtml}
       </div>
     </div>
@@ -1528,6 +1604,37 @@ function openCardDetail(id) {
     </div>
   `;
   document.getElementById('cardModal').classList.add('open');
+}
+
+function addModalTag(id) {
+  const t = prompt('Enter tag:');
+  if (!t || !t.trim()) return;
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  if (!c.tags) c.tags = [];
+  if (!c.tags.includes(t.trim())) {
+    c.tags.push(t.trim());
+    localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+    openCardDetail(id);
+    renderTagFilterRow();
+  }
+}
+
+function removeModalTag(id, tag) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  c.tags = (c.tags||[]).filter(t => t !== tag);
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  openCardDetail(id);
+  renderTagFilterRow();
+}
+
+function updateCardCollection(id, val) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  c.collection = val.replace(' Collection','').replace(' Binder','').replace(' Cards','');
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  showToast('Collection updated', 'success');
 }
 
 function listOnEbayFromModal(id) {
