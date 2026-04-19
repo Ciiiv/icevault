@@ -908,6 +908,9 @@
   <!-- CARD SCAN MODE -->
   <div id="modeScanPanel">
     <div class="section-sub">Upload or capture a photo — AI will automatically read and grade the card. Hit ✕ Clear to rescan.</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.25);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);">
+      ⚠ &nbsp;<strong>API cost:</strong> &nbsp;Each scan uses your Anthropic API key (~$0.01–0.03) to automatically read and fill in all card details + condition grade
+    </div>
     <div class="scan-grid">
       <div>
         <div class="scan-panel">
@@ -936,6 +939,7 @@
               ✕ Clear
             </button>
           </div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px;">⚠ Uses Anthropic API (~$0.01–0.03 per scan)</div>
         </div>
       </div>
 
@@ -1017,12 +1021,48 @@
 
   <!-- CERT LOOKUP MODE -->
   <div id="modeCertPanel" style="display:none;">
-    <div class="section-sub">Enter a cert number or scan the QR/barcode on your slab — opens the registry page and lets you fill in details. Zero API cost.</div>
+    <div class="section-sub">Two ways to add a graded card — AI slab scan (fast, small API cost) or manual cert # / QR lookup (free, you fill details yourself).</div>
     <div class="scan-grid">
       <div>
-        <div class="scan-panel">
-          <h3>Grading Company</h3>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+
+        <!-- OPTION A: AI SLAB SCAN -->
+        <div class="scan-panel" style="border-color:rgba(74,156,201,0.4);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3 style="color:var(--ice-dark);">Option A — AI Slab Scan</h3>
+            <span style="font-size:10px;background:rgba(201,162,39,0.15);color:var(--gold);border:1px solid rgba(201,162,39,0.3);border-radius:10px;padding:2px 8px;">⚠ API cost</span>
+          </div>
+          <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--gold);">
+            ⚠ API cost ~$0.01–0.03 per scan — uses your Anthropic API key to automatically read the slab label through the plastic and fill in all card details:
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Drop or photograph your graded slab — works with PSA, BGS, SGC, CGC and all supported graders. After the AI fills everything in, use the Verify link on the right to cross-check against the official registry.</div>
+          <div class="drop-zone" id="slabScanDropZone" style="position:relative;">
+            <input type="file" id="slabScanFileInput" accept="image/*" onchange="handleSlabScanSelect(event)">
+            <div class="drop-icon">🏒</div>
+            <div class="drop-text"><strong>Drop slab photo here</strong><br>or click to browse</div>
+          </div>
+          <button class="camera-btn" onclick="openSlabCamera()" style="margin-top:8px;">📷 &nbsp; Photograph Slab</button>
+          <div class="preview-box" id="slabScanPreview" style="margin-top:10px;display:none;">
+            <img id="slabScanImg" src="" alt="Slab">
+          </div>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="analyze-btn" id="slabAnalyzeBtn" onclick="analyzeSlabPhoto()" disabled>
+              ✦ &nbsp; Read Slab with AI
+            </button>
+            <button class="clear-btn" id="slabClearBtn" onclick="clearSlabScan()" style="margin-top:0;">✕</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;">⚠ Uses Anthropic API (~$0.01–0.03 per scan)</div>
+          <div id="slabScanStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
+        </div>
+
+        <!-- OPTION B: MANUAL / QR -->
+        <div class="scan-panel" style="margin-top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3>Option B — Cert # / QR Lookup</h3>
+            <span style="font-size:10px;background:rgba(39,174,96,0.15);color:var(--green);border:1px solid rgba(39,174,96,0.3);border-radius:10px;padding:2px 8px;">Free — no API</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Opens the grading company registry in a new tab. You fill in the details manually from what you see there.</div>
+          <h3 style="margin-bottom:6px;font-size:12px;">Grading Company</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
             <button class="grader-btn active" id="graderPSA" onclick="setGrader('PSA')">PSA</button>
             <button class="grader-btn" id="graderBGS" onclick="setGrader('BGS')">BGS</button>
             <button class="grader-btn" id="graderSGC" onclick="setGrader('SGC')">SGC</button>
@@ -1032,56 +1072,43 @@
             <button class="grader-btn" id="graderKSA" onclick="setGrader('KSA')">KSA</button>
             <button class="grader-btn" id="graderHGA" onclick="setGrader('HGA')">HGA</button>
           </div>
-          <div id="certRegistryInfo" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--rink);border-radius:6px;"></div>
-          <h3 style="margin-bottom:10px;">Enter Cert Number</h3>
-          <div style="display:flex;gap:8px;">
+          <div id="certRegistryInfo" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;padding:6px 10px;background:var(--rink);border-radius:6px;"></div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input type="text" class="result-input" id="certNumberInput" placeholder="e.g. 12345678" style="flex:1;" oninput="updateRegistryLink()" onkeydown="if(event.key==='Enter')lookupCert()">
-            <button class="analyze-btn" style="margin-top:0;flex:0 0 auto;padding:8px 16px;" onclick="lookupCert()">Look Up</button>
+            <button class="analyze-btn" style="margin-top:0;flex:0 0 auto;padding:8px 16px;background:var(--rink-light);border:1px solid var(--border-bright);color:var(--text-primary);" onclick="lookupCert()">Look Up</button>
           </div>
-          <div id="certRegistryLink" style="margin-top:8px;display:none;">
-            <a id="certRegistryAnchor" href="#" target="_blank" style="color:var(--ice-dark);font-size:13px;">Open in registry ↗</a>
-            <span style="color:var(--text-muted);font-size:12px;"> — look up cert, then fill fields on the right</span>
+          <div id="certRegistryLink" style="margin-bottom:10px;display:none;">
+            <a id="certRegistryAnchor" href="#" target="_blank" style="color:var(--ice-dark);font-size:13px;">Open registry ↗</a>
+            <span style="color:var(--text-muted);font-size:11px;"> — opens in new tab, fill fields on the right</span>
           </div>
-          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
-            <h3 style="margin-bottom:10px;">— or scan QR / Barcode —</h3>
-            <div class="drop-zone" id="certDropZone" style="position:relative;">
+          <div style="border-top:1px solid var(--border);padding-top:12px;">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">— or scan QR / barcode on slab —</div>
+            <div class="drop-zone" id="certDropZone" style="position:relative;padding:20px;">
               <input type="file" id="certFileInput" accept="image/*" onchange="handleCertImageSelect(event)">
-              <div class="drop-icon">⬜</div>
-              <div class="drop-text"><strong>Drop QR/barcode image here</strong><br>or click to browse</div>
+              <div class="drop-icon" style="font-size:24px;">⬜</div>
+              <div class="drop-text"><strong>Drop QR/barcode image</strong><br>or click to browse</div>
             </div>
-            <button class="camera-btn" onclick="openCertCamera()" style="margin-top:8px;">📷 &nbsp; Scan with Camera</button>
+            <button class="camera-btn" onclick="openCertCamera()" style="margin-top:8px;">📷 &nbsp; Scan QR with Camera</button>
           </div>
-          <div id="certQrStatus" style="margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
-        </div>
-
-        <div class="scan-panel" style="margin-top:16px;">
-          <h3>Slab Image (optional)</h3>
-          <div class="drop-zone" id="slabDropZone" style="position:relative;">
-            <input type="file" id="slabFileInput" accept="image/*" onchange="handleSlabImageSelect(event)">
-            <div class="drop-icon">🏒</div>
-            <div class="drop-text"><strong>Drop slab photo here</strong><br>for your collection image</div>
-          </div>
-          <div class="preview-box" id="slabPreviewBox" style="margin-top:10px;display:none;">
-            <img id="slabPreviewImg" src="" alt="Slab">
-          </div>
+          <div id="certQrStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
         </div>
       </div>
 
       <div>
         <div class="scan-panel" id="certResultPanel">
-          <h3>Cert Registry Data</h3>
+          <h3>Card Details</h3>
           <div id="certResultPlaceholder" style="color:var(--text-muted);font-size:13px;padding:10px 0;">
-            Enter a cert number or scan a QR code to pull registry data
+            Use Option A to auto-fill via AI slab scan, or Option B to open the registry and fill manually. You can use both together — scan the slab first, then verify the cert # via registry link.
           </div>
           <div id="certResultData" style="display:none;">
             <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:8px;padding:12px;margin-bottom:14px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Registry Data</span>
+                <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Graded Card Info</span>
                 <span id="certGraderBadge" style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(201,162,39,0.2);color:var(--gold);border:1px solid rgba(201,162,39,0.3);">PSA</span>
               </div>
               <div class="detail-row"><span class="detail-key">Cert #</span><span class="detail-val" id="certNum" style="color:var(--gold);">—</span></div>
               <div class="detail-row"><span class="detail-key">Grade</span><span class="detail-val" id="certGrade" style="color:var(--gold);">—</span></div>
-              <div class="detail-row"><span class="detail-key">Population</span><span class="detail-val" id="certPop">—</span></div>
+              <div class="detail-row"><span class="detail-key">Registry</span><span class="detail-val" id="certPop">—</span></div>
               <div class="detail-row"><span class="detail-key">Grade Date</span><span class="detail-val" id="certDate">—</span></div>
             </div>
             <div class="result-field">
@@ -1122,6 +1149,13 @@
                 <option value="For Sale">For Sale</option>
                 <option value="Trade">Trade Binder</option>
               </select>
+            </div>
+            <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Verify or update cert # — opens registry in new tab</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" class="result-input" id="certNumEditInput" placeholder="Cert # to verify" style="flex:1;font-size:13px;" oninput="updateRegistryLinkFromEdit()">
+                <a id="certVerifyAnchor" href="#" target="_blank" style="color:var(--ice-dark);font-size:13px;white-space:nowrap;padding:8px 12px;border:1px solid var(--border-bright);border-radius:6px;">Verify ↗</a>
+              </div>
             </div>
           </div>
         </div>
@@ -2031,6 +2065,143 @@ function setScanMode(mode) {
   if (mode === 'cert') updateGraderInfo();
 }
 
+// AI SLAB SCAN
+let slabScanImageData = null;
+
+function handleSlabScanSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    slabScanImageData = ev.target.result;
+    document.getElementById('slabScanImg').src = slabScanImageData;
+    document.getElementById('slabScanPreview').style.display = 'flex';
+    document.getElementById('slabAnalyzeBtn').disabled = false;
+    document.getElementById('slabClearBtn').classList.add('visible');
+    // also use as the slab collection image
+    certSlabImageData = slabScanImageData;
+  };
+  reader.readAsDataURL(file);
+}
+
+function openSlabCamera() {
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      cameraStream = stream;
+      document.getElementById('cameraFeed').srcObject = stream;
+      document.getElementById('cameraModal').classList.add('open');
+      document.getElementById('cameraModal').dataset.mode = 'slab';
+    })
+    .catch(() => showToast('Camera access denied', 'error'));
+}
+
+function clearSlabScan() {
+  slabScanImageData = null;
+  certSlabImageData = null;
+  document.getElementById('slabScanPreview').style.display = 'none';
+  document.getElementById('slabAnalyzeBtn').disabled = true;
+  document.getElementById('slabClearBtn').classList.remove('visible');
+  document.getElementById('slabScanFileInput').value = '';
+  document.getElementById('slabScanStatus').textContent = '';
+}
+
+async function analyzeSlabPhoto() {
+  const keys = getKeys();
+  if (!keys.anthropic) { showToast('Set your Anthropic API key first (⚙ API Keys)', 'error'); return; }
+  if (!slabScanImageData) { showToast('Load a slab photo first', 'error'); return; }
+
+  const btn = document.getElementById('slabAnalyzeBtn');
+  const status = document.getElementById('slabScanStatus');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> &nbsp; Reading slab...';
+  status.textContent = 'AI is reading the slab label and card...';
+  status.style.color = 'var(--text-muted)';
+
+  try {
+    const base64 = slabScanImageData.split(',')[1];
+    const mediaType = slabScanImageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+
+    const response = await fetch('https://lingering-breeze-fb87.mtouch01.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: `You are an expert graded sports card authenticator. Analyze this graded card slab image and read all visible information from the label and the card itself through the plastic. Respond ONLY with a JSON object, no markdown:
+
+{
+  "grader": "PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA, or Other",
+  "certNumber": "cert/serial number from the label",
+  "grade": "full grade text e.g. PSA 9 MINT or BGS 9.5 GEM MINT",
+  "gradeNumeric": "numeric grade only e.g. 9",
+  "player": "player name",
+  "year": "card year",
+  "brand": "brand and set name",
+  "cardNumber": "card number if visible",
+  "variation": "parallel or variation if shown",
+  "estimatedValue": "estimated market value in USD as number string"
+}` }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    let raw = data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const result = JSON.parse(raw);
+
+    // Auto-set grader if detected
+    const graderMap = { PSA:'PSA', BGS:'BGS', SGC:'SGC', CGC:'CGC', Authority:'AUT', TAG:'TAG', KSA:'KSA', HGA:'HGA' };
+    if (result.grader && graderMap[result.grader]) setGrader(graderMap[result.grader]);
+
+    // Fill cert number input and update link
+    if (result.certNumber) {
+      document.getElementById('certNumberInput').value = result.certNumber;
+      updateRegistryLink();
+    }
+
+    // Show result panel
+    document.getElementById('certResultPlaceholder').style.display = 'none';
+    document.getElementById('certResultData').style.display = 'block';
+    document.getElementById('certSaveBtn').style.display = 'block';
+    document.getElementById('certGraderBadge').textContent = result.grader || currentGrader;
+    document.getElementById('certNum').textContent = result.certNumber || '—';
+    document.getElementById('certGrade').textContent = result.grade || '—';
+    const url = GRADERS[graderMap[result.grader] || currentGrader]?.url(result.certNumber || '') || '#';
+    document.getElementById('certPop').innerHTML = `<a href="${url}" target="_blank" style="color:var(--ice-dark);">Verify at registry ↗</a>`;
+    document.getElementById('certDate').textContent = '—';
+    document.getElementById('certPlayer').value = result.player || '';
+    document.getElementById('certYear').value = result.year || '';
+    document.getElementById('certBrand').value = result.brand || '';
+    document.getElementById('certCardNum').value = result.cardNumber || '';
+    document.getElementById('certVariation').value = result.variation || '';
+    document.getElementById('certValue').value = result.estimatedValue || '';
+    // Pre-fill verify input with detected cert number
+    if (result.certNumber) {
+      document.getElementById('certNumEditInput').value = result.certNumber;
+      updateRegistryLinkFromEdit();
+    }
+    certTags = [];
+    renderCertTagRow();
+
+    status.textContent = '✓ Slab read successfully — verify cert # at registry if needed';
+    status.style.color = 'var(--green)';
+    showToast('Slab analyzed — review and save!', 'success');
+  } catch (err) {
+    status.textContent = '✗ Failed: ' + err.message;
+    status.style.color = 'var(--red)';
+    showToast('Slab read failed: ' + err.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✦ &nbsp; Read Slab with AI';
+}
+
 // GRADER REGISTRY CONFIG — all 8 companies
 const GRADERS = {
   PSA: {
@@ -2059,9 +2230,9 @@ const GRADERS = {
   },
   AUT: {
     name: 'Authority',
-    url: certNum => `https://www.theauthority.com/cert/${certNum}`,
+    url: certNum => `https://www.theauthority.com/${certNum}`,
     info: 'theauthority.com — Authority grading registry',
-    placeholder: 'e.g. 123456'
+    placeholder: 'e.g. A827580493'
   },
   TAG: {
     name: 'TAG',
@@ -2104,8 +2275,20 @@ function updateGraderInfo() {
   if (input) input.placeholder = GRADERS[currentGrader]?.placeholder || 'Cert number';
 }
 
+function updateRegistryLinkFromEdit() {
+  const certNum = (document.getElementById('certNumEditInput')?.value || '').trim();
+  const anchor = document.getElementById('certVerifyAnchor');
+  if (!anchor) return;
+  if (certNum.length >= 4) {
+    anchor.href = GRADERS[currentGrader]?.url(certNum) || '#';
+    anchor.style.color = 'var(--ice-dark)';
+  } else {
+    anchor.href = '#';
+  }
+}
+
 function updateRegistryLink() {
-  const certNum = (document.getElementById('certNumberInput')?.value || '').trim().replace(/\D/g,'');
+  const certNum = (document.getElementById('certNumberInput')?.value || '').trim();
   const linkDiv = document.getElementById('certRegistryLink');
   const anchor = document.getElementById('certRegistryAnchor');
   if (!linkDiv || !anchor) return;
@@ -2121,7 +2304,7 @@ function updateRegistryLink() {
 
 // CERT LOOKUP — zero API calls, just opens registry + shows blank form
 function lookupCert() {
-  const certNum = (document.getElementById('certNumberInput').value || '').trim().replace(/\D/g,'');
+  const certNum = (document.getElementById('certNumberInput').value || '').trim();
   if (!certNum) { showToast('Enter a cert number first', 'error'); return; }
 
   const grader = GRADERS[currentGrader];
@@ -2140,13 +2323,13 @@ function lookupCert() {
   document.getElementById('certPop').innerHTML = `<a href="${url}" target="_blank" style="color:var(--ice-dark);">View at ${grader.name} ↗</a>`;
   document.getElementById('certDate').textContent = '—';
 
-  // Clear editable fields
-  ['certPlayer','certYear','certBrand','certCardNum','certVariation','certValue'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  // Pre-fill verify input too
+  document.getElementById('certNumEditInput').value = certNum;
+  updateRegistryLinkFromEdit();
 
+  // Don't clear fields if AI already filled them — only clear if empty
   const status = document.getElementById('certQrStatus');
-  status.textContent = `✓ Registry opened in new tab — fill in details from the ${grader.name} page`;
+  status.textContent = `✓ Registry opened — fill in details from the ${grader.name} page`;
   status.style.color = 'var(--ice-dark)';
 
   certTags = [];
@@ -2193,8 +2376,8 @@ function decodeCertQR(dataUrl) {
       else if (data.includes('ksacertified.com')) setGrader('KSA');
       else if (data.includes('hgagrading.com')) setGrader('HGA');
 
-      // Extract cert number
-      const certMatch = data.match(/(\d{6,12})/);
+      // Extract cert number — allow alphanumeric (e.g. Authority uses A827580493)
+      const certMatch = data.match(/([A-Z]?\d{6,12})/i);
       if (certMatch) {
         document.getElementById('certNumberInput').value = certMatch[1];
         updateRegistryLink();
@@ -2230,7 +2413,8 @@ function openCertCamera() {
 const _origCapturePhoto = capturePhoto;
 window.capturePhoto = function() {
   const modal = document.getElementById('cameraModal');
-  if (modal.dataset.mode === 'cert') {
+  const mode = modal.dataset.mode;
+  if (mode === 'cert') {
     const video = document.getElementById('cameraFeed');
     const canvas = document.getElementById('cameraCanvas');
     canvas.width = video.videoWidth;
@@ -2240,23 +2424,30 @@ window.capturePhoto = function() {
     closeCamera();
     modal.dataset.mode = '';
     decodeCertQR(dataUrl);
+  } else if (mode === 'slab') {
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    closeCamera();
+    modal.dataset.mode = '';
+    slabScanImageData = dataUrl;
+    certSlabImageData = dataUrl;
+    document.getElementById('slabScanImg').src = dataUrl;
+    document.getElementById('slabScanPreview').style.display = 'flex';
+    document.getElementById('slabAnalyzeBtn').disabled = false;
+    document.getElementById('slabClearBtn').classList.add('visible');
   } else {
     modal.dataset.mode = '';
     _origCapturePhoto();
   }
 };
 
-// SLAB IMAGE
+// SLAB IMAGE (legacy handler — now handled by handleSlabScanSelect)
 function handleSlabImageSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    certSlabImageData = ev.target.result;
-    document.getElementById('slabPreviewImg').src = certSlabImageData;
-    document.getElementById('slabPreviewBox').style.display = 'flex';
-  };
-  reader.readAsDataURL(file);
+  handleSlabScanSelect(e);
 }
 
 // CERT TAGS
@@ -2278,7 +2469,7 @@ function saveCertCard() {
   const player = document.getElementById('certPlayer').value.trim();
   const gradeText = document.getElementById('certGrade').textContent;
   const gradeNum = gradeText.match(/(\d+\.?\d*)/)?.[1] || '';
-  const certNumVal = document.getElementById('certNum').textContent;
+  const certNumVal = document.getElementById('certNumEditInput')?.value.trim() || document.getElementById('certNum').textContent;
 
   if (!player) { showToast('Enter the player name first', 'error'); return; }
 
