@@ -549,7 +549,9 @@
     object-fit: contain;
     border-radius: 8px;
     background: var(--rink);
+    transition: opacity 0.15s;
   }
+  .modal-img:hover { opacity: 0.88; }
   .modal-img-placeholder {
     width: 200px;
     height: 260px;
@@ -1341,6 +1343,15 @@
   </div>
 </div>
 
+<!-- IMAGE LIGHTBOX -->
+<div class="modal-overlay" id="lightboxModal" onclick="closeLightbox()" style="align-items:center;justify-content:center;">
+  <div style="position:relative;max-width:90vw;max-height:90vh;" onclick="event.stopPropagation()">
+    <button onclick="closeLightbox()" style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:var(--rink-light);border:1px solid var(--border-bright);color:var(--text-primary);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;">✕</button>
+    <img id="lightboxImg" src="" alt="Card" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:10px;display:block;">
+    <div id="lightboxCaption" style="text-align:center;color:var(--text-secondary);font-size:13px;margin-top:10px;"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1781,7 +1792,7 @@ function openCardDetail(id) {
     <div class="modal-meta">${c.year || ''} · ${c.brand || ''} · ${c.team || ''}</div>
     <div class="modal-grid">
       <div>
-        ${c.imageData ? `<img class="modal-img" src="${c.imageData}" alt="${c.player}">` : '<div class="modal-img-placeholder">🏒</div>'}
+        ${c.imageData ? `<img class="modal-img" src="${c.imageData}" alt="${c.player}" onclick="openLightbox('${c.imageData.replace(/'/g,"\\'")}','${c.player} · ${c.year||''} ${c.brand||''}')" style="cursor:zoom-in;" title="Click to enlarge">` : '<div class="modal-img-placeholder">🏒</div>'}
       </div>
       <div>
         <div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber || '—'}</span></div>
@@ -2052,6 +2063,17 @@ function showToast(msg, type = 'success') {
   t.className = 'toast ' + type + ' show';
   setTimeout(() => t.className = 'toast', 3000);
 }
+
+// LIGHTBOX
+function openLightbox(src, caption) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightboxCaption').textContent = caption || '';
+  document.getElementById('lightboxModal').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightboxModal').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 // INIT
 updateHeaderStats();
