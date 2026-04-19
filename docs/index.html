@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ice Vault — Hockey Card Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <style>
   :root {
     --ice: #E8F4FD;
@@ -819,6 +820,39 @@
     .header-stats { display: none; }
   }
 
+  /* MODE TOGGLE */
+  .mode-toggle-btn {
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-toggle-btn:hover { background: var(--rink-light); color: var(--text-primary); }
+  .mode-toggle-btn.active { background: var(--ice-dark); border-color: var(--ice-dark); color: white; }
+  .mode-toggle-btn.active-gold { background: var(--gold); border-color: var(--gold); color: var(--rink); }
+
+  /* GRADER BUTTONS */
+  .grader-btn {
+    padding: 7px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .grader-btn:hover { background: var(--rink-light); }
+  .grader-btn.active { background: rgba(201,162,39,0.15); border-color: var(--gold); color: var(--gold); }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--rink); }
@@ -864,110 +898,235 @@
 <!-- SCAN VIEW -->
 <div class="view active" id="view-scan">
   <div class="section-title">Scan a Card</div>
-  <div class="section-sub">Upload or capture a photo — AI will automatically read and grade the card. Hit ✕ Clear to rescan.</div>
-  <div class="scan-grid">
-    <div>
-      <div class="scan-panel">
-        <h3>Upload / Capture</h3>
-        <div class="drop-zone" id="dropZone">
-          <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
-          <div class="drop-icon">📸</div>
-          <div class="drop-text"><strong>Drop card image here</strong><br>or click to browse</div>
-        </div>
-        <button class="camera-btn" onclick="openCamera()">📷 &nbsp; Use Camera</button>
-      </div>
 
-      <div class="scan-panel" style="margin-top:16px;">
-        <h3>Card Preview</h3>
-        <div class="preview-box" id="previewBox">
-          <div class="preview-placeholder">
-            <div style="font-size:32px;margin-bottom:8px;">🏒</div>
-            No card loaded
+  <!-- MODE TOGGLE -->
+  <div style="display:flex;gap:6px;margin-bottom:16px;align-items:center;">
+    <button class="mode-toggle-btn active" id="modeCardBtn" onclick="setScanMode('card')">📷 &nbsp; Card Scan</button>
+    <button class="mode-toggle-btn" id="modeCertBtn" onclick="setScanMode('cert')">⬜ &nbsp; Graded Cert Lookup</button>
+  </div>
+
+  <!-- CARD SCAN MODE -->
+  <div id="modeScanPanel">
+    <div class="section-sub">Upload or capture a photo — AI will automatically read and grade the card. Hit ✕ Clear to rescan.</div>
+    <div class="scan-grid">
+      <div>
+        <div class="scan-panel">
+          <h3>Upload / Capture</h3>
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+            <div class="drop-icon">📸</div>
+            <div class="drop-text"><strong>Drop card image here</strong><br>or click to browse</div>
+          </div>
+          <button class="camera-btn" onclick="openCamera()">📷 &nbsp; Use Camera</button>
+        </div>
+
+        <div class="scan-panel" style="margin-top:16px;">
+          <h3>Card Preview</h3>
+          <div class="preview-box" id="previewBox">
+            <div class="preview-placeholder">
+              <div style="font-size:32px;margin-bottom:8px;">🏒</div>
+              No card loaded
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="analyze-btn" id="analyzeBtn" onclick="analyzeCard()" disabled>
+              ✦ &nbsp; Analyze with AI
+            </button>
+            <button class="clear-btn" id="clearBtn" onclick="clearCard()">
+              ✕ Clear
+            </button>
           </div>
         </div>
-        <div class="btn-row">
-          <button class="analyze-btn" id="analyzeBtn" onclick="analyzeCard()" disabled>
-            ✦ &nbsp; Analyze with AI
-          </button>
-          <button class="clear-btn" id="clearBtn" onclick="clearCard()">
-            ✕ Clear
-          </button>
+      </div>
+
+      <div>
+        <div class="scan-panel">
+          <h3>Card Details (OCR)</h3>
+          <div class="result-field">
+            <div class="result-label">Player Name</div>
+            <input type="text" class="result-input" id="fieldPlayer" placeholder="—">
+          </div>
+          <div class="result-field">
+            <div class="result-label">Year</div>
+            <input type="text" class="result-input" id="fieldYear" placeholder="—">
+          </div>
+          <div class="result-field">
+            <div class="result-label">Brand / Set</div>
+            <input type="text" class="result-input" id="fieldBrand" placeholder="—">
+          </div>
+          <div class="result-field">
+            <div class="result-label">Card Number</div>
+            <input type="text" class="result-input" id="fieldNumber" placeholder="—">
+          </div>
+          <div class="result-field">
+            <div class="result-label">Team</div>
+            <input type="text" class="result-input" id="fieldTeam" placeholder="—">
+          </div>
+          <div class="result-field">
+            <div class="result-label">Parallel / Variation</div>
+            <input type="text" class="result-input" id="fieldParallel" placeholder="Base">
+          </div>
+          <div class="result-field">
+            <div class="result-label">Estimated Value ($)</div>
+            <input type="text" class="result-input" id="fieldValue" placeholder="—">
+          </div>
+          <div class="result-field">
+            <div class="result-label">Collection Tags</div>
+            <div class="tag-input-row" id="tagRow">
+              <div class="tag-add" onclick="addTag()">+ Add Tag</div>
+            </div>
+          </div>
+          <div class="result-field">
+            <div class="result-label">Collection</div>
+            <select class="result-select" id="fieldCollection">
+              <option value="Personal">Personal Collection</option>
+              <option value="For Sale">For Sale</option>
+              <option value="Trade">Trade Binder</option>
+              <option value="Graded">Graded Cards</option>
+              <option value="Wishlist">Wishlist</option>
+            </select>
+          </div>
         </div>
+
+        <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
+          <h3>AI Condition Grade</h3>
+          <div id="gradePlaceholder" style="color:var(--text-muted);font-size:13px;padding:10px 0;">
+            Analyze the card above to get an AI-powered condition grade
+          </div>
+          <div id="gradeResult" style="display:none;">
+            <div class="grade-box">
+              <div class="grade-header">
+                <span class="grade-title">PSA-Style Grade</span>
+                <span class="grade-badge" id="gradeBadge"></span>
+              </div>
+              <div class="grade-breakdown">
+                <div class="grade-row"><span>Centering</span><span id="grC">—</span></div>
+                <div class="grade-row"><span>Corners</span><span id="grCo">—</span></div>
+                <div class="grade-row"><span>Edges</span><span id="grE">—</span></div>
+                <div class="grade-row"><span>Surface</span><span id="grS">—</span></div>
+              </div>
+            </div>
+            <div class="grade-rationale" id="gradeRationale"></div>
+          </div>
+        </div>
+
+        <button class="save-btn" onclick="saveCard()">💾 &nbsp; Save to Collection</button>
       </div>
     </div>
+  </div>
 
-    <div>
-      <div class="scan-panel">
-        <h3>Card Details (OCR)</h3>
-        <div class="result-field">
-          <div class="result-label">Player Name</div>
-          <input type="text" class="result-input" id="fieldPlayer" placeholder="—">
-        </div>
-        <div class="result-field">
-          <div class="result-label">Year</div>
-          <input type="text" class="result-input" id="fieldYear" placeholder="—">
-        </div>
-        <div class="result-field">
-          <div class="result-label">Brand / Set</div>
-          <input type="text" class="result-input" id="fieldBrand" placeholder="—">
-        </div>
-        <div class="result-field">
-          <div class="result-label">Card Number</div>
-          <input type="text" class="result-input" id="fieldNumber" placeholder="—">
-        </div>
-        <div class="result-field">
-          <div class="result-label">Team</div>
-          <input type="text" class="result-input" id="fieldTeam" placeholder="—">
-        </div>
-        <div class="result-field">
-          <div class="result-label">Parallel / Variation</div>
-          <input type="text" class="result-input" id="fieldParallel" placeholder="Base">
-        </div>
-        <div class="result-field">
-          <div class="result-label">Estimated Value ($)</div>
-          <input type="text" class="result-input" id="fieldValue" placeholder="—">
-        </div>
-        <div class="result-field">
-          <div class="result-label">Collection Tags</div>
-          <div class="tag-input-row" id="tagRow">
-            <div class="tag-add" onclick="addTag()">+ Add Tag</div>
+  <!-- CERT LOOKUP MODE -->
+  <div id="modeCertPanel" style="display:none;">
+    <div class="section-sub">Enter a cert number or scan the QR/barcode on your slab — opens the registry page and lets you fill in details. Zero API cost.</div>
+    <div class="scan-grid">
+      <div>
+        <div class="scan-panel">
+          <h3>Grading Company</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+            <button class="grader-btn active" id="graderPSA" onclick="setGrader('PSA')">PSA</button>
+            <button class="grader-btn" id="graderBGS" onclick="setGrader('BGS')">BGS</button>
+            <button class="grader-btn" id="graderSGC" onclick="setGrader('SGC')">SGC</button>
+            <button class="grader-btn" id="graderCGC" onclick="setGrader('CGC')">CGC</button>
+            <button class="grader-btn" id="graderAUT" onclick="setGrader('AUT')">Authority</button>
+            <button class="grader-btn" id="graderTAG" onclick="setGrader('TAG')">TAG</button>
+            <button class="grader-btn" id="graderKSA" onclick="setGrader('KSA')">KSA</button>
+            <button class="grader-btn" id="graderHGA" onclick="setGrader('HGA')">HGA</button>
           </div>
+          <div id="certRegistryInfo" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--rink);border-radius:6px;"></div>
+          <h3 style="margin-bottom:10px;">Enter Cert Number</h3>
+          <div style="display:flex;gap:8px;">
+            <input type="text" class="result-input" id="certNumberInput" placeholder="e.g. 12345678" style="flex:1;" oninput="updateRegistryLink()" onkeydown="if(event.key==='Enter')lookupCert()">
+            <button class="analyze-btn" style="margin-top:0;flex:0 0 auto;padding:8px 16px;" onclick="lookupCert()">Look Up</button>
+          </div>
+          <div id="certRegistryLink" style="margin-top:8px;display:none;">
+            <a id="certRegistryAnchor" href="#" target="_blank" style="color:var(--ice-dark);font-size:13px;">Open in registry ↗</a>
+            <span style="color:var(--text-muted);font-size:12px;"> — look up cert, then fill fields on the right</span>
+          </div>
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+            <h3 style="margin-bottom:10px;">— or scan QR / Barcode —</h3>
+            <div class="drop-zone" id="certDropZone" style="position:relative;">
+              <input type="file" id="certFileInput" accept="image/*" onchange="handleCertImageSelect(event)">
+              <div class="drop-icon">⬜</div>
+              <div class="drop-text"><strong>Drop QR/barcode image here</strong><br>or click to browse</div>
+            </div>
+            <button class="camera-btn" onclick="openCertCamera()" style="margin-top:8px;">📷 &nbsp; Scan with Camera</button>
+          </div>
+          <div id="certQrStatus" style="margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
         </div>
-        <div class="result-field">
-          <div class="result-label">Collection</div>
-          <select class="result-select" id="fieldCollection">
-            <option value="Personal">Personal Collection</option>
-            <option value="For Sale">For Sale</option>
-            <option value="Trade">Trade Binder</option>
-            <option value="Graded">Graded Cards</option>
-            <option value="Wishlist">Wishlist</option>
-          </select>
+
+        <div class="scan-panel" style="margin-top:16px;">
+          <h3>Slab Image (optional)</h3>
+          <div class="drop-zone" id="slabDropZone" style="position:relative;">
+            <input type="file" id="slabFileInput" accept="image/*" onchange="handleSlabImageSelect(event)">
+            <div class="drop-icon">🏒</div>
+            <div class="drop-text"><strong>Drop slab photo here</strong><br>for your collection image</div>
+          </div>
+          <div class="preview-box" id="slabPreviewBox" style="margin-top:10px;display:none;">
+            <img id="slabPreviewImg" src="" alt="Slab">
+          </div>
         </div>
       </div>
 
-      <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
-        <h3>AI Condition Grade</h3>
-        <div id="gradePlaceholder" style="color:var(--text-muted);font-size:13px;padding:10px 0;">
-          Analyze the card above to get an AI-powered condition grade
-        </div>
-        <div id="gradeResult" style="display:none;">
-          <div class="grade-box">
-            <div class="grade-header">
-              <span class="grade-title">PSA-Style Grade</span>
-              <span class="grade-badge" id="gradeBadge"></span>
+      <div>
+        <div class="scan-panel" id="certResultPanel">
+          <h3>Cert Registry Data</h3>
+          <div id="certResultPlaceholder" style="color:var(--text-muted);font-size:13px;padding:10px 0;">
+            Enter a cert number or scan a QR code to pull registry data
+          </div>
+          <div id="certResultData" style="display:none;">
+            <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:8px;padding:12px;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Registry Data</span>
+                <span id="certGraderBadge" style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(201,162,39,0.2);color:var(--gold);border:1px solid rgba(201,162,39,0.3);">PSA</span>
+              </div>
+              <div class="detail-row"><span class="detail-key">Cert #</span><span class="detail-val" id="certNum" style="color:var(--gold);">—</span></div>
+              <div class="detail-row"><span class="detail-key">Grade</span><span class="detail-val" id="certGrade" style="color:var(--gold);">—</span></div>
+              <div class="detail-row"><span class="detail-key">Population</span><span class="detail-val" id="certPop">—</span></div>
+              <div class="detail-row"><span class="detail-key">Grade Date</span><span class="detail-val" id="certDate">—</span></div>
             </div>
-            <div class="grade-breakdown">
-              <div class="grade-row"><span>Centering</span><span id="grC">—</span></div>
-              <div class="grade-row"><span>Corners</span><span id="grCo">—</span></div>
-              <div class="grade-row"><span>Edges</span><span id="grE">—</span></div>
-              <div class="grade-row"><span>Surface</span><span id="grS">—</span></div>
+            <div class="result-field">
+              <div class="result-label">Player Name</div>
+              <input type="text" class="result-input" id="certPlayer" placeholder="—">
+            </div>
+            <div class="result-field">
+              <div class="result-label">Year</div>
+              <input type="text" class="result-input" id="certYear" placeholder="—">
+            </div>
+            <div class="result-field">
+              <div class="result-label">Brand / Set</div>
+              <input type="text" class="result-input" id="certBrand" placeholder="—">
+            </div>
+            <div class="result-field">
+              <div class="result-label">Card Number</div>
+              <input type="text" class="result-input" id="certCardNum" placeholder="—">
+            </div>
+            <div class="result-field">
+              <div class="result-label">Variation</div>
+              <input type="text" class="result-input" id="certVariation" placeholder="—">
+            </div>
+            <div class="result-field">
+              <div class="result-label">Estimated Value ($)</div>
+              <input type="text" class="result-input" id="certValue" placeholder="—">
+            </div>
+            <div class="result-field">
+              <div class="result-label">Collection Tags</div>
+              <div class="tag-input-row" id="certTagRow">
+                <div class="tag-add" onclick="addCertTag()">+ Add Tag</div>
+              </div>
+            </div>
+            <div class="result-field">
+              <div class="result-label">Collection</div>
+              <select class="result-select" id="certCollection">
+                <option value="Graded">Graded Cards</option>
+                <option value="Personal">Personal Collection</option>
+                <option value="For Sale">For Sale</option>
+                <option value="Trade">Trade Binder</option>
+              </select>
             </div>
           </div>
-          <div class="grade-rationale" id="gradeRationale"></div>
         </div>
+        <button class="save-btn" id="certSaveBtn" onclick="saveCertCard()" style="display:none;margin-top:12px;">💾 &nbsp; Save to Collection</button>
       </div>
-
-      <button class="save-btn" onclick="saveCard()">💾 &nbsp; Save to Collection</button>
     </div>
   </div>
 </div>
@@ -1859,6 +2018,317 @@ function showToast(msg, type = 'success') {
 
 // INIT
 updateHeaderStats();
+setTimeout(updateGraderInfo, 100);
+
+// SCAN MODE TOGGLE
+let currentScanMode = 'card';
+function setScanMode(mode) {
+  currentScanMode = mode;
+  document.getElementById('modeScanPanel').style.display = mode === 'card' ? 'block' : 'none';
+  document.getElementById('modeCertPanel').style.display = mode === 'cert' ? 'block' : 'none';
+  document.getElementById('modeCardBtn').className = 'mode-toggle-btn' + (mode === 'card' ? ' active' : '');
+  document.getElementById('modeCertBtn').className = 'mode-toggle-btn' + (mode === 'cert' ? ' active-gold' : '');
+  if (mode === 'cert') updateGraderInfo();
+}
+
+// GRADER REGISTRY CONFIG — all 8 companies
+const GRADERS = {
+  PSA: {
+    name: 'PSA',
+    url: certNum => `https://www.psacard.com/cert/${certNum}`,
+    info: 'psacard.com — largest grading company, most liquid market',
+    placeholder: 'e.g. 12345678'
+  },
+  BGS: {
+    name: 'Beckett (BGS)',
+    url: certNum => `https://www.beckett.com/grading/population/submitCertSearch?cert_num=${certNum}`,
+    info: 'beckett.com — BGS/BVG/BCCG grading registry',
+    placeholder: 'e.g. 0012345678'
+  },
+  SGC: {
+    name: 'SGC',
+    url: certNum => `https://www.sgccard.com/cert-lookup/?cert=${certNum}`,
+    info: 'sgccard.com — SGC grading registry lookup',
+    placeholder: 'e.g. 1234567'
+  },
+  CGC: {
+    name: 'CGC',
+    url: certNum => `https://www.cgccards.com/certlookup/${certNum}/`,
+    info: 'cgccards.com — CGC Trading Cards registry',
+    placeholder: 'e.g. 1234567890'
+  },
+  AUT: {
+    name: 'Authority',
+    url: certNum => `https://www.theauthority.com/cert/${certNum}`,
+    info: 'theauthority.com — Authority grading registry',
+    placeholder: 'e.g. 123456'
+  },
+  TAG: {
+    name: 'TAG',
+    url: certNum => `https://www.taggrading.com/cert/${certNum}`,
+    info: 'taggrading.com — Tech-Assisted Grading registry',
+    placeholder: 'e.g. 123456'
+  },
+  KSA: {
+    name: 'KSA',
+    url: certNum => `https://www.ksacertified.com/cert-lookup?cert=${certNum}`,
+    info: 'ksacertified.com — KSA Certified grading registry',
+    placeholder: 'e.g. 123456'
+  },
+  HGA: {
+    name: 'HGA',
+    url: certNum => `https://hgagrading.com/cert/${certNum}`,
+    info: 'hgagrading.com — Hybrid Grading Approach registry',
+    placeholder: 'e.g. 123456'
+  }
+};
+
+let currentGrader = 'PSA';
+let certTags = [];
+let certSlabImageData = null;
+
+function setGrader(g) {
+  currentGrader = g;
+  ['PSA','BGS','SGC','CGC','AUT','TAG','KSA','HGA'].forEach(x => {
+    const btn = document.getElementById('grader'+x);
+    if (btn) btn.className = 'grader-btn' + (x === g ? ' active' : '');
+  });
+  updateGraderInfo();
+  updateRegistryLink();
+}
+
+function updateGraderInfo() {
+  const info = document.getElementById('certRegistryInfo');
+  if (info) info.textContent = GRADERS[currentGrader]?.info || '';
+  const input = document.getElementById('certNumberInput');
+  if (input) input.placeholder = GRADERS[currentGrader]?.placeholder || 'Cert number';
+}
+
+function updateRegistryLink() {
+  const certNum = (document.getElementById('certNumberInput')?.value || '').trim().replace(/\D/g,'');
+  const linkDiv = document.getElementById('certRegistryLink');
+  const anchor = document.getElementById('certRegistryAnchor');
+  if (!linkDiv || !anchor) return;
+  if (certNum.length >= 4) {
+    const url = GRADERS[currentGrader].url(certNum);
+    anchor.href = url;
+    anchor.textContent = `Open ${GRADERS[currentGrader].name} registry ↗`;
+    linkDiv.style.display = 'block';
+  } else {
+    linkDiv.style.display = 'none';
+  }
+}
+
+// CERT LOOKUP — zero API calls, just opens registry + shows blank form
+function lookupCert() {
+  const certNum = (document.getElementById('certNumberInput').value || '').trim().replace(/\D/g,'');
+  if (!certNum) { showToast('Enter a cert number first', 'error'); return; }
+
+  const grader = GRADERS[currentGrader];
+  const url = grader.url(certNum);
+
+  // Open registry in new tab
+  window.open(url, '_blank');
+
+  // Show blank editable form with cert info pre-filled
+  document.getElementById('certResultPlaceholder').style.display = 'none';
+  document.getElementById('certResultData').style.display = 'block';
+  document.getElementById('certSaveBtn').style.display = 'block';
+  document.getElementById('certGraderBadge').textContent = currentGrader === 'AUT' ? 'Authority' : currentGrader;
+  document.getElementById('certNum').textContent = certNum;
+  document.getElementById('certGrade').textContent = '— enter from registry';
+  document.getElementById('certPop').innerHTML = `<a href="${url}" target="_blank" style="color:var(--ice-dark);">View at ${grader.name} ↗</a>`;
+  document.getElementById('certDate').textContent = '—';
+
+  // Clear editable fields
+  ['certPlayer','certYear','certBrand','certCardNum','certVariation','certValue'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+
+  const status = document.getElementById('certQrStatus');
+  status.textContent = `✓ Registry opened in new tab — fill in details from the ${grader.name} page`;
+  status.style.color = 'var(--ice-dark)';
+
+  certTags = [];
+  renderCertTagRow();
+  showToast(`${grader.name} registry opened — fill in the details`, 'success');
+}
+
+// QR DECODE — still zero API cost, uses jsQR locally
+function handleCertImageSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => decodeCertQR(ev.target.result);
+  reader.readAsDataURL(file);
+}
+
+function decodeCertQR(dataUrl) {
+  const status = document.getElementById('certQrStatus');
+  status.textContent = 'Decoding QR/barcode...';
+  status.style.color = 'var(--text-muted)';
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+
+    if (typeof jsQR === 'undefined') {
+      status.textContent = 'QR library loading — try again in a moment';
+      return;
+    }
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code) {
+      // Try to auto-detect grader from URL
+      const data = code.data;
+      if (data.includes('psacard.com')) setGrader('PSA');
+      else if (data.includes('beckett.com')) setGrader('BGS');
+      else if (data.includes('sgccard.com')) setGrader('SGC');
+      else if (data.includes('cgccards.com')) setGrader('CGC');
+      else if (data.includes('theauthority.com')) setGrader('AUT');
+      else if (data.includes('taggrading.com')) setGrader('TAG');
+      else if (data.includes('ksacertified.com')) setGrader('KSA');
+      else if (data.includes('hgagrading.com')) setGrader('HGA');
+
+      // Extract cert number
+      const certMatch = data.match(/(\d{6,12})/);
+      if (certMatch) {
+        document.getElementById('certNumberInput').value = certMatch[1];
+        updateRegistryLink();
+        status.textContent = '✓ QR decoded — cert #' + certMatch[1] + ' detected. Hit Look Up to open registry.';
+        status.style.color = 'var(--green)';
+        lookupCert();
+      } else {
+        document.getElementById('certNumberInput').value = data;
+        updateRegistryLink();
+        status.textContent = '✓ Scanned: ' + data + ' — verify cert # and hit Look Up';
+        status.style.color = 'var(--green)';
+      }
+    } else {
+      status.textContent = '✗ No QR/barcode detected — try a clearer, closer image';
+      status.style.color = 'var(--red)';
+    }
+  };
+  img.src = dataUrl;
+}
+
+// CERT CAMERA
+function openCertCamera() {
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      document.getElementById('cameraFeed').srcObject = stream;
+      cameraStream = stream;
+      document.getElementById('cameraModal').classList.add('open');
+      document.getElementById('cameraModal').dataset.mode = 'cert';
+    })
+    .catch(() => showToast('Camera access denied', 'error'));
+}
+
+const _origCapturePhoto = capturePhoto;
+window.capturePhoto = function() {
+  const modal = document.getElementById('cameraModal');
+  if (modal.dataset.mode === 'cert') {
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    closeCamera();
+    modal.dataset.mode = '';
+    decodeCertQR(dataUrl);
+  } else {
+    modal.dataset.mode = '';
+    _origCapturePhoto();
+  }
+};
+
+// SLAB IMAGE
+function handleSlabImageSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    certSlabImageData = ev.target.result;
+    document.getElementById('slabPreviewImg').src = certSlabImageData;
+    document.getElementById('slabPreviewBox').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+// CERT TAGS
+function renderCertTagRow() {
+  const row = document.getElementById('certTagRow');
+  if (!row) return;
+  row.innerHTML = certTags.map(t =>
+    `<div class="tag">${t} <span class="tag-x" onclick="removeCertTag('${t}')">✕</span></div>`
+  ).join('') + `<div class="tag-add" onclick="addCertTag()">+ Add Tag</div>`;
+}
+function addCertTag() {
+  const t = prompt('Enter tag:');
+  if (t && t.trim() && !certTags.includes(t.trim())) { certTags.push(t.trim()); renderCertTagRow(); }
+}
+function removeCertTag(t) { certTags = certTags.filter(x => x !== t); renderCertTagRow(); }
+
+// SAVE CERT CARD
+function saveCertCard() {
+  const player = document.getElementById('certPlayer').value.trim();
+  const gradeText = document.getElementById('certGrade').textContent;
+  const gradeNum = gradeText.match(/(\d+\.?\d*)/)?.[1] || '';
+  const certNumVal = document.getElementById('certNum').textContent;
+
+  if (!player) { showToast('Enter the player name first', 'error'); return; }
+
+  const graderLabel = currentGrader === 'AUT' ? 'Authority' : currentGrader;
+
+  const card = {
+    id: Date.now(),
+    player,
+    year: document.getElementById('certYear').value,
+    brand: document.getElementById('certBrand').value,
+    cardNumber: document.getElementById('certCardNum').value,
+    team: '',
+    parallel: document.getElementById('certVariation').value || 'Base',
+    estimatedValue: document.getElementById('certValue').value,
+    collection: document.getElementById('certCollection').value,
+    tags: [...new Set([...certTags, graderLabel])],
+    grade: gradeNum ? {
+      overall: gradeNum,
+      centering: gradeNum,
+      corners: gradeNum,
+      edges: gradeNum,
+      surface: gradeNum,
+      rationale: `Official ${graderLabel} grade: ${gradeText}. Cert #${certNumVal}.`
+    } : null,
+    imageData: certSlabImageData,
+    certNumber: certNumVal,
+    certGrader: graderLabel,
+    officialGrade: gradeText,
+    registryUrl: GRADERS[currentGrader].url(certNumVal),
+    listedOnEbay: false,
+    ebayListingId: null,
+    addedAt: new Date().toISOString()
+  };
+
+  collection.push(card);
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  updateHeaderStats();
+  showToast(`${player} (${graderLabel} ${gradeNum || '?'}) saved!`, 'success');
+
+  // Reset
+  document.getElementById('certNumberInput').value = '';
+  document.getElementById('certResultPlaceholder').style.display = 'block';
+  document.getElementById('certResultData').style.display = 'none';
+  document.getElementById('certSaveBtn').style.display = 'none';
+  document.getElementById('slabPreviewBox').style.display = 'none';
+  document.getElementById('certQrStatus').textContent = '';
+  document.getElementById('certRegistryLink').style.display = 'none';
+  certSlabImageData = null;
+  certTags = [];
+}
 </script>
 </body>
 </html>
