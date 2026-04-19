@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ADD THESE KEYS to your ios/App/App/Info.plist after running:
+    npx cap add ios
+
+  Xcode will also prompt you to set these in the Signing & Capabilities tab.
+-->
+<plist version="1.0">
+<dict>
+
+  <!-- Camera access -->
+  <key>NSCameraUsageDescription</key>
+  <string>Ice Vault uses your camera to scan hockey cards for OCR and condition grading.</string>
+
+  <!-- Photo library (for picking existing photos) -->
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Ice Vault can read photos from your library to scan hockey cards.</string>
+
+  <!-- Photo library write (for saving card scans) -->
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Ice Vault can save card scans to your photo library.</string>
+
+  <!-- Allow loading Anthropic + eBay APIs over HTTPS -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <key>api.anthropic.com</key>
+      <dict>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <false/>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+      </dict>
+      <key>api.ebay.com</key>
+      <dict>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <false/>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+      </dict>
+    </dict>
+  </dict>
+
+</dict>
+</plist>

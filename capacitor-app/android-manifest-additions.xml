@@ -1,0 +1,31 @@
+<!--
+  ADD THESE to android/app/src/main/AndroidManifest.xml
+  after running: npx cap add android
+
+  Place inside the <manifest> tag, before <application>:
+-->
+
+<!-- Camera -->
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-feature android:name="android.hardware.camera" android:required="false" />
+<uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+<!-- Photo library / storage (Android 12 and below) -->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+    android:maxSdkVersion="32" />
+
+<!-- Photo library (Android 13+) -->
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+<!-- Internet for Anthropic + eBay API calls -->
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+<!--
+  Also add inside <application> tag:
+  android:usesCleartextTraffic="false"
+  (HTTPS only — already the default for API 28+)
+
+  And add this activity config inside <activity> for proper keyboard handling:
+  android:windowSoftInputMode="adjustResize"
+-->

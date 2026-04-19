@@ -1,0 +1,26 @@
+{
+  "appId": "com.icevault.app",
+  "appName": "Ice Vault",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "Camera": {
+      "permissions": ["camera", "photos"]
+    },
+    "Preferences": {
+      "group": "IceVaultPrefs"
+    }
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#0A1628",
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "backgroundColor": "#0A1628",
+    "allowMixedContent": false,
+    "captureInput": true
+  }
+}
