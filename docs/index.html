@@ -993,7 +993,8 @@
         </div>
 
         <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
-          <h3>AI Condition Grade</h3>
+          <h3>AI Condition Estimate</h3>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">⚠ AI estimate only — not an official PSA/BGS/SGC grade</div>
           <div id="gradePlaceholder" style="color:var(--text-muted);font-size:13px;padding:10px 0;">
             Analyze the card above to get an AI-powered condition grade
           </div>
@@ -1572,7 +1573,7 @@ function showGrade(grade) {
   document.getElementById('gradeResult').style.display = 'block';
   const overall = parseFloat(grade.overall);
   const badge = document.getElementById('gradeBadge');
-  badge.textContent = `PSA ${grade.overall}`;
+  badge.textContent = `AI Est. ${grade.overall}`;
   badge.className = 'grade-badge ' + (overall >= 9 ? 'grade-9' : overall >= 7 ? 'grade-7' : overall >= 5 ? 'grade-5' : 'grade-low');
   document.getElementById('grC').textContent = grade.centering;
   document.getElementById('grCo').textContent = grade.corners;
@@ -1619,6 +1620,7 @@ function saveCard() {
     collection: document.getElementById('fieldCollection').value,
     tags: [...currentTags],
     grade: currentGrade,
+    aiGraded: true,
     imageData: currentImageData,
     listedOnEbay: false,
     ebayListingId: null,
@@ -1718,7 +1720,7 @@ function filterCards() {
         <div class="card-meta">${c.year || ''} ${c.brand || ''}</div>
         ${c.tags && c.tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${c.tags.map(t=>`<span style="padding:1px 6px;background:rgba(74,156,201,0.12);border:1px solid rgba(74,156,201,0.25);border-radius:10px;font-size:10px;color:var(--ice-dark);">${t}</span>`).join('')}</div>` : ''}
         <div class="card-bottom">
-          ${c.grade ? `<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">PSA ${c.grade.overall}</span>` : '<span></span>'}
+          ${c.grade ? `<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">${c.aiGraded ? 'AI Est. ' : (c.certGrader || 'PSA') + ' '}${c.grade.overall}</span>` : '<span></span>'}
           <span class="card-status ${c.listedOnEbay ? 'listed' : ''}">${c.listedOnEbay ? '● Listed' : c.estimatedValue ? '$' + c.estimatedValue : ''}</span>
         </div>
       </div>
@@ -1740,9 +1742,10 @@ function openCardDetail(id) {
   const gradeHtml = c.grade ? `
     <div class="grade-box" style="margin-top:16px;">
       <div class="grade-header">
-        <span class="grade-title">Condition Grade</span>
-        <span class="grade-badge grade-${gradeClass(c.grade.overall)}">PSA ${c.grade.overall}</span>
+        <span class="grade-title">${c.aiGraded ? 'AI Condition Estimate' : 'Official Grade'}</span>
+        <span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded ? 'AI Est. ' : (c.certGrader || 'PSA') + ' '}${c.grade.overall}</span>
       </div>
+      ${c.aiGraded ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;padding:4px 0;">⚠ AI estimate only — Claude assessed condition from the photo. This card has not been officially graded by PSA, BGS, or any grading company.</div>` : ''}
       <div class="grade-breakdown">
         <div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div>
         <div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div>
