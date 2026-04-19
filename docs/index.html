@@ -1275,6 +1275,18 @@
           <div class="listing-desc-preview" id="previewDesc"></div>
         </div>
       </div>
+      <div class="form-section" id="ebayMarketResearch" style="display:none;">
+        <h3>Market Research</h3>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Check real sold prices before listing — opens in a new tab.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a id="ebayResearchLink" href="#" target="_blank" class="ebay-btn" style="text-decoration:none;background:rgba(0,100,210,0.15);border:1px solid rgba(0,100,210,0.4);color:#4A9CC9;flex:1;justify-content:center;">
+            🔍 &nbsp; eBay Sold Listings
+          </a>
+          <a id="point130Link" href="#" target="_blank" class="ebay-btn" style="text-decoration:none;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#27AE60;flex:1;justify-content:center;">
+            📈 &nbsp; 130point History
+          </a>
+        </div>
+      </div>
       <div class="form-section">
         <h3>eBay API Settings</h3>
         <div class="form-group">
@@ -1809,6 +1821,17 @@ function openCardDetail(id) {
       <button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>
       <button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button>
     </div>
+    <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">
+          🔍 eBay Sold Listings
+        </a>
+        <a href="${point130Url(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">
+          📈 130point History
+        </a>
+      </div>
+    </div>
   `;
   document.getElementById('cardModal').classList.add('open');
 }
@@ -1887,9 +1910,36 @@ function selectCardForEbay(id) {
   populateEbayForm(selectedCardForEbay);
 }
 
+// MARKET RESEARCH URL BUILDERS
+function ebaySearchUrl(card) {
+  const parts = [
+    card.player,
+    card.year,
+    card.brand,
+    card.cardNumber ? '#' + card.cardNumber : '',
+    card.parallel && card.parallel !== 'Base' ? card.parallel : '',
+    card.certGrader && !card.aiGraded ? card.certGrader : '',
+    card.grade && !card.aiGraded ? card.grade.overall : ''
+  ].filter(Boolean).join(' ').trim();
+  const q = encodeURIComponent(parts);
+  return `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1&_sop=13`;
+}
+
+function point130Url(card) {
+  const parts = [
+    card.player,
+    card.year,
+    card.brand,
+    card.parallel && card.parallel !== 'Base' ? card.parallel : ''
+  ].filter(Boolean).join(' ').trim();
+  const q = encodeURIComponent(parts);
+  return `https://130point.com/sales/?query=${q}`;
+}
+
 function populateEbayForm(card) {
   if (!card) return;
-  const gradeStr = card.grade ? ` PSA ${card.grade.overall}` : '';
+  const gradeLabel = card.aiGraded ? 'AI Est.' : (card.certGrader || 'PSA');
+  const gradeStr = card.grade ? ` ${gradeLabel} ${card.grade.overall}` : '';
   const title = `${card.year || ''} ${card.brand || ''} ${card.player}${card.cardNumber ? ' #'+card.cardNumber : ''} ${card.parallel !== 'Base' ? card.parallel : ''}${gradeStr}`.trim().replace(/\s+/g,' ');
   document.getElementById('ebayTitle').value = title.substring(0, 80);
   if (card.estimatedValue) {
@@ -1899,6 +1949,12 @@ function populateEbayForm(card) {
   document.getElementById('ebayAppId').value = getKeys().ebayApp || '';
   document.getElementById('ebayToken').value = getKeys().ebayToken ? '••••' : '';
 
+  // Market research links
+  const researchSection = document.getElementById('ebayMarketResearch');
+  researchSection.style.display = 'block';
+  document.getElementById('ebayResearchLink').href = ebaySearchUrl(card);
+  document.getElementById('point130Link').href = point130Url(card);
+
   const preview = document.getElementById('selectedCardPreview');
   preview.innerHTML = `
     <h3 style="font-size:13px;font-weight:500;color:var(--ice-dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Selected Card</h3>
@@ -1907,7 +1963,7 @@ function populateEbayForm(card) {
       <div>
         <div style="font-weight:600;font-size:15px;">${card.player}</div>
         <div style="color:var(--text-muted);font-size:12px;">${card.year || ''} · ${card.brand || ''}</div>
-        ${card.grade ? `<div style="margin-top:4px;"><span class="grade-badge grade-${gradeClass(card.grade.overall)}" style="font-size:11px;padding:2px 8px;">PSA ${card.grade.overall}</span></div>` : ''}
+        ${card.grade ? `<div style="margin-top:4px;"><span class="grade-badge grade-${gradeClass(card.grade.overall)}" style="font-size:11px;padding:2px 8px;">${gradeLabel} ${card.grade.overall}</span></div>` : ''}
       </div>
     </div>
   `;
