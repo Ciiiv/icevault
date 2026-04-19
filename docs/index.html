@@ -1285,9 +1285,9 @@
           <a id="ebayResearchLink" href="#" target="_blank" class="ebay-btn" style="text-decoration:none;background:rgba(0,100,210,0.15);border:1px solid rgba(0,100,210,0.4);color:#4A9CC9;flex:1;justify-content:center;">
             🔍 &nbsp; eBay Sold Listings
           </a>
-          <a id="point130Link" href="#" target="_blank" class="ebay-btn" style="text-decoration:none;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#27AE60;flex:1;justify-content:center;">
-            📈 &nbsp; 130point History
-          </a>
+          <button id="point130Btn" onclick="open130point(selectedCardForEbay)" class="ebay-btn" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#27AE60;flex:1;justify-content:center;">
+            📈 &nbsp; 130point — copies search
+          </button>
         </div>
       </div>
       <div class="form-section">
@@ -1830,9 +1830,9 @@ function openCardDetail(id) {
         <a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">
           🔍 eBay Sold Listings
         </a>
-        <a href="${point130Url(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">
-          📈 130point History
-        </a>
+        <button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">
+          📈 130point — copies search term
+        </button>
       </div>
     </div>
   `;
@@ -1929,14 +1929,27 @@ function ebaySearchUrl(card) {
 }
 
 function point130Url(card) {
+  // 130point doesn't support URL query parameters — search is JS-driven
+  // We copy the search term to clipboard and open the site so user can paste
+  return null; // handled by open130point()
+}
+
+function open130point(card) {
   const parts = [
     card.player,
     card.year,
     card.brand,
-    card.parallel && card.parallel !== 'Base' ? card.parallel : ''
+    card.parallel && card.parallel !== 'Base' ? card.parallel : '',
+    card.certGrader && !card.aiGraded ? card.certGrader : '',
+    card.grade && !card.aiGraded ? card.grade.overall : ''
   ].filter(Boolean).join(' ').trim();
-  const q = encodeURIComponent(parts);
-  return `https://130point.com/sales/?query=${q}`;
+
+  navigator.clipboard.writeText(parts).then(() => {
+    showToast('Search copied to clipboard — paste it into 130point!', 'success');
+  }).catch(() => {
+    showToast('Open 130point and search: ' + parts, 'success');
+  });
+  window.open('https://130point.com/sales/', '_blank');
 }
 
 function populateEbayForm(card) {
@@ -1956,7 +1969,6 @@ function populateEbayForm(card) {
   const researchSection = document.getElementById('ebayMarketResearch');
   researchSection.style.display = 'block';
   document.getElementById('ebayResearchLink').href = ebaySearchUrl(card);
-  document.getElementById('point130Link').href = point130Url(card);
 
   const preview = document.getElementById('selectedCardPreview');
   preview.innerHTML = `
