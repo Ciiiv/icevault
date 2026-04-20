@@ -71,7 +71,8 @@ A free, open-source hockey card collection manager with AI-powered scanning, con
 
 ## 🌐 Web App
 
-**Live site:** `https://Ciiiv.github.io/icevault`
+**Live site (repo owner's instance):** `https://Ciiiv.github.io/icevault`
+> If you've forked this repo, your site will be at `https://YOUR-USERNAME.github.io/icevault`
 
 Visit and click **⚙ API Keys** to enter your keys. Click **👤 Sign In** to create a free account and sync your collection across devices.
 
@@ -93,7 +94,7 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 
 ### Install via sideload (no Play Store needed)
 1. Go to [pwabuilder.com](https://pwabuilder.com)
-2. Enter `https://Ciiiv.github.io/icevault`
+2. Enter your GitHub Pages URL (e.g. `https://YOUR-USERNAME.github.io/icevault`)
 3. Click **Package For Stores → Other Android → Download Package**
 4. Unzip the download, transfer the APK to your Android phone
 5. Enable "Install from unknown sources" in Android Settings → Security
@@ -244,8 +245,8 @@ CREATE INDEX IF NOT EXISTS idx_cards_user ON cards(user_id)
 ### Step 7 — Update the app to point to your worker
 
 1. In your forked repo, edit `docs/index.html`
-2. Find the line: `const WORKER_URL = 'https://lingering-breeze-fb87.mtouch01.workers.dev'`
-3. Replace the URL with your own Cloudflare Worker URL (shown on the worker overview page)
+2. Find the line: `const WORKER_URL = 'https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev'`
+3. Replace the URL with your own Cloudflare Worker URL (shown on the worker overview page after deploying)
 4. Commit — GitHub Pages auto-deploys in ~30 seconds
 
 ---
