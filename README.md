@@ -154,8 +154,7 @@ icevault/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml             # Auto-deploys docs/ to GitHub Pages on every push to main
-├── README.md                      # This file
-└── SETUP.md                       # Full setup instructions
+└── README.md                      # This file
 ```
 
 ---
@@ -165,7 +164,7 @@ icevault/
 1. Fork this repo on GitHub
 2. Go to **Settings → Pages → Source → GitHub Actions**
 3. Push any change to `main` — site deploys automatically in ~30 seconds
-4. Set up the backend services (see `SETUP.md`):
+4. Set up the backend services:
    - Cloudflare account → create a Worker → deploy `icevault-worker.js`
    - Cloudflare D1 → create `icevault` database → run schema SQL
    - Add Worker bindings: `DB` (D1) and `RESEND_API_KEY` (Secret)
