@@ -1009,6 +1009,9 @@
       <div>
         <div class="scan-panel">
           <h3>Card Details (OCR)</h3>
+          <!-- fake username/password fields trick browsers into not autofilling below -->
+          <input type="text" style="display:none;" aria-hidden="true">
+          <input type="password" style="display:none;" aria-hidden="true">
           <div class="result-field">
             <div class="result-label">Player Name</div>
             <input type="text" class="result-input" id="fieldPlayer" placeholder="—" autocomplete="off">
