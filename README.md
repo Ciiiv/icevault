@@ -1,17 +1,18 @@
 # 🏒 Ice Vault — Hockey Card Manager
 
-A free, open-source hockey card collection manager with AI-powered scanning, condition grading, graded cert lookup, eBay listing, and cloud account sync — all from your browser or as a native iOS/Android app.
+A free, open-source hockey card collection manager with AI-powered scanning, condition grading, graded cert lookup, eBay listing, and cloud account sync — available as a web app and Android app.
 
 ---
 
 ## ✨ Features
 
 ### 📷 Card Scanning
-- **Drop or photograph** any hockey card
-- **AI reads the card** automatically — player name, year, brand/set, card number, team, parallel/variation
+- Drop or photograph any hockey card
+- **AI reads the card automatically** — player name, year, brand/set, card number, team, parallel/variation
 - **AI condition estimate** — PSA-style 1–10 grade with centering, corners, edges, and surface breakdown
 - Clearly labeled as **AI estimate only** — not an official grading company grade
-- **✕ Clear** button to rescan a bad photo instantly
+- ✕ Clear button to rescan a bad photo instantly
+- ~$0.01–0.03 per scan using your own Anthropic API key
 
 ### ⬜ Graded Cert Lookup
 - **Option A — AI Slab Scan** (~$0.01–0.03): photograph your graded slab — AI reads the label through the plastic and fills in all details including cert number, official grade, player, year, and set
@@ -20,113 +21,156 @@ A free, open-source hockey card collection manager with AI-powered scanning, con
 - QR scanning auto-detects the grading company from the barcode URL
 
 ### 🗂 Collection Management
-- Browse all cards in a **grid view** with thumbnails
-- **Search** by player, year, brand, team, or tag
-- **Filter** by collection bucket, eBay status
-- **Sort** by newest, oldest, player name, value, or grade
-- **Tag system** — add custom tags (Rookie, HOF, Auto, etc.) and filter by tag
-- **Click any card** to view full details, edit tags, change collection bucket, or enlarge the image
-- **Lightbox image viewer** — click the card photo to expand it full screen
+- Grid view with card thumbnails, grades, tags, and values
+- Search by player, year, brand, team, or tag
+- Filter by collection bucket and eBay listing status
+- Sort by newest, oldest, player name, value, or grade
+- Custom tag system — add, remove, and filter by tags
+- Click any card for full details, edit tags, change collection, enlarge image
+- Lightbox image viewer — click card photo to expand full screen
 
 ### 🛒 List on eBay
-- Select any card from your collection to create a listing
-- Auto-generates a listing title (up to 80 characters)
-- **Optional AI description** (~$0.01–0.02): generates a collector-focused eBay listing description based on card details, grade, and parallel
-- **🔍 eBay Sold Listings** button — opens eBay pre-filtered to completed sold listings for real market pricing
-- **📈 130point** button — copies the search term to clipboard and opens 130point.com for historical price data
-- Direct **eBay Trading API** submission (requires eBay developer credentials)
+- Select any card to create a listing
+- Auto-generates listing title (80 character eBay limit)
+- Optional AI description (~$0.01–0.02) — collector-focused, editable before listing
+- **🔍 eBay Sold Listings** — opens eBay pre-filtered to completed sold listings
+- **📈 130point** — copies search term to clipboard and opens 130point.com for price history
+- Direct eBay Trading API submission (requires eBay developer credentials)
 
 ### 👤 User Accounts & Cloud Sync
-- **Free accounts** — sign up with email and password
-- Collection **syncs to the cloud** via Cloudflare D1 — accessible from any device
-- **Guest mode** — full app works without an account, collection stored locally in browser
+- Free accounts — sign up with email and password
+- Collection syncs to the cloud via Cloudflare D1 — accessible from any device
+- Guest mode — full app usable without an account, collection stored locally in browser
 - Visible warning on save buttons when not signed in
-- **Forgot password** — reset link sent to your email via Resend
+- Forgot password — reset link sent to email via Resend
 - API keys are **never saved to your account** — stored locally on your device only
+- Session lasts 30 days before requiring re-login
 
-### 🔒 Privacy & Cost Transparency
-- All API keys stored in **browser localStorage only** — never sent to any server or database
-- Cost warnings on every AI-powered action so you always know when an API call is made:
-  - Card scan: ~$0.01–0.03
-  - Slab scan: ~$0.01–0.03
-  - eBay description (optional): ~$0.01–0.02
-- Cert # lookup and QR decoding: **free, no API call**
-- eBay Sold and 130point links: **free, no API call**
+### 🔒 Privacy & Security
+- All API keys stored in browser localStorage only — never sent to any server or database
+- Passwords hashed with SHA-256 before storing — never stored as plain text
+- Cloudflare Worker locked to only accept requests from the Ice Vault domain (origin check)
+- Cost warnings on every AI-powered action so you always know when an API call is made
 
 ---
 
-## 🌐 Use as a Web App
+## 💰 API Cost Summary
+
+| Action | Cost | API Used |
+|--------|------|----------|
+| Card scan (OCR + grade) | ~$0.01–0.03 | Anthropic Claude |
+| AI slab scan (graded cert) | ~$0.01–0.03 | Anthropic Claude |
+| eBay description (optional) | ~$0.01–0.02 | Anthropic Claude |
+| Cert # / QR lookup | Free | None |
+| eBay sold listings link | Free | None |
+| 130point link | Free | None |
+| Account sync | Free | Cloudflare D1 |
+| Password reset email | Free | Resend |
+
+---
+
+## 🌐 Web App
 
 **Live site:** `https://Ciiiv.github.io/icevault`
 
-Visit the URL and click **⚙ API Keys** to enter your keys. Click **👤 Sign In** to create a free account and sync your collection across devices.
+Visit and click **⚙ API Keys** to enter your keys. Click **👤 Sign In** to create a free account and sync your collection across devices.
 
-### API Keys needed:
+### API Keys needed
+
 | Key | Where to get it | Used for |
 |-----|----------------|---------|
 | Anthropic `sk-ant-...` | [console.anthropic.com](https://console.anthropic.com) | Card scanning, slab reading, eBay descriptions |
 | eBay App ID | [developer.ebay.com](https://developer.ebay.com) | eBay listing (optional) |
-| eBay OAuth Token | eBay OAuth flow | eBay listing (optional) |
+| eBay OAuth Token | eBay OAuth flow with `sell.item` scope | eBay listing (optional) |
 
-> **Privacy note:** API keys are stored only in your browser's local storage on your device. They are never sent to, saved in, or accessible by this app, any server, or any database — even if you have an account. You will need to re-enter your keys if you clear your browser cache, use a different browser, or switch devices.
-
----
-
-## 📱 Build as iOS / Android App
-
-The mobile app uses [Capacitor](https://capacitorjs.com) to wrap the web app in a native shell with real camera access.
-
-### iOS
-```bash
-cd capacitor-app
-npm install
-npx cap add ios
-node build.js
-npx cap sync ios
-npx cap open ios   # opens Xcode → hit Run
-```
-
-### Android
-```bash
-npx cap add android
-node build.js
-npx cap sync android
-npx cap open android   # opens Android Studio → hit Run
-```
-
-See `SETUP.md` for full mobile build instructions.
+> **Privacy:** API keys are stored only in your browser's local storage. They are never sent to, saved in, or accessible by this app, any server, or database — even if you have an account. Re-enter keys on each new device or after clearing browser cache.
 
 ---
 
-## 🏗 Project Structure
+## 📱 Android App
+
+The Android app is built using **PWABuilder** — a free Microsoft tool that wraps the web app into a native Android package (TWA — Trusted Web Activity).
+
+### Install via sideload (no Play Store needed)
+1. Go to [pwabuilder.com](https://pwabuilder.com)
+2. Enter `https://Ciiiv.github.io/icevault`
+3. Click **Package For Stores → Other Android → Download Package**
+4. Unzip the download, transfer the APK to your Android phone
+5. Enable "Install from unknown sources" in Android Settings → Security
+6. Open the APK and tap Install
+7. Ice Vault appears on your home screen as a native app
+
+### Google Play Store submission
+1. Use the **Google Play** tab in PWABuilder instead of Other Android
+2. You will need a Google Play developer account ($25 one-time fee)
+3. Follow PWABuilder's [packaging instructions](https://docs.pwabuilder.com/#/builder/android)
+
+---
+
+## 🏗 Full Stack & Dependencies
+
+| Component | Service | Purpose | Cost |
+|-----------|---------|---------|------|
+| Web hosting | GitHub Pages | Serves the app | Free |
+| API proxy + Auth | Cloudflare Workers | Forwards Anthropic requests, handles user auth | Free tier |
+| Database | Cloudflare D1 | Stores user accounts and card collections | Free tier (5GB) |
+| Email | Resend | Welcome emails and password reset | Free tier (3k/mo) |
+| AI | Anthropic Claude | Card OCR, condition grading, eBay descriptions | Pay per use |
+| Android app | PWABuilder | Wraps web app as Android APK / Play Store bundle | Free |
+
+### Cloudflare Worker — API endpoints
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/` | Anthropic API proxy |
+| POST | `/auth/signup` | Create account |
+| POST | `/auth/login` | Sign in |
+| POST | `/auth/logout` | Sign out |
+| GET | `/auth/verify` | Verify session token |
+| POST | `/auth/forgot` | Request password reset email |
+| POST | `/auth/reset` | Reset password with token |
+| GET | `/collection` | Fetch user's collection from D1 |
+| PUT | `/collection` | Save/sync full collection to D1 |
+| DELETE | `/collection/:id` | Delete single card from D1 |
+
+### Cloudflare Worker — environment bindings required
+| Variable | Type | Value |
+|----------|------|-------|
+| `DB` | D1 Database binding | `icevault` database |
+| `RESEND_API_KEY` | Secret | Resend API key |
+
+---
+
+## 📁 Project Structure
 
 ```
 icevault/
-├── docs/
-│   └── index.html          # The entire web app (single file)
-├── capacitor-app/           # Native iOS/Android wrapper
-│   ├── package.json
-│   ├── capacitor.config.json
-│   └── build.js
-└── .github/workflows/
-    └── deploy.yml           # Auto-deploys to GitHub Pages on push
+├── docs/                          # GitHub Pages web app (auto-deployed)
+│   ├── index.html                 # Entire app — HTML, CSS, and JS in one file
+│   ├── manifest.json              # PWA manifest — name, icons, theme colors
+│   ├── sw.js                      # Service worker — offline support and caching
+│   └── icons/
+│       ├── icon-192.png           # App icon 192x192 (home screen, PWA)
+│       └── icon-512.png           # App icon 512x512 (splash screen, Play Store)
+├── .github/
+│   └── workflows/
+│       └── deploy.yml             # Auto-deploys docs/ to GitHub Pages on every push to main
+├── README.md                      # This file
+└── SETUP.md                       # Full setup instructions
 ```
 
 ---
 
-## 🚀 Deploy Your Own
+## 🚀 Deploy Your Own Copy
 
-1. Fork this repo
-2. Go to **Settings → Pages → Source: GitHub Actions**
-3. Push to `main` — auto-deploys in ~30 seconds
-
-For full cloud sync (user accounts), you'll need:
-- A [Cloudflare](https://cloudflare.com) account (free)
-- A Cloudflare Worker (proxy + auth backend)
-- A Cloudflare D1 database (collection storage)
-- A [Resend](https://resend.com) account for password reset emails (free tier)
-
-See `SETUP.md` for complete instructions.
+1. Fork this repo on GitHub
+2. Go to **Settings → Pages → Source → GitHub Actions**
+3. Push any change to `main` — site deploys automatically in ~30 seconds
+4. Set up the backend services (see `SETUP.md`):
+   - Cloudflare account → create a Worker → deploy `icevault-worker.js`
+   - Cloudflare D1 → create `icevault` database → run schema SQL
+   - Add Worker bindings: `DB` (D1) and `RESEND_API_KEY` (Secret)
+   - Resend account → create API key → add to Worker secrets
+5. Update `WORKER_URL` and `ALLOWED_ORIGINS` in the worker to match your GitHub Pages URL
 
 ---
 
