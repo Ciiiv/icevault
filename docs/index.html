@@ -855,6 +855,66 @@
   .grader-btn:hover { background: var(--rink-light); }
   .grader-btn.active { background: rgba(201,162,39,0.15); border-color: var(--gold); color: var(--gold); }
 
+  /* AUTH */
+  .auth-btn {
+    padding: 7px 16px;
+    border-radius: 7px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .auth-btn:hover { background: var(--rink-light); color: var(--text-primary); }
+  .auth-btn.signed-in { border-color: rgba(39,174,96,0.4); color: var(--green); }
+  .guest-warning {
+    background: rgba(192,57,43,0.1);
+    border: 1px solid rgba(192,57,43,0.35);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #E74C3C;
+  }
+  .guest-warning strong { color: #E74C3C; }
+  .guest-warning-link {
+    color: var(--ice-dark);
+    text-decoration: underline;
+    cursor: pointer;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .auth-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--rink);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 18px;
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .auth-tab.active { background: var(--ice-dark); color: white; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--rink); }
@@ -883,6 +943,7 @@
     </div>
   </div>
   <button class="api-config-btn" onclick="openApiModal()">⚙ API Keys</button>
+  <button class="auth-btn" id="accountBtn" onclick="openAuthModal()">👤 Sign In</button>
 </header>
 
 <nav>
@@ -1017,6 +1078,9 @@
           </div>
         </div>
 
+        <div class="guest-warning" id="scanGuestWarning">
+          ⚠ <span><strong>Not signed in</strong> — your collection is only saved on this device and will be lost if your browser cache is cleared. <span class="guest-warning-link" onclick="openAuthModal()">Sign in or create a free account</span> to save your collection to the cloud.</span>
+        </div>
         <button class="save-btn" onclick="saveCard()">💾 &nbsp; Save to Collection</button>
       </div>
     </div>
@@ -1161,6 +1225,9 @@
               </div>
             </div>
           </div>
+        </div>
+        <div class="guest-warning" id="certGuestWarning" style="display:none;">
+          ⚠ <span><strong>Not signed in</strong> — your collection is only saved on this device and will be lost if your browser cache is cleared. <span class="guest-warning-link" onclick="openAuthModal()">Sign in or create a free account</span> to save your collection to the cloud.</span>
         </div>
         <button class="save-btn" id="certSaveBtn" onclick="saveCertCard()" style="display:none;margin-top:12px;">💾 &nbsp; Save to Collection</button>
       </div>
@@ -1345,6 +1412,52 @@
       <button class="api-save-btn" onclick="saveApiKeys()">Save API Keys</button>
       <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:10px;">Keys are saved to this device only. Re-enter on each new device or browser.</div>
       <div class="api-status" id="apiStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('authModal')">✕</button>
+    <div id="authModalContent">
+      <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:2px;color:var(--ice-dark);margin-bottom:4px;">Ice Vault Account</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Save your collection to the cloud — sync across any device</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="authTabSignin" onclick="switchAuthTab('signin')">Sign In</button>
+        <button class="auth-tab" id="authTabSignup" onclick="switchAuthTab('signup')">Create Account</button>
+      </div>
+      <div class="result-field">
+        <div class="result-label">Email</div>
+        <input type="email" class="result-input" id="authEmail" placeholder="you@example.com" style="width:100%;">
+      </div>
+      <div class="result-field" style="margin-top:10px;" id="authPasswordField">
+        <div class="result-label">Password</div>
+        <input type="password" class="result-input" id="authPassword" placeholder="••••••••" style="width:100%;" onkeydown="if(event.key==='Enter')submitAuth()">
+      </div>
+      <div id="authSignupExtra" style="display:none;margin-top:10px;">
+        <div class="result-label">Confirm Password</div>
+        <input type="password" class="result-input" id="authPasswordConfirm" placeholder="••••••••" style="width:100%;margin-top:4px;">
+      </div>
+      <div style="text-align:right;margin-top:6px;" id="authForgotLink">
+        <span onclick="switchAuthTab('forgot')" style="font-size:12px;color:var(--ice-dark);cursor:pointer;text-decoration:underline;">Forgot password?</span>
+      </div>
+      <div id="authForgotPanel" style="display:none;">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;">Enter your email and we'll send you a reset link.</div>
+      </div>
+      <div style="background:rgba(74,156,201,0.08);border:1px solid rgba(74,156,201,0.2);border-radius:6px;padding:8px 12px;margin-top:14px;font-size:11px;color:var(--text-muted);line-height:1.6;">
+        🔒 Your API keys are <strong style="color:var(--text-primary);">never</strong> saved to your account — they stay local to this device only.
+      </div>
+      <button class="save-btn" style="margin-top:14px;" onclick="submitAuth()" id="authSubmitBtn">Sign In</button>
+      <div id="authError" style="margin-top:10px;font-size:13px;color:#E74C3C;text-align:center;"></div>
+      <div id="authSuccess" style="margin-top:10px;font-size:13px;color:var(--green);text-align:center;display:none;"></div>
+    </div>
+    <div id="authSignedInContent" style="display:none;text-align:center;padding:10px 0;">
+      <div style="font-size:36px;margin-bottom:10px;">✓</div>
+      <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--green);margin-bottom:6px;">Signed In</div>
+      <div id="authSignedInEmail" style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;"></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">Your collection syncs automatically to the cloud. You can use the app on any device — just sign in and your cards will be there.</div>
+      <button class="camera-btn" onclick="signOut()" style="width:100%;justify-content:center;">Sign Out</button>
     </div>
   </div>
 </div>
@@ -1660,6 +1773,7 @@ function saveCard() {
 
   collection.push(card);
   localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCollectionToCloud();
   updateHeaderStats();
   showToast(`"${player}" saved to collection!`, 'success');
   // Reset
@@ -1886,6 +2000,7 @@ function deleteCard(id) {
   if (!confirm('Delete this card?')) return;
   collection = collection.filter(c => c.id !== id);
   localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCollectionToCloud();
   closeModal('cardModal');
   renderCollection();
   showToast('Card deleted', 'success');
@@ -2140,6 +2255,269 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
+// AUTH SYSTEM
+const WORKER_URL = 'https://lingering-breeze-fb87.mtouch01.workers.dev';
+let currentUser = null;
+let authToken = null;
+
+function getAuthToken() { return localStorage.getItem('iceVault_authToken'); }
+function setAuthToken(token) { localStorage.setItem('iceVault_authToken', token); authToken = token; }
+function clearAuthToken() { localStorage.removeItem('iceVault_authToken'); authToken = null; }
+
+async function verifySession() {
+  const token = getAuthToken();
+  if (!token) return updateAuthUI(null);
+  try {
+    const res = await fetch(WORKER_URL + '/auth/verify', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data;
+      authToken = token;
+      updateAuthUI(data);
+      await syncCollectionFromCloud();
+    } else {
+      clearAuthToken();
+      updateAuthUI(null);
+    }
+  } catch {
+    updateAuthUI(null);
+  }
+}
+
+function updateAuthUI(user) {
+  const btn = document.getElementById('accountBtn');
+  const scanWarn = document.getElementById('scanGuestWarning');
+  const certWarn = document.getElementById('certGuestWarning');
+  if (user) {
+    btn.textContent = '✓ ' + user.email.split('@')[0];
+    btn.className = 'auth-btn signed-in';
+    if (scanWarn) scanWarn.style.display = 'none';
+    if (certWarn) certWarn.style.display = 'none';
+  } else {
+    btn.textContent = '👤 Sign In';
+    btn.className = 'auth-btn';
+    if (scanWarn) scanWarn.style.display = 'flex';
+  }
+}
+
+function openAuthModal() {
+  const modal = document.getElementById('authModal');
+  const signedIn = document.getElementById('authSignedInContent');
+  const form = document.getElementById('authModalContent');
+  if (currentUser) {
+    document.getElementById('authSignedInEmail').textContent = currentUser.email;
+    form.style.display = 'none';
+    signedIn.style.display = 'block';
+  } else {
+    form.style.display = 'block';
+    signedIn.style.display = 'none';
+  }
+  modal.classList.add('open');
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('authTabSignin').className = 'auth-tab' + (tab === 'signin' ? ' active' : '');
+  document.getElementById('authTabSignup').className = 'auth-tab' + (tab === 'signup' ? ' active' : '');
+  document.getElementById('authSignupExtra').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('authPasswordField').style.display = tab === 'forgot' ? 'none' : 'block';
+  document.getElementById('authForgotLink').style.display = tab === 'signin' ? 'block' : 'none';
+  document.getElementById('authForgotPanel').style.display = tab === 'forgot' ? 'block' : 'none';
+  document.getElementById('authSubmitBtn').textContent = tab === 'signup' ? 'Create Account' : tab === 'forgot' ? 'Send Reset Email' : 'Sign In';
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authSuccess').style.display = 'none';
+  document.getElementById('authSuccess').textContent = '';
+}
+
+async function submitAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const isSignup = document.getElementById('authTabSignup').classList.contains('active');
+  const isForgot = document.getElementById('authSubmitBtn').textContent === 'Send Reset Email';
+  const btn = document.getElementById('authSubmitBtn');
+  const errEl = document.getElementById('authError');
+  const succEl = document.getElementById('authSuccess');
+  errEl.textContent = '';
+  succEl.style.display = 'none';
+
+  if (!email) { errEl.textContent = 'Please enter your email'; return; }
+
+  if (isForgot) {
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+    try {
+      const res = await fetch(WORKER_URL + '/auth/forgot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      succEl.textContent = 'If that email has an account, a reset link has been sent. Check your inbox.';
+      succEl.style.display = 'block';
+    } catch {
+      errEl.textContent = 'Connection error — try again';
+    } finally {
+      btn.textContent = 'Send Reset Email';
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  if (!password) { errEl.textContent = 'Please enter your password'; return; }
+
+  if (isSignup) {
+    const confirm = document.getElementById('authPasswordConfirm').value;
+    if (password !== confirm) { errEl.textContent = 'Passwords do not match'; return; }
+    if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; return; }
+  }
+
+  btn.textContent = isSignup ? 'Creating account...' : 'Signing in...';
+  btn.disabled = true;
+
+  try {
+    const endpoint = isSignup ? '/auth/signup' : '/auth/login';
+    const res = await fetch(WORKER_URL + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Something went wrong'; return; }
+
+    setAuthToken(data.token);
+    currentUser = { email: data.email, userId: data.userId };
+    updateAuthUI(currentUser);
+
+    if (collection.length > 0) await syncCollectionToCloud();
+    else await syncCollectionFromCloud();
+
+    closeModal('authModal');
+    showToast(isSignup ? 'Account created! Collection synced.' : 'Signed in! Collection synced.', 'success');
+  } catch (e) {
+    errEl.textContent = 'Connection error — try again';
+  } finally {
+    btn.textContent = isSignup ? 'Create Account' : 'Sign In';
+    btn.disabled = false;
+  }
+}
+
+// Handle password reset token from URL on page load
+async function checkResetToken() {
+  const params = new URLSearchParams(window.location.search);
+  const resetToken = params.get('reset');
+  if (!resetToken) return;
+
+  // Clean URL
+  window.history.replaceState({}, '', window.location.pathname);
+
+  // Show reset password modal
+  document.getElementById('authModalContent').style.display = 'block';
+  document.getElementById('authSignedInContent').style.display = 'none';
+  document.getElementById('authModal').classList.add('open');
+
+  // Switch to reset UI
+  const form = document.getElementById('authModalContent');
+  form.innerHTML = `
+    <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:2px;color:var(--ice-dark);margin-bottom:4px;">Reset Password</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Enter your new password below</div>
+    <div class="result-field">
+      <div class="result-label">New Password</div>
+      <input type="password" class="result-input" id="resetNewPassword" placeholder="••••••••" style="width:100%;">
+    </div>
+    <div class="result-field" style="margin-top:10px;">
+      <div class="result-label">Confirm New Password</div>
+      <input type="password" class="result-input" id="resetConfirmPassword" placeholder="••••••••" style="width:100%;margin-top:4px;">
+    </div>
+    <button class="save-btn" style="margin-top:14px;" onclick="submitReset('${resetToken}')">Set New Password</button>
+    <div id="resetError" style="margin-top:10px;font-size:13px;color:#E74C3C;text-align:center;"></div>
+  `;
+}
+
+async function submitReset(token) {
+  const password = document.getElementById('resetNewPassword').value;
+  const confirm = document.getElementById('resetConfirmPassword').value;
+  const errEl = document.getElementById('resetError');
+  errEl.textContent = '';
+
+  if (!password) { errEl.textContent = 'Enter a new password'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; return; }
+  if (password !== confirm) { errEl.textContent = 'Passwords do not match'; return; }
+
+  try {
+    const res = await fetch(WORKER_URL + '/auth/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Reset failed'; return; }
+
+    closeModal('authModal');
+    showToast('Password reset! Please sign in with your new password.', 'success');
+    setTimeout(() => openAuthModal(), 500);
+  } catch {
+    errEl.textContent = 'Connection error — try again';
+  }
+}
+
+async function signOut() {
+  const token = getAuthToken();
+  if (token) {
+    fetch(WORKER_URL + '/auth/logout', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).catch(() => {});
+  }
+  clearAuthToken();
+  currentUser = null;
+  updateAuthUI(null);
+  closeModal('authModal');
+  showToast('Signed out', 'success');
+}
+
+// CLOUD SYNC
+async function syncCollectionToCloud() {
+  const token = getAuthToken();
+  if (!token || !currentUser) return;
+  try {
+    // Strip imageData to save space — store separately or keep small
+    const cloudCollection = collection.map(c => ({...c, imageData: c.imageData ? '[img]' : null}));
+    // Actually keep imageData for now since D1 supports up to 1MB per row
+    await fetch(WORKER_URL + '/collection', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ collection })
+    });
+  } catch (e) {
+    console.warn('Cloud sync failed:', e);
+  }
+}
+
+async function syncCollectionFromCloud() {
+  const token = getAuthToken();
+  if (!token || !currentUser) return;
+  try {
+    const res = await fetch(WORKER_URL + '/collection', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.collection && data.collection.length > 0) {
+      collection = data.collection;
+      localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+      updateHeaderStats();
+    }
+  } catch (e) {
+    console.warn('Cloud fetch failed:', e);
+  }
+}
+
+// Hook into save functions to auto-sync
+const _origSaveCollection = () => {
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCollectionToCloud();
+};
+
 // LIGHTBOX
 function openLightbox(src, caption) {
   document.getElementById('lightboxImg').src = src;
@@ -2154,6 +2532,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbo
 // INIT
 updateHeaderStats();
 setTimeout(updateGraderInfo, 100);
+verifySession();
+checkResetToken();
 
 // SCAN MODE TOGGLE
 let currentScanMode = 'card';
@@ -2270,6 +2650,7 @@ async function analyzeSlabPhoto() {
     document.getElementById('certResultPlaceholder').style.display = 'none';
     document.getElementById('certResultData').style.display = 'block';
     document.getElementById('certSaveBtn').style.display = 'block';
+    if (!currentUser) document.getElementById('certGuestWarning').style.display = 'flex';
     document.getElementById('certGraderBadge').textContent = result.grader || currentGrader;
     document.getElementById('certNum').textContent = result.certNumber || '—';
     document.getElementById('certGrade').textContent = result.grade || '—';
@@ -2418,6 +2799,7 @@ function lookupCert() {
   document.getElementById('certResultPlaceholder').style.display = 'none';
   document.getElementById('certResultData').style.display = 'block';
   document.getElementById('certSaveBtn').style.display = 'block';
+  if (!currentUser) document.getElementById('certGuestWarning').style.display = 'flex';
   document.getElementById('certGraderBadge').textContent = currentGrader === 'AUT' ? 'Authority' : currentGrader;
   document.getElementById('certNum').textContent = certNum;
   document.getElementById('certGrade').textContent = '— enter from registry';
@@ -2607,6 +2989,7 @@ function saveCertCard() {
 
   collection.push(card);
   localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCollectionToCloud();
   updateHeaderStats();
   showToast(`${player} (${graderLabel} ${gradeNum || '?'}) saved!`, 'success');
 
@@ -2615,6 +2998,7 @@ function saveCertCard() {
   document.getElementById('certResultPlaceholder').style.display = 'block';
   document.getElementById('certResultData').style.display = 'none';
   document.getElementById('certSaveBtn').style.display = 'none';
+  document.getElementById('certGuestWarning').style.display = 'none';
   document.getElementById('slabPreviewBox').style.display = 'none';
   document.getElementById('certQrStatus').textContent = '';
   document.getElementById('certRegistryLink').style.display = 'none';
