@@ -2509,18 +2509,27 @@ async function submitReset(token) {
           <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:2px;color:var(--ice-dark);margin-bottom:4px;">Ice Vault Account</div>
           <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Password reset successful — sign in with your new password</div>
           <div style="background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:13px;color:var(--green);">✓ Password changed successfully!</div>
+          <div class="auth-tabs">
+            <button class="auth-tab active" id="authTabSignin" onclick="switchAuthTab('signin')">Sign In</button>
+            <button class="auth-tab" id="authTabSignup" onclick="switchAuthTab('signup')">Create Account</button>
+          </div>
           <div class="result-field">
             <div class="result-label">Email</div>
-            <input type="email" class="result-input" id="authEmail" placeholder="you@example.com" style="width:100%;">
+            <input type="email" class="result-input" id="authEmail" placeholder="you@example.com" style="width:100%;" autocomplete="email">
           </div>
-          <div class="result-field" style="margin-top:10px;">
+          <div class="result-field" style="margin-top:10px;" id="authPasswordField">
             <div class="result-label">Password</div>
             <div style="position:relative;">
               <input type="password" class="result-input" id="authPassword" placeholder="••••••••" style="width:100%;padding-right:40px;" onkeydown="if(event.key==='Enter')submitAuth()">
               <button onclick="togglePasswordVisibility('authPassword', this)" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">👁</button>
             </div>
           </div>
-          <button class="save-btn" style="margin-top:14px;" onclick="submitAuth()">Sign In</button>
+          <div id="authSignupExtra" style="display:none;"></div>
+          <div style="text-align:right;margin-top:6px;" id="authForgotLink">
+            <span onclick="switchAuthTab('forgot')" style="font-size:12px;color:var(--ice-dark);cursor:pointer;text-decoration:underline;">Forgot password?</span>
+          </div>
+          <div id="authForgotPanel" style="display:none;"></div>
+          <button class="save-btn" style="margin-top:14px;" onclick="submitAuth()" id="authSubmitBtn">Sign In</button>
           <div id="authError" style="margin-top:10px;font-size:13px;color:#E74C3C;text-align:center;"></div>
           <div id="authSuccess" style="margin-top:10px;font-size:13px;color:var(--green);text-align:center;display:none;"></div>
         `;
