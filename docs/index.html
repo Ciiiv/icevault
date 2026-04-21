@@ -1442,11 +1442,17 @@
       </div>
       <div class="result-field" style="margin-top:10px;" id="authPasswordField">
         <div class="result-label">Password</div>
-        <input type="password" class="result-input" id="authPassword" placeholder="••••••••" style="width:100%;" onkeydown="if(event.key==='Enter')submitAuth()">
+        <div style="position:relative;">
+          <input type="password" class="result-input" id="authPassword" placeholder="••••••••" style="width:100%;padding-right:40px;" onkeydown="if(event.key==='Enter')submitAuth()">
+          <button onclick="togglePasswordVisibility('authPassword', this)" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">👁</button>
+        </div>
       </div>
       <div id="authSignupExtra" style="display:none;margin-top:10px;">
         <div class="result-label">Confirm Password</div>
-        <input type="password" class="result-input" id="authPasswordConfirm" placeholder="••••••••" style="width:100%;margin-top:4px;">
+        <div style="position:relative;margin-top:4px;">
+          <input type="password" class="result-input" id="authPasswordConfirm" placeholder="••••••••" style="width:100%;padding-right:40px;">
+          <button onclick="togglePasswordVisibility('authPasswordConfirm', this)" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">👁</button>
+        </div>
       </div>
       <div style="text-align:right;margin-top:6px;" id="authForgotLink">
         <span onclick="switchAuthTab('forgot')" style="font-size:12px;color:var(--ice-dark);cursor:pointer;text-decoration:underline;">Forgot password?</span>
@@ -2264,6 +2270,19 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
+// PASSWORD VISIBILITY TOGGLE
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
 // AUTH SYSTEM
 const WORKER_URL = 'https://lingering-breeze-fb87.mtouch01.workers.dev';
 let currentUser = null;
@@ -2428,17 +2447,24 @@ async function checkResetToken() {
   const form = document.getElementById('authModalContent');
   form.innerHTML = `
     <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:2px;color:var(--ice-dark);margin-bottom:4px;">Reset Password</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Enter your new password below</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Enter your new password below — must be at least 6 characters</div>
     <div class="result-field">
       <div class="result-label">New Password</div>
-      <input type="password" class="result-input" id="resetNewPassword" placeholder="••••••••" style="width:100%;">
+      <div style="position:relative;">
+        <input type="password" class="result-input" id="resetNewPassword" placeholder="••••••••" style="width:100%;padding-right:40px;">
+        <button onclick="togglePasswordVisibility('resetNewPassword', this)" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">👁</button>
+      </div>
     </div>
     <div class="result-field" style="margin-top:10px;">
       <div class="result-label">Confirm New Password</div>
-      <input type="password" class="result-input" id="resetConfirmPassword" placeholder="••••••••" style="width:100%;margin-top:4px;">
+      <div style="position:relative;margin-top:4px;">
+        <input type="password" class="result-input" id="resetConfirmPassword" placeholder="••••••••" style="width:100%;padding-right:40px;">
+        <button onclick="togglePasswordVisibility('resetConfirmPassword', this)" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">👁</button>
+      </div>
     </div>
     <button class="save-btn" style="margin-top:14px;" onclick="submitReset('${resetToken}')">Set New Password</button>
     <div id="resetError" style="margin-top:10px;font-size:13px;color:#E74C3C;text-align:center;"></div>
+    <div id="resetSuccess" style="margin-top:10px;font-size:13px;color:var(--green);text-align:center;display:none;"></div>
   `;
 }
 
@@ -2446,11 +2472,16 @@ async function submitReset(token) {
   const password = document.getElementById('resetNewPassword').value;
   const confirm = document.getElementById('resetConfirmPassword').value;
   const errEl = document.getElementById('resetError');
+  const succEl = document.getElementById('resetSuccess');
   errEl.textContent = '';
+  succEl.style.display = 'none';
 
   if (!password) { errEl.textContent = 'Enter a new password'; return; }
   if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; return; }
   if (password !== confirm) { errEl.textContent = 'Passwords do not match'; return; }
+
+  const btn = document.querySelector('#authModalContent .save-btn');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
 
   try {
     const res = await fetch(WORKER_URL + '/auth/reset', {
@@ -2459,13 +2490,26 @@ async function submitReset(token) {
       body: JSON.stringify({ token, password })
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Reset failed'; return; }
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Reset failed — the link may have expired';
+      if (btn) { btn.textContent = 'Set New Password'; btn.disabled = false; }
+      return;
+    }
 
-    closeModal('authModal');
-    showToast('Password reset! Please sign in with your new password.', 'success');
-    setTimeout(() => openAuthModal(), 500);
+    // Show success then redirect to sign in
+    succEl.textContent = '✓ Password changed successfully!';
+    succEl.style.display = 'block';
+    if (btn) btn.style.display = 'none';
+
+    setTimeout(() => {
+      closeModal('authModal');
+      showToast('Password reset! Sign in with your new password.', 'success');
+      setTimeout(() => openAuthModal(), 500);
+    }, 1500);
+
   } catch {
     errEl.textContent = 'Connection error — try again';
+    if (btn) { btn.textContent = 'Set New Password'; btn.disabled = false; }
   }
 }
 
