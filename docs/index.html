@@ -2497,14 +2497,35 @@ async function submitReset(token) {
     }
 
     // Show success then redirect to sign in
-    succEl.textContent = '✓ Password changed successfully!';
+    succEl.textContent = '✓ Password changed! Redirecting to sign in...';
     succEl.style.display = 'block';
     if (btn) btn.style.display = 'none';
 
     setTimeout(() => {
-      closeModal('authModal');
+      // Rebuild the auth modal content back to normal sign in form
+      const form = document.getElementById('authModalContent');
+      if (form) {
+        form.innerHTML = `
+          <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:2px;color:var(--ice-dark);margin-bottom:4px;">Ice Vault Account</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Password reset successful — sign in with your new password</div>
+          <div style="background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:13px;color:var(--green);">✓ Password changed successfully!</div>
+          <div class="result-field">
+            <div class="result-label">Email</div>
+            <input type="email" class="result-input" id="authEmail" placeholder="you@example.com" style="width:100%;">
+          </div>
+          <div class="result-field" style="margin-top:10px;">
+            <div class="result-label">Password</div>
+            <div style="position:relative;">
+              <input type="password" class="result-input" id="authPassword" placeholder="••••••••" style="width:100%;padding-right:40px;" onkeydown="if(event.key==='Enter')submitAuth()">
+              <button onclick="togglePasswordVisibility('authPassword', this)" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">👁</button>
+            </div>
+          </div>
+          <button class="save-btn" style="margin-top:14px;" onclick="submitAuth()">Sign In</button>
+          <div id="authError" style="margin-top:10px;font-size:13px;color:#E74C3C;text-align:center;"></div>
+          <div id="authSuccess" style="margin-top:10px;font-size:13px;color:var(--green);text-align:center;display:none;"></div>
+        `;
+      }
       showToast('Password reset! Sign in with your new password.', 'success');
-      setTimeout(() => openAuthModal(), 500);
     }, 1500);
 
   } catch {
