@@ -1066,14 +1066,22 @@
 
         <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
           <h3>AI Condition Estimate</h3>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">⚠ AI estimate only — not an official PSA/BGS/SGC grade</div>
+          <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#E74C3C;line-height:1.6;">
+            <strong>⚠ Important Disclaimer</strong><br>
+            This is an AI estimate only — not an official grade from PSA, BGS, SGC, or any grading company. The AI can only assess what is visible in the photo and has known limitations:<br><br>
+            • <strong>Foil, refractor, and holographic cards</strong> — glare and reflection may obscure details and produce inaccurate results<br>
+            • <strong>Surface scratches and print defects</strong> — may not be visible in photos<br>
+            • <strong>Corners and edges</strong> — difficult to assess accurately from a flat photo<br>
+            • <strong>Cards in sleeves or toploaders</strong> — plastic adds distortion<br><br>
+            <strong>Ice Vault and its contributors are not responsible for any incorrect data, inaccurate grades, or any losses, financial or otherwise, resulting from reliance on this AI estimate.</strong> Always obtain an official grade from a certified grading company before making significant buying or selling decisions.
+          </div>
           <div id="gradePlaceholder" style="color:var(--text-muted);font-size:13px;padding:10px 0;">
-            Analyze the card above to get an AI-powered condition grade
+            Analyze the card above to get an AI-powered condition estimate
           </div>
           <div id="gradeResult" style="display:none;">
             <div class="grade-box">
               <div class="grade-header">
-                <span class="grade-title">PSA-Style Grade</span>
+                <span class="grade-title">AI Condition Estimate</span>
                 <span class="grade-badge" id="gradeBadge"></span>
               </div>
               <div class="grade-breakdown">
@@ -1109,6 +1117,9 @@
           </div>
           <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--gold);">
             ⚠ API cost ~$0.01–0.03 per scan — uses your Anthropic API key to automatically read the slab label through the plastic and fill in all card details:
+          </div>
+          <div style="background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#E74C3C;line-height:1.6;">
+            ⚠ AI reads what is visible through the plastic — results may be inaccurate for foil, holographic, or heavily reflective slabs. Always verify details at the official registry. Ice Vault is not responsible for any incorrect data or losses from reliance on AI-read slab data.
           </div>
           <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Drop or photograph your graded slab — works with PSA, BGS, SGC, CGC and all supported graders. After the AI fills everything in, use the Verify link on the right to cross-check against the official registry.</div>
           <div class="drop-zone" id="slabScanDropZone" style="position:relative;">
@@ -1248,6 +1259,9 @@
 <div class="view" id="view-collection">
   <div class="section-title">My Collection</div>
   <div class="section-sub">Browse, filter, and manage your cards</div>
+  <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;padding:6px 10px;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;">
+    ⚠ Cards showing <strong style="color:#E74C3C;">AI Est.</strong> grades are AI estimates only — not official PSA/BGS/SGC grades. Foil and holographic cards may be inaccurate. Ice Vault is not responsible for any losses from reliance on these estimates.
+  </div>
   <div class="collection-toolbar">
     <input type="text" class="search-input" placeholder="🔍  Search player, year, brand..." oninput="filterCards()" id="searchInput">
     <select class="filter-select" onchange="filterCards()" id="collectionFilter">
@@ -1289,6 +1303,9 @@
 <div class="view" id="view-ebay">
   <div class="section-title">List on eBay</div>
   <div class="section-sub">Select a card from your collection and create an eBay listing</div>
+  <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#E74C3C;line-height:1.6;">
+    ⚠ <strong>AI Grade Disclaimer:</strong> Cards showing "AI Est." grades have been assessed by AI based on what was visible in the photo — this is <strong>not</strong> an official PSA, BGS, SGC, or other grading company grade. AI grades may be inaccurate, particularly for foil, refractor, and holographic cards. Do not represent an AI estimate as an official grade in your eBay listing. <strong>Ice Vault is not responsible for any incorrect grades, listing disputes, or financial losses resulting from reliance on AI estimates.</strong>
+  </div>
   <div style="display:flex;gap:24px;flex-wrap:wrap;">
     <div style="flex:1;min-width:280px;">
       <div class="scan-panel">
@@ -1905,7 +1922,7 @@ function openCardDetail(id) {
         <span class="grade-title">${c.aiGraded ? 'AI Condition Estimate' : 'Official Grade'}</span>
         <span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded ? 'AI Est. ' : (c.certGrader || 'PSA') + ' '}${c.grade.overall}</span>
       </div>
-      ${c.aiGraded ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;padding:4px 0;">⚠ AI estimate only — Claude assessed condition from the photo. This card has not been officially graded by PSA, BGS, or any grading company.</div>` : ''}
+      ${c.aiGraded ? `<div style="font-size:11px;color:#E74C3C;margin-bottom:8px;padding:6px 8px;background:rgba(192,57,43,0.08);border-radius:6px;border:1px solid rgba(192,57,43,0.2);">⚠ AI estimate only — based on what was visible in the photo. Foil, refractor, and holographic cards may produce inaccurate results. Not an official grade. Ice Vault is not responsible for any losses resulting from reliance on this estimate.</div>` : ''}
       <div class="grade-breakdown">
         <div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div>
         <div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div>
