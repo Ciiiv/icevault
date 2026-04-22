@@ -41,7 +41,6 @@
 
 - `DB` — D1 database binding
 - `BREVO_API_KEY` — Brevo transactional email API key
-- `RESEND_API_KEY` — old Resend key (no longer used, can be deleted)
 
 ---
 
@@ -59,7 +58,8 @@ icevault/
 ├── icevault-worker.js      # Cloudflare Worker source (reference copy for forkers)
 ├── .github/workflows/
 │   └── deploy.yml          # GitHub Actions auto-deploy
-└── README.md
+├── README.md               # Public-facing documentation
+└── PROJECT_NOTES.md        # Internal project context for Claude sessions
 ```
 
 ---
@@ -179,7 +179,7 @@ Passwords: bcrypt `$2b$12$...` format. Login normalizes `$2b$` → `$2a$` for co
 | Single HTML file | Easy to deploy anywhere, no build pipeline needed for hobby scale |
 | Cloudflare Workers + D1 | Free tier generous, all in one ecosystem, Wrangler CLI deployment |
 | bcrypt over SHA-256 | SHA-256 is a fast hash — bcrypt is intentionally slow, brute force resistant |
-| Brevo over Resend | Higher free tier (300/day vs Resend limitations) — both require domain for arbitrary recipients |
+| Brevo over Resend | Started with Resend but switched — both require a verified custom domain to send to arbitrary email addresses on free tier. Brevo has 300 emails/day free vs Resend's limitations. Neither works for all users without a domain (~$10/yr). |
 | PWABuilder over Capacitor | No Android Studio needed, 5 minute APK generation, auto-updates with web app |
 | Guest mode | Better UX than forcing accounts, localStorage collection still useful |
 | API keys local only | Privacy — keys never touch our servers, users own their API costs |
