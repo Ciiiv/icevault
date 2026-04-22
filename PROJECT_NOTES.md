@@ -6,7 +6,7 @@
 ## 🌐 Live URLs
 
 - **Web app:** https://Ciiiv.github.io/icevault
-- **Cloudflare Worker:** https://lingering-breeze-fb87.mtouch01.workers.dev
+- **Cloudflare Worker:** https://lingering-breeze-fb87.workers.dev (check Cloudflare dashboard for full URL)
 - **GitHub repo:** https://github.com/Ciiiv/icevault
 
 ---
@@ -29,7 +29,6 @@
 
 - **D1 Database ID:** `3cacae20-fde1-4183-94af-eaa256eebb84`
 - **Worker name:** `lingering-breeze-fb87`
-- **Cloudflare account subdomain:** `mtouch01`
 - **GitHub username:** `Ciiiv`
 - **Wrangler project path:** `C:\Users\civ2g\icevault-worker`
 - **wrangler.toml main:** `src/index.js`
@@ -193,7 +192,7 @@ Passwords: bcrypt `$2b$12$...` format. Login normalizes `$2b$` → `$2a$` for co
 Paste this at the start of a new conversation:
 
 > "I'm continuing development of Ice Vault — a hockey card manager web app + Android app. 
-> Stack: GitHub Pages (Ciiiv.github.io/icevault), Cloudflare Worker (lingering-breeze-fb87.mtouch01.workers.dev) 
+> Stack: GitHub Pages (Ciiiv.github.io/icevault), Cloudflare Worker (see PROJECT_NOTES.md for URL) 
 > deployed via Wrangler CLI at C:\Users\civ2g\icevault-worker, D1 database (icevault), 
 > Brevo for emails (needs verified domain to send to all users). 
 > Completed: bcrypt auth (Priority #1). 
