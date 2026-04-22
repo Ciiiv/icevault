@@ -164,7 +164,8 @@ icevault/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml             # Auto-deploys docs/ to GitHub Pages on every push to main
-└── README.md                      # This file
+├── README.md                      # Public-facing documentation
+└── PROJECT_NOTES.md               # Internal project context — architecture, decisions, pending work
 ```
 
 ---
@@ -307,6 +308,12 @@ wrangler deploy
 2. Enter your GitHub Pages URL
 3. Click **Package For Stores → Other Android → Download Package**
 4. Transfer the APK to your Android phone and install
+
+---
+
+## 🗒 Project Notes
+
+See [`PROJECT_NOTES.md`](./PROJECT_NOTES.md) for full internal project context including architecture decisions, known issues, pending priority list, and deployment commands. Useful for contributors and for continuing development with AI assistance.
 
 ---
 
