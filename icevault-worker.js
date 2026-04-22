@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+
 // Ice Vault — Cloudflare Worker
 // Handles: Anthropic API proxy, Auth (signup/login/password reset), Collection sync via D1
 
@@ -32,11 +34,17 @@ function err(msg, status, cors) {
   return json({ error: msg }, status || 400, cors);
 }
 
+// bcrypt password hashing — much stronger than SHA-256
+// Cost factor 12 = ~300ms per hash, making brute force impractical
 async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + 'icevault_salt_2024');
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const salt = await bcrypt.genSalt(12);
+  return bcrypt.hash(password, salt);
+}
+
+async function verifyPassword(password, hash) {
+  // Normalize $2b$ to $2a$ for cross-implementation compatibility
+  const normalizedHash = hash.replace(/^\$2b\$/, '$2a$');
+  return bcrypt.compare(password, normalizedHash);
 }
 
 function generateToken(length) {
@@ -60,18 +68,18 @@ async function getUser(request, db) {
   return user;
 }
 
-async function sendEmail(resendKey, to, subject, html) {
-  const res = await fetch('https://api.resend.com/emails', {
+async function sendEmail(brevoKey, to, subject, html) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer ' + resendKey,
+      'api-key': brevoKey,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Ice Vault <onboarding@resend.dev>',
-      to: [to],
+      sender: { name: 'Ice Vault', email: 'icevault@smtp-brevo.com' },
+      to: [{ email: to }],
       subject,
-      html,
+      htmlContent: html,
     }),
   });
   return res.ok;
@@ -83,7 +91,6 @@ export default {
     const cors = getCORS(origin);
 
     // Block requests from unknown origins
-    // Allow empty origin for direct API testing/curl
     if (origin && !ALLOWED_ORIGINS.includes(origin)) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
@@ -130,11 +137,16 @@ export default {
         if (!email || !password) return err('Email and password required', 400, cors);
         if (password.length < 6) return err('Password must be at least 6 characters', 400, cors);
 
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return err('Invalid email address', 400, cors);
+
         const existing = await env.DB.prepare(
           'SELECT id FROM users WHERE email = ?'
         ).bind(email.toLowerCase()).first();
         if (existing) return err('An account with this email already exists', 400, cors);
 
+        // bcrypt hash — strong, slow, production-grade
         const hash = await hashPassword(password);
         const userId = generateToken(8);
         await env.DB.prepare(
@@ -148,7 +160,7 @@ export default {
         ).bind(token, userId, expires).run();
 
         await sendEmail(
-          env.RESEND_API_KEY,
+          env.BREVO_API_KEY,
           email,
           'Welcome to Ice Vault!',
           `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
@@ -174,10 +186,13 @@ export default {
         const user = await env.DB.prepare(
           'SELECT id, email, password_hash FROM users WHERE email = ?'
         ).bind(email.toLowerCase()).first();
-        if (!user) return err('Invalid email or password', 401, cors);
 
-        const hash = await hashPassword(password);
-        if (hash !== user.password_hash) return err('Invalid email or password', 401, cors);
+        // Always run bcrypt compare even if user not found to prevent timing attacks
+        const dummyHash = '$2a$12$dummy.hash.to.prevent.timing.attacks.padding';
+        const hashToCheck = user ? user.password_hash : dummyHash;
+        const valid = await verifyPassword(password, hashToCheck);
+
+        if (!user || !valid) return err('Invalid email or password', 401, cors);
 
         const token = generateToken();
         const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -218,6 +233,7 @@ export default {
           'SELECT id, email FROM users WHERE email = ?'
         ).bind(email.toLowerCase()).first();
 
+        // Always return success to prevent email enumeration
         if (!user) return json({ ok: true }, 200, cors);
 
         await env.DB.prepare(
@@ -232,7 +248,7 @@ export default {
 
         const resetUrl = `${APP_URL}?reset=${resetToken}`;
         await sendEmail(
-          env.RESEND_API_KEY,
+          env.BREVO_API_KEY,
           user.email,
           'Reset your Ice Vault password',
           `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
