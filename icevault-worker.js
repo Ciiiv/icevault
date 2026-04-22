@@ -76,7 +76,9 @@ async function sendEmail(brevoKey, to, subject, html) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Ice Vault', email: 'icevault@smtp-brevo.com' },
+      // Replace with your verified Brevo sender email
+      // Use your registered email address or noreply@yourdomain.com once you have a domain
+      sender: { name: 'Ice Vault', email: 'YOUR_VERIFIED_SENDER_EMAIL' },
       to: [{ email: to }],
       subject,
       htmlContent: html,
