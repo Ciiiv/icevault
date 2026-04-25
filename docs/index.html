@@ -976,31 +976,55 @@
 
   <!-- CARD SCAN MODE -->
   <div id="modeScanPanel">
-    <div class="section-sub">Upload or capture a photo — AI will automatically read and grade the card. Hit ✕ Clear to rescan.</div>
+    <div class="section-sub">Upload or capture front and back photos — AI will read and grade the card using both images for better accuracy.</div>
     <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.25);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);">
-      ⚠ &nbsp;<strong>API cost:</strong> &nbsp;Each scan uses your Anthropic API key (~$0.01–0.03) to automatically read and fill in all card details + condition grade
+      ⚠ &nbsp;<strong>API cost:</strong> &nbsp;Each scan uses your Anthropic API key (~$0.02–0.05 with front+back) to automatically read and fill in all card details + condition grade
     </div>
     <div class="scan-grid">
       <div>
         <div class="scan-panel">
-          <h3>Upload / Capture</h3>
-          <div class="drop-zone" id="dropZone">
-            <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+          <h3>Front of Card <span style="color:var(--text-muted);font-size:11px;font-weight:400;">(required)</span></h3>
+          <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event, 'front')" style="display:none;">
             <div class="drop-icon">📸</div>
-            <div class="drop-text"><strong>Drop card image here</strong><br>or click to browse</div>
+            <div class="drop-text"><strong>Drop front image here</strong><br>or click to browse</div>
           </div>
-          <button class="camera-btn" onclick="openCamera()">📷 &nbsp; Use Camera</button>
+          <button class="camera-btn" onclick="openCamera('front')">📷 &nbsp; Use Camera (Front)</button>
         </div>
 
-        <div class="scan-panel" style="margin-top:16px;">
+        <div class="scan-panel" style="margin-top:12px;">
+          <h3>Back of Card <span style="color:var(--text-muted);font-size:11px;font-weight:400;">(recommended — improves parallel & serial detection)</span></h3>
+          <div class="drop-zone" id="dropZoneBack" onclick="document.getElementById('fileInputBack').click()" style="min-height:120px;">
+            <input type="file" id="fileInputBack" accept="image/*" onchange="handleFileSelect(event, 'back')" style="display:none;">
+            <div class="drop-icon">🔄</div>
+            <div class="drop-text"><strong>Drop back image here</strong><br>or click to browse</div>
+          </div>
+          <button class="camera-btn" onclick="openCamera('back')" style="margin-top:8px;">📷 &nbsp; Use Camera (Back)</button>
+        </div>
+
+        <div class="scan-panel" style="margin-top:12px;">
           <h3>Card Preview</h3>
-          <div class="preview-box" id="previewBox">
-            <div class="preview-placeholder">
-              <div style="font-size:32px;margin-bottom:8px;">🏒</div>
-              No card loaded
+          <div style="display:flex;gap:8px;">
+            <div class="preview-box" id="previewBox" style="flex:1;">
+              <div class="preview-placeholder">
+                <div style="font-size:24px;margin-bottom:4px;">🏒</div>
+                <div style="font-size:11px;">Front</div>
+              </div>
+            </div>
+            <div class="preview-box" id="previewBoxBack" style="flex:1;">
+              <div class="preview-placeholder">
+                <div style="font-size:24px;margin-bottom:4px;">🔄</div>
+                <div style="font-size:11px;">Back</div>
+              </div>
             </div>
           </div>
-          <div class="btn-row">
+          <div style="margin-top:10px;padding:8px 12px;background:var(--rink);border-radius:8px;border:1px solid var(--border);">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);">
+              <input type="checkbox" id="includeEbayDesc" style="width:16px;height:16px;cursor:pointer;">
+              <span>Generate eBay listing description too <span style="color:var(--text-muted);font-size:11px;">(~+$0.01)</span></span>
+            </label>
+          </div>
+          <div class="btn-row" style="margin-top:10px;">
             <button class="analyze-btn" id="analyzeBtn" onclick="analyzeCard()" disabled>
               ✦ &nbsp; Analyze with AI
             </button>
@@ -1569,6 +1593,8 @@ function switchView(name) {
 }
 
 // FILE / DROP
+let currentBackImageData = null;
+
 document.getElementById('dropZone').addEventListener('dragover', e => {
   e.preventDefault();
   e.currentTarget.classList.add('drag-over');
@@ -1580,27 +1606,52 @@ document.getElementById('dropZone').addEventListener('drop', e => {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
   const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) loadImageFile(file);
+  if (file && file.type.startsWith('image/')) loadImageFile(file, 'front');
 });
 
-function handleFileSelect(e) {
+// Back drop zone
+document.getElementById('dropZoneBack').addEventListener('dragover', e => {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+});
+document.getElementById('dropZoneBack').addEventListener('dragleave', e => {
+  e.currentTarget.classList.remove('drag-over');
+});
+document.getElementById('dropZoneBack').addEventListener('drop', e => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadImageFile(file, 'back');
+});
+
+function handleFileSelect(e, side) {
   const file = e.target.files[0];
-  if (file) loadImageFile(file);
+  if (file) loadImageFile(file, side || 'front');
 }
 
-function loadImageFile(file) {
+function loadImageFile(file, side) {
   const reader = new FileReader();
   reader.onload = e => {
-    currentImageData = e.target.result;
-    currentImage = file;
-    setPreviewImage(e.target.result);
+    if (side === 'back') {
+      currentBackImageData = e.target.result;
+      setPreviewImage(e.target.result, 'back');
+    } else {
+      currentImageData = e.target.result;
+      currentImage = file;
+      setPreviewImage(e.target.result, 'front');
+    }
   };
   reader.readAsDataURL(file);
 }
 
-function setPreviewImage(src) {
+function setPreviewImage(src, side) {
+  if (side === 'back') {
+    const box = document.getElementById('previewBoxBack');
+    box.innerHTML = `<img src="${src}" alt="Card Back" style="width:100%;height:100%;object-fit:contain;">`;
+    return;
+  }
   const box = document.getElementById('previewBox');
-  box.innerHTML = `<img src="${src}" alt="Card">`;
+  box.innerHTML = `<img src="${src}" alt="Card Front" style="width:100%;height:100%;object-fit:contain;">`;
   document.getElementById('analyzeBtn').disabled = false;
   document.getElementById('clearBtn').classList.add('visible');
   resetFields();
@@ -1608,17 +1659,21 @@ function setPreviewImage(src) {
   if (getKeys().anthropic) {
     analyzeCard();
   } else {
-    showToast('Image loaded — set your API key to auto-analyze, or hit Analyze', 'success');
+    showToast('Front image loaded — add back image for better accuracy, then hit Analyze', 'success');
   }
 }
 
 function clearCard() {
   currentImageData = null;
+  currentBackImageData = null;
   currentImage = null;
-  document.getElementById('previewBox').innerHTML = '<div class="preview-placeholder"><div style="font-size:32px;margin-bottom:8px;">🏒</div>No card loaded</div>';
+  document.getElementById('previewBox').innerHTML = '<div class="preview-placeholder"><div style="font-size:24px;margin-bottom:4px;">🏒</div><div style="font-size:11px;">Front</div></div>';
+  document.getElementById('previewBoxBack').innerHTML = '<div class="preview-placeholder"><div style="font-size:24px;margin-bottom:4px;">🔄</div><div style="font-size:11px;">Back</div></div>';
   document.getElementById('analyzeBtn').disabled = true;
   document.getElementById('clearBtn').classList.remove('visible');
   document.getElementById('fileInput').value = '';
+  document.getElementById('fileInputBack').value = '';
+  document.getElementById('includeEbayDesc').checked = false;
   resetFields();
   showToast('Card cleared — ready to scan again', 'success');
 }
@@ -1635,7 +1690,9 @@ function resetFields() {
 }
 
 // CAMERA
-async function openCamera() {
+let cameraTarget = 'front';
+async function openCamera(side) {
+  cameraTarget = side || 'front';
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     document.getElementById('cameraFeed').srcObject = cameraStream;
@@ -1656,8 +1713,14 @@ function capturePhoto() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0);
-  currentImageData = canvas.toDataURL('image/jpeg', 0.9);
-  setPreviewImage(currentImageData);
+  const imageData = canvas.toDataURL('image/jpeg', 0.9);
+  if (cameraTarget === 'back') {
+    currentBackImageData = imageData;
+    setPreviewImage(imageData, 'back');
+  } else {
+    currentImageData = imageData;
+    setPreviewImage(imageData, 'front');
+  }
   closeCamera();
 }
 
@@ -1672,11 +1735,55 @@ async function analyzeCard() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> &nbsp; Analyzing...';
 
-  try {
-    const base64 = currentImageData.split(',')[1];
-    const mediaType = currentImageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+  const includeEbay = document.getElementById('includeEbayDesc').checked;
+  const hasBack = !!currentBackImageData;
 
-    const response = await fetch('https://lingering-breeze-fb87.mtouch01.workers.dev', {
+  try {
+    const frontBase64 = currentImageData.split(',')[1];
+    const frontMediaType = currentImageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+
+    // Build content array — front always included, back if available
+    const contentImages = [
+      { type: 'image', source: { type: 'base64', media_type: frontMediaType, data: frontBase64 } }
+    ];
+
+    if (hasBack) {
+      const backBase64 = currentBackImageData.split(',')[1];
+      const backMediaType = currentBackImageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+      contentImages.push({ type: 'image', source: { type: 'base64', media_type: backMediaType, data: backBase64 } });
+    }
+
+    const ebayFields = includeEbay ? `,
+  "ebayTitle": "eBay listing title max 80 characters — include player, year, brand, parallel, card number",
+  "ebayDescription": "Collector-focused eBay listing description 2-3 paragraphs — mention condition, key features, parallel type, any notable characteristics"` : '';
+
+    const backNote = hasBack ? 'The second image is the BACK of the same card — use it to identify the card number, parallel name, serial number, copyright year, and assess back condition (corners, edges, surface).' : 'Only the front image was provided — note this limitation in your grade rationale.';
+
+    const prompt = `You are an expert hockey card grader and authenticator with 20+ years of experience. ${backNote}
+
+Analyze this hockey card and respond ONLY with a JSON object — no preamble, no markdown, no explanation outside the JSON.
+
+Return this exact structure:
+{
+  "player": "Full player name or empty string if unclear",
+  "year": "Card year or set year",
+  "brand": "Card brand and set name (e.g. Upper Deck Series 2)",
+  "cardNumber": "Card number if visible — check back of card",
+  "team": "Player's team",
+  "parallel": "Parallel or variation — check BOTH front and back for parallel name (e.g. Speckled Rainbow Foil, Gold, Base)",
+  "serialNumber": "Serial number if stamped (e.g. 42/99) or null",
+  "estimatedValue": "Estimated raw market value in USD as a number string (e.g. 4.50)",
+  "grade": {
+    "overall": "PSA-style grade 1-10 as a number string — weighted average of front (70%) and back (30%)",
+    "centering": "Grade 1-10 based on front",
+    "corners": "Grade 1-10 based on worst corner front or back",
+    "edges": "Grade 1-10 based on worst edge front or back",
+    "surface": "Grade 1-10 based on both front and back surface",
+    "rationale": "2-3 sentences explaining the grade, noting any visible flaws on front and back"
+  }${ebayFields}
+}`;
+
+    const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1685,31 +1792,12 @@ async function analyzeCard() {
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
-        max_tokens: 1200,
+        max_tokens: includeEbay ? 2000 : 1200,
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: `You are an expert hockey card grader and authenticator with 20+ years of experience. Analyze this hockey card image and respond ONLY with a JSON object — no preamble, no markdown, no explanation outside the JSON.
-
-Return this exact structure:
-{
-  "player": "Full player name or empty string if unclear",
-  "year": "Card year or set year",
-  "brand": "Card brand and set name (e.g. Upper Deck Series 1)",
-  "cardNumber": "Card number if visible",
-  "team": "Player's team",
-  "parallel": "Parallel or variation (e.g. Gold Foil, Base, Rookie)",
-  "estimatedValue": "Estimated market value in USD as a number string (e.g. 4.50)",
-  "grade": {
-    "overall": "PSA-style grade 1-10 as a number string",
-    "centering": "Grade 1-10",
-    "corners": "Grade 1-10",
-    "edges": "Grade 1-10",
-    "surface": "Grade 1-10",
-    "rationale": "2-3 sentences explaining the grade, noting any visible flaws"
-  }
-}` }
+            ...contentImages,
+            { type: 'text', text: prompt }
           ]
         }]
       })
@@ -1731,10 +1819,24 @@ Return this exact structure:
     if (result.parallel) document.getElementById('fieldParallel').value = result.parallel;
     if (result.estimatedValue) document.getElementById('fieldValue').value = result.estimatedValue;
 
+    // Store serial number if detected
+    if (result.serialNumber) {
+      showToast(`Serial number detected: ${result.serialNumber}`, 'success');
+    }
+
+    // Store eBay description for later use on eBay tab
+    if (result.ebayTitle || result.ebayDescription) {
+      window._lastEbayData = {
+        title: result.ebayTitle || '',
+        description: result.ebayDescription || ''
+      };
+    }
+
     // Grade display
     currentGrade = result.grade;
     showGrade(result.grade);
-    showToast('Card analyzed successfully!', 'success');
+    showToast(`Card analyzed${hasBack ? ' (front + back)' : ''}${includeEbay ? ' + eBay description ready' : ''}!`, 'success');
+
   } catch (err) {
     showToast('Analysis failed: ' + err.message, 'error');
     console.error(err);
@@ -2142,12 +2244,27 @@ async function generateListingAI() {
   const keys = getKeys();
   if (!keys.anthropic) { showToast('Set your Anthropic API key first', 'error'); return; }
 
+  // Use pre-generated description from scan if available and card matches
+  if (window._lastEbayData && window._lastEbayData.description) {
+    const desc = document.getElementById('ebayDescription');
+    if (desc) {
+      desc.value = window._lastEbayData.description;
+      if (window._lastEbayData.title) {
+        const titleEl = document.getElementById('ebayTitle');
+        if (titleEl && !titleEl.value) titleEl.value = window._lastEbayData.title.substring(0, 80);
+      }
+      showToast('eBay description loaded from scan!', 'success');
+      window._lastEbayData = null; // clear after use
+      return;
+    }
+  }
+
   const c = selectedCardForEbay;
   const gradeText = c.grade ? `PSA-style grade ${c.grade.overall}/10. Centering: ${c.grade.centering}, Corners: ${c.grade.corners}, Edges: ${c.grade.edges}, Surface: ${c.grade.surface}. ${c.grade.rationale}` : 'Not graded';
 
   const btn = document.querySelector('.camera-btn');
   try {
-    const response = await fetch('https://lingering-breeze-fb87.mtouch01.workers.dev', {
+    const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -2709,7 +2826,7 @@ async function analyzeSlabPhoto() {
     const base64 = slabScanImageData.split(',')[1];
     const mediaType = slabScanImageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
 
-    const response = await fetch('https://lingering-breeze-fb87.mtouch01.workers.dev', {
+    const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
