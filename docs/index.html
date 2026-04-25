@@ -1145,15 +1145,31 @@
           <div style="background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#E74C3C;line-height:1.6;">
             ⚠ AI reads what is visible through the plastic — results may be inaccurate for foil, holographic, or heavily reflective slabs. Always verify details at the official registry. Ice Vault is not responsible for any incorrect data or losses from reliance on AI-read slab data.
           </div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Drop or photograph your graded slab — works with PSA, BGS, SGC, CGC and all supported graders. After the AI fills everything in, use the Verify link on the right to cross-check against the official registry.</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Drop or photograph your graded slab — works with PSA, BGS, SGC, CGC and all supported graders. Scanning both front and back improves cert number and card detail accuracy.</div>
+
+          <div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px;">Front of Slab <span style="color:var(--text-muted);font-weight:400;">(required)</span></div>
           <div class="drop-zone" id="slabScanDropZone" style="position:relative;">
-            <input type="file" id="slabScanFileInput" accept="image/*" onchange="handleSlabScanSelect(event)">
+            <input type="file" id="slabScanFileInput" accept="image/*" onchange="handleSlabScanSelect(event, 'front')">
             <div class="drop-icon">🏒</div>
-            <div class="drop-text"><strong>Drop slab photo here</strong><br>or click to browse</div>
+            <div class="drop-text"><strong>Drop front slab photo here</strong><br>or click to browse</div>
           </div>
-          <button class="camera-btn" onclick="openSlabCamera()" style="margin-top:8px;">📷 &nbsp; Photograph Slab</button>
-          <div class="preview-box" id="slabScanPreview" style="margin-top:10px;display:none;">
-            <img id="slabScanImg" src="" alt="Slab">
+          <button class="camera-btn" onclick="openSlabCamera('front')" style="margin-top:8px;">📷 &nbsp; Photograph Front</button>
+
+          <div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin:10px 0 6px;">Back of Slab <span style="color:var(--text-muted);font-weight:400;">(recommended — cert # often clearer on back)</span></div>
+          <div class="drop-zone" id="slabScanDropZoneBack" style="position:relative;min-height:100px;" onclick="document.getElementById('slabScanFileInputBack').click()">
+            <input type="file" id="slabScanFileInputBack" accept="image/*" onchange="handleSlabScanSelect(event, 'back')" style="display:none;">
+            <div class="drop-icon">🔄</div>
+            <div class="drop-text"><strong>Drop back slab photo here</strong><br>or click to browse</div>
+          </div>
+          <button class="camera-btn" onclick="openSlabCamera('back')" style="margin-top:8px;">📷 &nbsp; Photograph Back</button>
+
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <div class="preview-box" id="slabScanPreview" style="flex:1;display:none;">
+              <img id="slabScanImg" src="" alt="Slab Front" style="width:100%;height:100%;object-fit:contain;">
+            </div>
+            <div class="preview-box" id="slabScanPreviewBack" style="flex:1;display:none;">
+              <img id="slabScanImgBack" src="" alt="Slab Back" style="width:100%;height:100%;object-fit:contain;">
+            </div>
           </div>
           <div class="btn-row" style="margin-top:10px;">
             <button class="analyze-btn" id="slabAnalyzeBtn" onclick="analyzeSlabPhoto()" disabled>
@@ -1161,7 +1177,7 @@
             </button>
             <button class="clear-btn" id="slabClearBtn" onclick="clearSlabScan()" style="margin-top:0;">✕</button>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;">⚠ Uses Anthropic API (~$0.01–0.03 per scan)</div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;">⚠ Uses Anthropic API (~$0.02–0.05 with front+back)</div>
           <div id="slabScanStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
         </div>
 
@@ -2772,24 +2788,32 @@ function setScanMode(mode) {
 
 // AI SLAB SCAN
 let slabScanImageData = null;
+let slabScanImageDataBack = null;
 
-function handleSlabScanSelect(e) {
+function handleSlabScanSelect(e, side) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    slabScanImageData = ev.target.result;
-    document.getElementById('slabScanImg').src = slabScanImageData;
-    document.getElementById('slabScanPreview').style.display = 'flex';
-    document.getElementById('slabAnalyzeBtn').disabled = false;
-    document.getElementById('slabClearBtn').classList.add('visible');
-    // also use as the slab collection image
-    certSlabImageData = slabScanImageData;
+    if (side === 'back') {
+      slabScanImageDataBack = ev.target.result;
+      document.getElementById('slabScanImgBack').src = slabScanImageDataBack;
+      document.getElementById('slabScanPreviewBack').style.display = 'flex';
+    } else {
+      slabScanImageData = ev.target.result;
+      certSlabImageData = slabScanImageData;
+      document.getElementById('slabScanImg').src = slabScanImageData;
+      document.getElementById('slabScanPreview').style.display = 'flex';
+      document.getElementById('slabAnalyzeBtn').disabled = false;
+      document.getElementById('slabClearBtn').classList.add('visible');
+    }
   };
   reader.readAsDataURL(file);
 }
 
-function openSlabCamera() {
+let slabCameraTarget = 'front';
+function openSlabCamera(side) {
+  slabCameraTarget = side || 'front';
   navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
     .then(stream => {
       cameraStream = stream;
@@ -2802,11 +2826,14 @@ function openSlabCamera() {
 
 function clearSlabScan() {
   slabScanImageData = null;
+  slabScanImageDataBack = null;
   certSlabImageData = null;
   document.getElementById('slabScanPreview').style.display = 'none';
+  if (document.getElementById('slabScanPreviewBack')) document.getElementById('slabScanPreviewBack').style.display = 'none';
   document.getElementById('slabAnalyzeBtn').disabled = true;
   document.getElementById('slabClearBtn').classList.remove('visible');
   document.getElementById('slabScanFileInput').value = '';
+  if (document.getElementById('slabScanFileInputBack')) document.getElementById('slabScanFileInputBack').value = '';
   document.getElementById('slabScanStatus').textContent = '';
 }
 
@@ -2826,6 +2853,18 @@ async function analyzeSlabPhoto() {
     const base64 = slabScanImageData.split(',')[1];
     const mediaType = slabScanImageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
 
+    // Build content array — front always, back if available
+    const contentImages = [
+      { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } }
+    ];
+    if (slabScanImageDataBack) {
+      const backBase64 = slabScanImageDataBack.split(',')[1];
+      const backMediaType = slabScanImageDataBack.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+      contentImages.push({ type: 'image', source: { type: 'base64', media_type: backMediaType, data: backBase64 } });
+    }
+
+    const backNote = slabScanImageDataBack ? 'The second image is the BACK of the same slab — use it to find the cert number (often printed more clearly on the back label), barcode, and any additional card details.' : 'Only the front slab image was provided.';
+
     const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
@@ -2835,12 +2874,12 @@ async function analyzeSlabPhoto() {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: `You are an expert graded sports card authenticator. Analyze this graded card slab image and read all visible information from the label and the card itself through the plastic. Respond ONLY with a JSON object, no markdown:
+            ...contentImages,
+            { type: 'text', text: `You are an expert graded sports card authenticator. ${backNote} Analyze these graded card slab images and read all visible information from the labels and the card itself through the plastic. Respond ONLY with a JSON object, no markdown:
 
 {
   "grader": "PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA, or Other",
-  "certNumber": "cert/serial number from the label",
+  "certNumber": "cert/serial number from the label — check both front and back",
   "grade": "full grade text e.g. PSA 9 MINT or BGS 9.5 GEM MINT",
   "gradeNumeric": "numeric grade only e.g. 9",
   "player": "player name",
@@ -3140,12 +3179,18 @@ window.capturePhoto = function() {
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
     closeCamera();
     modal.dataset.mode = '';
-    slabScanImageData = dataUrl;
-    certSlabImageData = dataUrl;
-    document.getElementById('slabScanImg').src = dataUrl;
-    document.getElementById('slabScanPreview').style.display = 'flex';
-    document.getElementById('slabAnalyzeBtn').disabled = false;
-    document.getElementById('slabClearBtn').classList.add('visible');
+    if (slabCameraTarget === 'back') {
+      slabScanImageDataBack = dataUrl;
+      document.getElementById('slabScanImgBack').src = dataUrl;
+      document.getElementById('slabScanPreviewBack').style.display = 'flex';
+    } else {
+      slabScanImageData = dataUrl;
+      certSlabImageData = dataUrl;
+      document.getElementById('slabScanImg').src = dataUrl;
+      document.getElementById('slabScanPreview').style.display = 'flex';
+      document.getElementById('slabAnalyzeBtn').disabled = false;
+      document.getElementById('slabClearBtn').classList.add('visible');
+    }
   } else {
     modal.dataset.mode = '';
     _origCapturePhoto();
@@ -3154,7 +3199,7 @@ window.capturePhoto = function() {
 
 // SLAB IMAGE (legacy handler — now handled by handleSlabScanSelect)
 function handleSlabImageSelect(e) {
-  handleSlabScanSelect(e);
+  handleSlabScanSelect(e, 'front');
 }
 
 // CERT TAGS
