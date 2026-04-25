@@ -67,25 +67,30 @@ icevault/
 ## ✅ What's Built & Working
 
 ### App Features
-- Card scanning with AI OCR + condition estimate (labeled "AI Est." not PSA grade)
-- Graded cert lookup — Option A (AI slab scan) + Option B (free QR/cert # → registry link)
+- Card scanning — front + back photo support, AI reads both images in one call
+- Parallel and serial number detection from back of card
+- AI condition estimate — PSA-style 1–10, weighted 70% front / 30% back (labeled "AI Est." not PSA grade)
+- Optional eBay description checkbox at scan time — generates in same API call as scan
+- Graded cert lookup — Option A (AI slab scan front+back) + Option B (free QR/cert # → registry link)
 - 8 grading companies: PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA
 - Collection management — grid view, search, filter, sort, tags, lightbox image viewer
 - Tag filtering bar in collection view
-- eBay listing with AI description generation
+- eBay listing with AI description generation (separate call or pre-generated at scan time)
 - eBay Sold Listings + 130point market research buttons
 - User accounts with email/password auth
 - Cloud sync to Cloudflare D1
 - Guest mode with red warning on save buttons
-- Password reset via email (Brevo)
+- Password reset via email (Brevo — own verified email only without custom domain)
 - Password visibility toggle on all password fields
 - bcrypt password hashing (cost factor 12)
 - Timing attack prevention on login
 - Origin check on Cloudflare Worker
 - PWA manifest + service worker (network-first caching)
-- Android APK via PWABuilder (sideloaded, working)
+- Android APK via PWABuilder (sideloaded, working — auto-updates with index.html)
 - Auto-syncs collection on login/signup
 - Cost warnings on all API call buttons
+- AI grade disclaimers on scan, collection, eBay, cert lookup tabs + card detail modal
+- Liability disclaimer on all AI grade displays
 
 ### Security Completed
 - ✅ Priority #1 — bcrypt replacing SHA-256 (deployed via Wrangler)
@@ -111,9 +116,9 @@ icevault/
 - ⬜ Google OAuth login
 - ⬜ Export collection to CSV
 - ⬜ Card value tracking over time
-- ⬜ **Front + back card scanning** — upload both front and back photos for better parallel/serial detection and full front+back condition grading. Back often has parallel name printed (e.g. Speckled Rainbow Foil), card number, serial number, copyright year
-- ⬜ **Combined single API call** — one Claude call returns OCR + grade + optional eBay description all at once. Currently two separate calls. Saves ~$0.01-0.03 per scan
-- ⬜ **Optional eBay description at scan time** — checkbox before scanning "Generate eBay listing description too?" — only adds description tokens if user wants it. Default off to keep costs low for users just cataloging
+- ✅ **Front + back card scanning** — implemented, both raw and graded slab
+- ✅ **Combined single API call** — OCR + grade + optional eBay description in one call
+- ✅ **Optional eBay description at scan time** — checkbox before scanning, default off
 - ⬜ **Maileroo email** — investigate as free alternative to Brevo that allows sending to any email without custom domain (3,000/month free, uses shared maileroo.org domain). Some Outlook/Hotmail deliverability issues noted
 - ⬜ Photography tips popup — guidance for better scan results especially foil/refractor cards (diffused lighting, slight angle, polarizing filter)
 - ⬜ Allow ChatGPT / other AI models as alternative to Claude
