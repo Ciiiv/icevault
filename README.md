@@ -7,15 +7,17 @@ A free, open-source hockey card collection manager with AI-powered scanning, con
 ## ✨ Features
 
 ### 📷 Card Scanning
-- Drop or photograph any hockey card
-- **AI reads the card automatically** — player name, year, brand/set, card number, team, parallel/variation
-- **AI condition estimate** — PSA-style 1–10 grade with centering, corners, edges, and surface breakdown
+- Upload or photograph **front and back** of any hockey card
+- **AI reads both images in one call** — player name, year, brand/set, card number, team, parallel/variation, serial number
+- **Back of card improves accuracy** — parallel names (e.g. Speckled Rainbow Foil), serial numbers, and card numbers are often clearer on the back
+- **AI condition estimate** — PSA-style 1–10 grade with centering, corners, edges, and surface — weighted 70% front / 30% back
 - Clearly labeled as **AI estimate only** — not an official grading company grade
-- ✕ Clear button to rescan a bad photo instantly
-- ~$0.01–0.03 per scan using your own Anthropic API key
+- **Optional eBay description** — checkbox before scanning to generate listing copy in the same API call (~+$0.01)
+- ✕ Clear button to rescan instantly
+- Front only: ~$0.01–0.02 | Front + back: ~$0.02–0.04 per scan
 
 ### ⬜ Graded Cert Lookup
-- **Option A — AI Slab Scan** (~$0.01–0.03): photograph your graded slab — AI reads the label through the plastic and fills in all details including cert number, official grade, player, year, and set
+- **Option A — AI Slab Scan** (~$0.02–0.04): photograph **front and back** of your graded slab — AI reads both label sides through the plastic, filling in cert number, official grade, player, year, set, and variation. Back label often has clearer cert number and barcode
 - **Option B — Free cert # / QR lookup**: enter a cert number or scan the QR/barcode on the slab — opens the official registry in a new tab for manual entry (zero API cost)
 - Supports **8 grading companies**: PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA
 - QR scanning auto-detects the grading company from the barcode URL
@@ -34,7 +36,8 @@ A free, open-source hockey card collection manager with AI-powered scanning, con
 ### 🛒 List on eBay
 - Select any card to create a listing
 - Auto-generates listing title (80 character eBay limit)
-- Optional AI description (~$0.01–0.02) — collector-focused, editable before listing
+- **Optional AI description at scan time** — check "Generate eBay listing description too?" before scanning — description is ready when you go to list (~+$0.01 added to scan cost)
+- Or generate description separately on the eBay tab (~$0.01–0.02)
 - **🔍 eBay Sold Listings** — opens eBay pre-filtered to completed sold listings for real market pricing
 - **📈 130point** — copies search term to clipboard and opens 130point.com for price history
 - Direct eBay Trading API submission (requires eBay developer credentials)
@@ -63,16 +66,40 @@ A free, open-source hockey card collection manager with AI-powered scanning, con
 
 ## 💰 API Cost Summary
 
-| Action | Cost | API Used |
-|--------|------|----------|
-| Card scan (OCR + grade) | ~$0.01–0.03 | Anthropic Claude |
-| AI slab scan (graded cert) | ~$0.01–0.03 | Anthropic Claude |
-| eBay description (optional) | ~$0.01–0.02 | Anthropic Claude |
-| Cert # / QR lookup | Free | None |
-| eBay sold listings link | Free | None |
-| 130point link | Free | None |
-| Account sync | Free | Cloudflare D1 |
-| Password reset email | Free (with verified domain) | Brevo |
+All AI features use your own Anthropic API key — you pay only for what you use, directly to Anthropic. No markup, no subscription.
+
+### Per-scan cost (Anthropic Claude claude-opus-4-5)
+
+| Scan Type | Images Sent | Approx Cost |
+|-----------|-------------|-------------|
+| Card scan — front only | 1 | ~$0.01–0.02 |
+| Card scan — front + back | 2 | ~$0.02–0.04 |
+| Card scan — front + back + eBay description | 2 + longer output | ~$0.03–0.06 |
+| Graded slab scan — front only | 1 | ~$0.01–0.02 |
+| Graded slab scan — front + back | 2 | ~$0.02–0.04 |
+| Cert # / QR lookup | 0 | Free |
+| eBay sold listings link | 0 | Free |
+| 130point link | 0 | Free |
+| Account sync | 0 | Free (Cloudflare D1) |
+| Password reset email | 0 | Free (Brevo) |
+
+### How the cost is calculated (Claude claude-opus-4-5 pricing)
+- Each image ≈ 1,000–2,000 tokens depending on resolution
+- Prompt text ≈ 300–500 tokens
+- JSON response ≈ 300–600 tokens (800–1,200 with eBay description)
+- Input tokens: $3.00 per million — Output tokens: $15.00 per million
+
+### Monthly cost vs CollX Pro ($10/month flat)
+
+| Scans/month | Front only (~$0.02) | Front + Back (~$0.04) | Front + Back + eBay (~$0.05) |
+|-------------|--------------------|-----------------------|------------------------------|
+| 10 cards | $0.20 | $0.40 | $0.50 |
+| 50 cards | $1.00 | $2.00 | $2.50 |
+| 100 cards | $2.00 | $4.00 | $5.00 |
+| 200 cards | $4.00 | $8.00 | $10.00 |
+| 250 cards | $5.00 | $10.00 | $12.50 |
+
+> **Break-even vs CollX Pro:** Ice Vault is cheaper for collectors scanning under ~200 cards/month with front+back. Most casual collectors scan 20–50 new cards/month, making Ice Vault cost **$0.40–$2.00/month** vs CollX Pro's flat $10/month. Note that CollX Pro includes features Ice Vault doesn't have — real-time market pricing and a 17M+ card identification database.
 
 ---
 
