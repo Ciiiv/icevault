@@ -21,7 +21,7 @@
 | Email | Brevo | Transactional email — welcome + password reset. Requires verified domain to send to all users |
 | AI | Anthropic Claude | `claude-opus-4-5` model — card OCR, grading, eBay descriptions |
 | Android app | PWABuilder | TWA wrapper — sideloaded APK, loads from GitHub Pages URL |
-| Worker deployment | Wrangler CLI | Local project at `C:\Users\civ2g\icevault-worker` |
+| Worker deployment | Wrangler CLI | Local project at `C:\Users\civ2g\icevault-worker` — **requires Node.js installed locally** (tested on v24.15.0). Wrangler is installed globally via `npm install -g wrangler`. Without Node.js, `wrangler` command will not be recognized. Install from nodejs.org if missing. |
 
 ---
 
@@ -99,33 +99,72 @@ icevault/
 
 ## 🔄 Pending / In Progress
 
-### Security Priority List (from architecture review)
-- ⬜ Priority #2 — Rate limiting on auth + proxy endpoints (Cloudflare Workers KV)
-- ⬜ Priority #3 — Move card images to Cloudflare R2 (currently stored as base64 in D1)
-- ⬜ Priority #4 — Per-card collection sync (currently full delete+reinsert on every save)
-- ⬜ Priority #5 — Email verification on signup
-- ⬜ Priority #6 — Session cleanup job (expired sessions accumulate in D1)
-- ⬜ Priority #7 — Input validation on all worker endpoints
-- ⬜ Priority #8 — Pagination on collection fetch
-- ⬜ Priority #9 — Migrate to component-based frontend
-- ⬜ Priority #10 — Error monitoring (Sentry)
-- ⬜ Priority #11 — Migrate eBay to REST API (Trading API is legacy)
+### Security & Architecture Priority List
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| 1 | bcrypt password hashing | ✅ Done | Cost factor 12, $2b$ → $2a$ normalization fix applied |
+| 2 | Rate limiting on auth + proxy endpoints | ⬜ Next | Cloudflare Workers KV — auth endpoints vulnerable to brute force |
+| 3 | Move card images to Cloudflare R2 | ⬜ Pending | Currently stored as base64 in D1 — hits 1MB row limit at scale |
+| 4 | Per-card collection sync | ⬜ Pending | Currently full delete+reinsert on every save — O(n) writes |
+| 5 | D1 schema redesign for OAuth | ⬜ Pending | Add `auth_providers` table, migrate existing password users to it |
+| 6 | Google + Discord OAuth | ⬜ Pending | Depends on #5 schema first. Free providers only — no Apple ($99/yr), no Twitter/X |
+| 7 | Email verification on signup | ⬜ Pending | Lower priority if OAuth adoption is high — OAuth users already verified |
+| 8 | Session cleanup job | ⬜ Pending | Expired sessions accumulate in D1 |
+| 9 | Input validation on all worker endpoints | ⬜ Pending | No validation currently on inputs |
+| 10 | Pagination on collection fetch | ⬜ Pending | Full collection loads every time |
+| 11 | Component-based frontend refactor | ⬜ Low priority | Single HTML file fine for current scale |
+| 12 | Error monitoring (Sentry) | ⬜ Low priority | Nice to have |
+| 13 | Migrate eBay to REST API | ⬜ Low priority | Trading API is legacy but still works |
 
 ### Features Backlog
-- ⬜ Collection sharing — public URL per account (e.g. `?collection=TOKEN`)
-- ⬜ Google OAuth login
+
+#### UI & Themes
+- ⬜ **5 themes implementation** — Light / Dark / Vibrant Blue / Ice (full dark) / Hybrid (ice sidebar + blue content). Full CSS variable specs, JS switcher, and HTML in the 🎨 UI Themes section of this file. Saved to localStorage, applied on load via IIFE to prevent flash
+- ⬜ **Mobile slide-out drawer nav** — replaces sidebar on screens <768px. Hamburger ☰ in topbar, slides from left, dark overlay, swipe gestures. Full spec in 📱 Mobile Navigation section of this file
+- ⬜ **Responsive layout** — connect desktop sidebar ↔ mobile drawer at 768px breakpoint. Collection switches from table to card list on mobile. Scan view stacks single column on mobile
+
+#### Auth & Accounts
+- ⬜ Google OAuth login — free, most universal, covers 90%+ of users
+- ⬜ Discord OAuth login — free, relevant for hockey/hobby communities on Discord
+- ⬜ GitHub OAuth login — free, good for open source/self-host crowd
+- ⬜ Account deletion (GDPR right to erasure) — legal requirement
+- ⬜ Age gate (13+ COPPA) — legal requirement
+- ⬜ Privacy Policy + Terms of Service — needed before public release
+
+#### Collection & Sharing
+- ⬜ Collection sharing — public read-only URL per account (`?collection=TOKEN`). No account needed to view. User controls what's public. No in-app messaging — contact happens off-platform
 - ⬜ Export collection to CSV
 - ⬜ Card value tracking over time
-- ✅ **Front + back card scanning** — implemented, both raw and graded slab
-- ✅ **Combined single API call** — OCR + grade + optional eBay description in one call
-- ✅ **Optional eBay description at scan time** — checkbox before scanning, default off
-- ⬜ **Maileroo email** — investigate as free alternative to Brevo that allows sending to any email without custom domain (3,000/month free, uses shared maileroo.org domain). Some Outlook/Hotmail deliverability issues noted
-- ⬜ Photography tips popup — guidance for better scan results especially foil/refractor cards (diffused lighting, slight angle, polarizing filter)
-- ⬜ Allow ChatGPT / other AI models as alternative to Claude
-- ⬜ Ximilar API integration — purpose-built card grading API, better than Claude for condition assessment, supports hockey cards, has free tier credits. Use alongside Claude OCR (Claude reads text, Ximilar grades condition)
-- ⬜ Privacy Policy + Terms of Service
-- ⬜ Account deletion feature (GDPR right to erasure)
-- ⬜ Age gate (13+ COPPA requirement)
+- ⬜ Historical price charts
+
+#### Email
+- ⬜ Maileroo email — free alternative to Brevo that allows sending to any email without custom domain (3,000/month free, shared `maileroo.org` domain). Some Outlook/Hotmail deliverability issues. May become unnecessary if most users adopt OAuth
+- ⬜ Custom domain for email (~$10/yr Cloudflare Registrar) — permanent fix for sending to all users with any provider
+
+#### AI & Scanning
+- ⬜ Multi-AI support — allow ChatGPT (GPT-4o) and Gemini as alternatives to Claude. BYOK for all. User picks in Settings
+- ⬜ Ximilar API integration — purpose-built card grading API, better than Claude for foil/refractor condition assessment, supports hockey cards, has free tier credits. Use alongside Claude OCR (Claude reads text → Ximilar grades condition)
+- ⬜ Photography tips popup — guidance for better scan results especially foil/refractor (diffused lighting, slight angle, polarizing filter)
+
+#### Selling
+- ⬜ Bulk eBay listing — list multiple cards at once
+- ⬜ Track which cards sold and for how much
+
+#### Legal
+- ⬜ Privacy Policy
+- ⬜ Terms of Service
+- ⬜ Account deletion feature (GDPR)
+- ⬜ Age gate 13+ (COPPA)
+
+#### Completed ✅
+- ✅ Front + back card scanning — raw cards and graded slabs
+- ✅ Combined single API call — OCR + grade + optional eBay description
+- ✅ Optional eBay description at scan time — checkbox, default off
+- ✅ bcrypt password hashing — cost factor 12
+- ✅ Origin check on Cloudflare Worker
+- ✅ Serial number detection from back of card
+- ✅ AI grade disclaimer + liability disclaimer on all grade displays
 
 ---
 
@@ -148,17 +187,39 @@ icevault/
 
 ## 🛠 How to Deploy Worker Updates
 
+> **Prerequisites:** Node.js must be installed (nodejs.org) and Wrangler installed globally.
+> Run once if not already set up: `npm install -g wrangler` then `wrangler login`
+> Full self-hosting setup steps are in README.md → "Deploy Your Own Copy" section.
+
 ```powershell
+# Day-to-day worker deployment (from your local machine)
 cd C:\Users\civ2g\icevault-worker
-# Edit src/index.js in VS Code
+# Edit src/index.js in VS Code, then:
 wrangler deploy
-# To update secrets:
+
+# Update a secret
 wrangler secret put BREVO_API_KEY
-# To view logs in real time:
+
+# Real-time logs
 wrangler tail
-# To list secrets:
+
+# List all secrets
 wrangler secret list
 ```
+
+### wrangler.toml (your actual config — do not commit sensitive values)
+```toml
+name = "lingering-breeze-fb87"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "icevault"
+database_id = "3cacae20-fde1-4183-94af-eaa256eebb84"
+```
+
+> **Note:** The `database_id` above is non-sensitive (it's just an identifier, useless without Cloudflare login credentials). The `BREVO_API_KEY` is stored as a Cloudflare Worker Secret — never in `wrangler.toml` or any file.
 
 ---
 
