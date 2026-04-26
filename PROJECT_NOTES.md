@@ -120,7 +120,7 @@ icevault/
 ### Features Backlog
 
 #### UI & Themes
-- ⬜ **5 themes implementation** — Light / Dark / Vibrant Blue / Ice (full dark) / Hybrid (ice sidebar + blue content). Full CSS variable specs, JS switcher, and HTML in the 🎨 UI Themes section of this file. Saved to localStorage, applied on load via IIFE to prevent flash
+- ⬜ **6 themes implementation** — Classic (default, current app) / Light / Dark / Vibrant Blue / Ice (full dark) / Hybrid (ice sidebar + blue content). Classic uses existing tab-nav layout and is preserved exactly as-is. Themes 1–5 use new sidebar + drawer layout. Full CSS variable specs, JS switcher, layout toggle logic, and HTML all in the 🎨 UI Themes section of this file. Default is Classic — saved to localStorage as `icevault-theme`, applied on load via IIFE to prevent flash
 - ⬜ **Mobile slide-out drawer nav** — replaces sidebar on screens <768px. Hamburger ☰ in topbar, slides from left, dark overlay, swipe gestures. Full spec in 📱 Mobile Navigation section of this file
 - ⬜ **Responsive layout** — connect desktop sidebar ↔ mobile drawer at 768px breakpoint. Collection switches from table to card list on mobile. Scan view stacks single column on mobile
 
@@ -261,9 +261,65 @@ Passwords: bcrypt `$2b$12$...` format. Login normalizes `$2b$` → `$2a$` for co
 
 ---
 
-## 🎨 UI Themes — 5 Official Choices
+## 🎨 UI Themes — 6 Official Choices
 
-Five approved themes for Ice Vault. All use the same layout (desktop sidebar + main content). To implement, use CSS variables on `:root[data-theme="name"]`. Saved to localStorage, applied on load.
+Six approved themes for Ice Vault. **Theme 0 (Classic) is the current default** — it's the existing app design, preserved exactly as-is. Themes 1–5 are new designs requiring the sidebar + mobile drawer layout to be implemented first.
+
+To implement themes 1–5, use CSS variables on `:root[data-theme="name"]`. Saved to localStorage, applied on load via IIFE. Theme 0 (Classic) is the default when no theme is saved.
+
+### Theme order in Settings picker
+```
+🏒 Classic (default)  ☀ Light  🌑 Dark  🔷 Vibrant Blue  ❄ Ice  🌊 Hybrid
+```
+
+---
+
+### Theme 0 — Classic (current app — default)
+The existing Ice Vault design. Dark hockey rink aesthetic with gold accents. Uses horizontal tab navigation (not sidebar). Custom font: Bebas Neue for logo, DM Sans for body. **This is the default theme — shown to all users until they choose another.**
+
+**Key difference from themes 1–5:** Classic uses the existing tab-based navigation layout. Themes 1–5 use the new sidebar + mobile drawer layout. When Classic is active, hide the sidebar and show the existing tab nav. When any other theme is active, show the sidebar/drawer and hide the tab nav.
+
+**Current CSS variables (from `:root` in index.html):**
+```css
+:root {
+  --ice:          #E8F4FD;
+  --ice-mid:      #B8D9F0;
+  --ice-dark:     #4A9CC9;
+  --rink:         #0A1628;   /* page background — deep navy */
+  --rink-mid:     #142240;   /* header, cards */
+  --rink-light:   #1E3359;   /* hover states */
+  --gold:         #C9A227;   /* primary accent — logo, buttons, highlights */
+  --gold-light:   #F0C84A;   /* hover gold */
+  --red:          #C0392B;
+  --green:        #27AE60;
+  --text-primary: #F0F4F8;
+  --text-secondary:#8BA4BF;
+  --text-muted:   #4A6A8A;
+  --border:       rgba(74,156,201,0.2);
+  --border-bright:rgba(74,156,201,0.5);
+  --card-bg:      #0F1E35;
+  --card-hover:   #142240;
+  --input-bg:     #0A1628;
+  --grade-mint:   #27AE60;
+  --grade-near:   #F39C12;
+  --grade-good:   #E67E22;
+  --grade-poor:   #C0392B;
+}
+```
+
+**Fonts:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+```
+- Logo: `font-family: 'Bebas Neue', cursive` — 28px, letter-spacing 2px
+- Body: `font-family: 'DM Sans', sans-serif`
+- Monospace: `font-family: 'DM Mono', monospace`
+
+**Layout:** Horizontal tabs across top (Collection / Scan / Graded / eBay). No sidebar. No drawer. Sticky header with logo, stats, and action buttons.
+
+**Theme color:** `<meta name="theme-color" content="#4A9CC9">` in `<head>`
+
+---
 
 ---
 
@@ -501,17 +557,41 @@ Identical ice sidebar to Theme 4. White content area with blue tones from Theme 
 ```
 
 Theme is applied via: `document.documentElement.setAttribute('data-theme', 'ice')`
-Saved to: `localStorage.setItem('icevault-theme', 'ice')`
-Loaded on init: `document.documentElement.setAttribute('data-theme', localStorage.getItem('icevault-theme') || 'light')`
+Saved to: `localStorage.setItem('icevault-theme', 'classic')`
+Loaded on init: `document.documentElement.setAttribute('data-theme', localStorage.getItem('icevault-theme') || 'classic')`
 
 ---
 
 ### Full index.html Implementation
 
-#### Step 1 — CSS variables block (add inside `<style>` tag)
+#### Step 1 — CSS variables block (add inside `<style>` tag, after existing `:root` block)
+
+> Classic theme uses the existing `:root` variables already in index.html — no new CSS block needed for it.
+
+#### Layout switching — Classic vs themes 1–5
+Classic uses existing tab nav. Themes 1–5 use sidebar + drawer. Add this CSS:
 
 ```css
-/* ── THEME VARIABLES ── */
+/* Classic — show existing tab nav, hide new sidebar */
+:root[data-theme="classic"] .sidebar { display: none !important; }
+:root[data-theme="classic"] .tab-nav { display: flex !important; }
+:root[data-theme="classic"] .hamburger-btn { display: none !important; }
+
+/* Themes 1–5 — hide tab nav, show sidebar */
+:root:not([data-theme="classic"]) .tab-nav { display: none !important; }
+:root:not([data-theme="classic"]) .sidebar { display: flex !important; }
+
+/* Themes 1–5 mobile — drawer replaces sidebar */
+@media (max-width: 767px) {
+  :root:not([data-theme="classic"]) .sidebar { display: none !important; }
+  :root:not([data-theme="classic"]) .hamburger-btn { display: flex !important; }
+}
+```
+
+#### Theme variables CSS (themes 1–5 only)
+
+```css
+/* ── THEME VARIABLES — themes 1–5 only ── */
 :root[data-theme="light"] {
   --bg-page:         #f5f5f2;
   --bg-main:         #ffffff;
@@ -825,24 +905,34 @@ Loaded on init: `document.documentElement.setAttribute('data-theme', localStorag
 }
 ```
 
-#### Step 2 — Apply variables to existing CSS (replace hardcoded colors)
+#### Step 2 — Apply variables to new sidebar/drawer layout elements only
 
-Replace all hardcoded color values in the existing CSS with variables. Key mappings:
+Do NOT touch existing Classic tab-nav CSS. Only apply variables to the new sidebar, drawer, and main content area elements being added for themes 1–5:
 
 ```css
-/* Replace these patterns throughout existing CSS: */
-background: #f5f5f2          → background: var(--bg-page)
-background: white            → background: var(--bg-main)
-background: #fafaf8          → background: var(--bg-sidebar)
-color: #1a1a1a               → color: var(--text-primary)
-color: #888                  → color: var(--text-secondary)
-border-color: #efefeb        → border-color: var(--border-main)
-background: #1a8c50          → background: var(--btn-primary-bg)
-color: #1a8c50  (values)     → color: var(--val-color)
-background: #e8f7ef          → background: var(--grade-ai-bg)
-color: #0f6e56               → color: var(--grade-ai-text)
-background: #faeeda          → background: var(--parallel-bg)
-color: #633806               → color: var(--parallel-text)
+/* New layout elements — use variables so all themes work */
+.sidebar { background: var(--sidebar-grad, var(--bg-sidebar)); border-color: var(--border-sidebar); }
+.main-content { background: var(--bg-main); }
+.topbar { background: var(--bg-topbar); border-color: var(--border-main); }
+.page-title { color: var(--text-heading); }
+.stat-card { background: var(--bg-stat); }
+.stat-val { color: var(--stat-val); }
+.stat-lbl { color: var(--stat-lbl); }
+.stat-delta { color: var(--stat-delta); }
+.nav-item { color: var(--text-sidebar); }
+.nav-item.active { background: var(--nav-active-bg); color: var(--nav-active-text); border-color: var(--nav-active-border); }
+.nav-badge { background: var(--nav-badge-bg); color: var(--nav-badge-text); }
+.user-avatar { background: var(--avatar-bg); color: var(--avatar-text); border-color: var(--avatar-border); }
+.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
+.btn-secondary { background: var(--btn-secondary-bg); border-color: var(--btn-secondary-border); color: var(--btn-secondary-text); }
+.filter-pill.active { background: var(--filter-active-bg); border-color: var(--filter-active-border); color: var(--filter-active-text); }
+table th { color: var(--table-th); border-color: var(--table-border); }
+table td { border-color: var(--table-row-border); color: var(--table-text); }
+table tr:hover td { background: var(--bg-hover); }
+.val-color { color: var(--val-color); }
+.grade-ai { background: var(--grade-ai-bg); color: var(--grade-ai-text); }
+.grade-psa { background: var(--grade-psa-bg); color: var(--grade-psa-text); }
+.parallel-tag { background: var(--parallel-bg); color: var(--parallel-text); }
 ```
 
 #### Step 3 — Sidebar gradient handling
@@ -854,35 +944,63 @@ color: #633806               → color: var(--parallel-text)
 /* When --sidebar-grad is 'none', falls back to --bg-sidebar solid color */
 ```
 
-#### Step 4 — Theme init JS (add at very top of existing `<script>` block)
+#### Step 4 — Theme init JS (add at very top of `<script>` block — must be first)
 
 ```javascript
-// ── THEME INIT ── runs before anything else to prevent flash
+// ── THEME INIT — runs immediately to prevent flash of wrong theme ──
 (function() {
-  const saved = localStorage.getItem('icevault-theme') || 'light';
+  const saved = localStorage.getItem('icevault-theme') || 'classic';
   document.documentElement.setAttribute('data-theme', saved);
 })();
 ```
 
-#### Step 5 — Theme switcher function (add to JS)
+#### Step 5 — Theme switcher functions
 
 ```javascript
 const THEMES = [
-  { id: 'light',  label: 'Light',        icon: '☀' },
-  { id: 'dark',   label: 'Dark',         icon: '🌑' },
-  { id: 'blue',   label: 'Vibrant Blue', icon: '🔷' },
-  { id: 'ice',    label: 'Ice',          icon: '❄' },
-  { id: 'hybrid', label: 'Hybrid',       icon: '🌊' },
+  { id: 'classic', label: 'Classic',      icon: '🏒' },
+  { id: 'light',   label: 'Light',        icon: '☀' },
+  { id: 'dark',    label: 'Dark',         icon: '🌑' },
+  { id: 'blue',    label: 'Vibrant Blue', icon: '🔷' },
+  { id: 'ice',     label: 'Ice',          icon: '❄' },
+  { id: 'hybrid',  label: 'Hybrid',       icon: '🌊' },
 ];
+
+function getCurrentTheme() {
+  return localStorage.getItem('icevault-theme') || 'classic';
+}
+
+function applyLayoutForTheme(themeId) {
+  const isClassic = themeId === 'classic';
+  // Classic — show existing tab nav, hide new sidebar/drawer
+  document.querySelectorAll('.tab-nav, .mode-tabs, .tabs-bar').forEach(el => {
+    el.style.display = isClassic ? '' : 'none';
+  });
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.style.display = isClassic ? 'none' : '';
+  const hamburger = document.querySelector('.hamburger-btn');
+  if (hamburger) hamburger.style.display = isClassic ? 'none' : '';
+}
 
 function setTheme(themeId) {
   document.documentElement.setAttribute('data-theme', themeId);
   localStorage.setItem('icevault-theme', themeId);
+  // Update active button state
+  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeBtn === themeId);
+  });
+  // Switch layout
+  applyLayoutForTheme(themeId);
 }
 
-function getCurrentTheme() {
-  return localStorage.getItem('icevault-theme') || 'light';
-}
+// On page load — set active button + apply correct layout
+document.addEventListener('DOMContentLoaded', () => {
+  const current = getCurrentTheme();
+  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeBtn === current);
+  });
+  applyLayoutForTheme(current);
+});
 ```
 
 #### Step 6 — Theme picker HTML (add inside Settings panel)
@@ -891,58 +1009,51 @@ function getCurrentTheme() {
 <div class="settings-section">
   <div class="settings-label">Theme</div>
   <div class="theme-picker">
-    <button onclick="setTheme('light')"  class="theme-btn" data-theme-btn="light">☀ Light</button>
-    <button onclick="setTheme('dark')"   class="theme-btn" data-theme-btn="dark">🌑 Dark</button>
-    <button onclick="setTheme('blue')"   class="theme-btn" data-theme-btn="blue">🔷 Vibrant Blue</button>
-    <button onclick="setTheme('ice')"    class="theme-btn" data-theme-btn="ice">❄ Ice</button>
-    <button onclick="setTheme('hybrid')" class="theme-btn" data-theme-btn="hybrid">🌊 Hybrid</button>
+    <button onclick="setTheme('classic')" class="theme-btn" data-theme-btn="classic">🏒 Classic</button>
+    <button onclick="setTheme('light')"   class="theme-btn" data-theme-btn="light">☀ Light</button>
+    <button onclick="setTheme('dark')"    class="theme-btn" data-theme-btn="dark">🌑 Dark</button>
+    <button onclick="setTheme('blue')"    class="theme-btn" data-theme-btn="blue">🔷 Vibrant Blue</button>
+    <button onclick="setTheme('ice')"     class="theme-btn" data-theme-btn="ice">❄ Ice</button>
+    <button onclick="setTheme('hybrid')"  class="theme-btn" data-theme-btn="hybrid">🌊 Hybrid</button>
   </div>
 </div>
 ```
 
-#### Step 7 — Active state on theme buttons (add to setTheme function)
-
-```javascript
-function setTheme(themeId) {
-  document.documentElement.setAttribute('data-theme', themeId);
-  localStorage.setItem('icevault-theme', themeId);
-  // Update active button state
-  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.themeBtn === themeId);
-  });
-}
-
-// Call on page load to set initial active state
-document.addEventListener('DOMContentLoaded', () => {
-  const current = getCurrentTheme();
-  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.themeBtn === current);
-  });
-});
-```
-
-#### Step 8 — Theme picker CSS
+#### Step 7 — Theme picker CSS
 
 ```css
 .theme-picker {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 8px;
 }
 .theme-btn {
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1px solid var(--border-main);
-  background: var(--bg-main);
-  color: var(--text-secondary);
+  border: 1px solid var(--border, rgba(74,156,201,0.2));
+  background: transparent;
+  color: var(--text-secondary, #8BA4BF);
   font-size: 12px;
   cursor: pointer;
+  transition: all .15s;
 }
+.theme-btn:hover {
+  border-color: var(--gold, #C9A227);
+  color: var(--gold, #C9A227);
+}
+/* Active state — works for Classic (gold) and themes 1-5 (accent color) */
 .theme-btn.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent-text);
+  background: var(--accent-light, rgba(201,162,39,0.15));
+  border-color: var(--accent, var(--gold, #C9A227));
+  color: var(--accent-text, var(--gold, #C9A227));
   font-weight: 500;
+}
+/* Classic specifically uses gold even when Classic is active */
+:root[data-theme="classic"] .theme-btn.active {
+  background: rgba(201,162,39,0.15);
+  border-color: #C9A227;
+  color: #C9A227;
 }
 ```
 
@@ -1167,7 +1278,7 @@ Paste this at the start of a new conversation:
 > at C:\Users\civ2g\icevault-worker, D1 database (icevault), Brevo for emails (needs verified
 > domain to send to all users). Completed: bcrypt auth (Priority #1), front+back scanning,
 > combined API call, optional eBay description at scan time.
-> UI: 5 approved themes (light/dark/blue/ice/hybrid) with full CSS variable specs in PROJECT_NOTES.
+> UI: 6 approved themes — Classic (default, current app) + Light/Dark/Blue/Ice/Hybrid — with full CSS variable specs in PROJECT_NOTES.
 > Mobile nav: slide-out drawer replacing sidebar on screens <768px — full spec in PROJECT_NOTES.
 > Next priority: [whatever you're working on].
 > See PROJECT_NOTES.md in the GitHub repo (Ciiiv/icevault) for full context."
