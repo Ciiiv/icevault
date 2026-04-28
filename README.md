@@ -4,6 +4,34 @@ A free, open-source hockey card collection manager with AI-powered scanning, con
 
 ---
 
+## 🤔 Why Ice Vault?
+
+**Every other app shows you a catalog image of your card. Ice Vault shows you YOUR card.**
+
+When you import a collection from a CSV, eBay My Collection, or any other data source, you get a list of card names next to stock photos pulled from a database. The same generic image for every copy of a 2015-16 McDavid Young Guns — whether it's a PSA 10 or a beat-up $30 raw.
+
+That's a spreadsheet. Not a collection.
+
+Ice Vault scans your actual card — front and back — and stores your photo, your centering, your corners. Because two copies of the same card can be worth $200 or $600 depending on condition, and condition is only visible in your specific scan.
+
+| | Other apps | Ice Vault |
+|--|-----------|----------|
+| What you see | Generic catalog photo — same for every copy | Your actual card — your specific centering, corners, surfaces |
+| Condition grading | None (CollX, Ludex) or separate paid service | AI grades your card from your scan — included in scan cost |
+| Parallel detection | Limited | Reads parallel name from the back of YOUR card |
+| Serial number | Hit or miss | Reads serial number from the back of YOUR card |
+| Graded cert lookup | PSA only (PSA app) | 8 grading companies — PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA |
+| Data ownership | Their servers, their database | Your Cloudflare D1 — your data |
+| Cost | $10/month subscription (CollX Pro) or per-credit | ~$0.02–0.04 per scan — pay Anthropic directly, no markup |
+
+**The scan cost isn't a barrier — it's the price of doing it right.**
+
+A $50 card costs $0.04 to properly document with front + back scanning, AI condition grade, parallel detection, and serial number reading. A $200 card costs the same $0.04. For any card worth owning, the cost of scanning it correctly is negligible.
+
+What you can't do cheaply with any other method: see your card, grade your card, and know exactly what you have.
+
+---
+
 ## ✨ Features
 
 ### 📷 Card Scanning
