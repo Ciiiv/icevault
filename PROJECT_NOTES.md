@@ -104,7 +104,7 @@ icevault/
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 1 | bcrypt password hashing | ✅ Done | Cost factor 12, $2b$ → $2a$ normalization fix applied |
-| 2 | Rate limiting on auth + proxy endpoints | ⬜ Next | Cloudflare Workers KV — auth endpoints vulnerable to brute force |
+| 2 | Rate limiting on auth + proxy endpoints | ✅ Done | Cloudflare KV sliding window — 10 logins/15min, 5 signups/hr, 5 forgot/hr, 100 proxy/hr. Logs [RATE LIMITED] to wrangler tail |
 | 3 | Move card images to Cloudflare R2 | ⬜ Pending | Currently stored as base64 in D1 — hits 1MB row limit at scale |
 | 4 | Per-card collection sync | ⬜ Pending | Currently full delete+reinsert on every save — O(n) writes |
 | 5 | D1 schema redesign for OAuth | ⬜ Pending | Add `auth_providers` table, migrate existing password users to it |
