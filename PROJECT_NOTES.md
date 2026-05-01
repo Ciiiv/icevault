@@ -184,6 +184,7 @@ icevault/
 - Single HTML file — maintainable for now, needs refactor for commercial scale
 - ✅ Rate limiting — KV sliding window on all auth + proxy endpoints (Priority #2 complete)
 - localStorage for API keys — vulnerable to XSS (acceptable for current scope)
+- **Anthropic API key protection tip** — users should set a monthly spend limit in console.anthropic.com → Settings → Limits → Spend limits, and disable auto-reload in Billing settings. With prepaid credits and auto-reload off, worst case XSS exposure is limited to the prepaid balance — no automatic card charges. Recommended to add this tip to the Ice Vault UI near the API key input field.
 
 ---
 
@@ -1162,6 +1163,11 @@ document.addEventListener('DOMContentLoaded', () => {
 ```
 
 #### Step 6 — Theme picker HTML (add inside Settings panel)
+
+> ⚠ When building the Settings panel for themes 1–5, include the Anthropic spend limit tip near the API key input field — same as Classic theme. See the API key security note in the Architecture section. HTML snippet:
+> ```html
+> <p class="api-key-tip">💡 Security tip: Set a monthly spend limit and disable auto-reload at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → Settings → Limits. This caps your maximum exposure if your API key is ever compromised.</p>
+> ```
 
 ```html
 <div class="settings-section">

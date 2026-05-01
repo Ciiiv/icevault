@@ -148,6 +148,8 @@ Visit and click **⚙ API Keys** to enter your keys. Click **👤 Sign In** to c
 
 > **Privacy:** API keys are stored only in your browser's local storage. They are never sent to, saved in, or accessible by this app, any server, or database — even if you have an account. You will need to re-enter your keys if you clear your browser cache, use a different browser, or switch devices.
 
+> **Security tip:** In your Anthropic console (console.anthropic.com → Settings → Limits), set a monthly spend limit and disable auto-reload in Billing settings. With prepaid credits and auto-reload off, your maximum possible exposure is your prepaid balance — no automatic card charges can occur. This is the recommended setup for Ice Vault users.
+
 ---
 
 ## 📱 Android App
