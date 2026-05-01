@@ -1420,4 +1420,4 @@ Paste this at the start of a new conversation:
 > UI: 6 approved themes — Classic (default, current app) + Light/Dark/Blue/Ice/Hybrid — with full CSS variable specs in PROJECT_NOTES.
 > Mobile nav: slide-out drawer replacing sidebar on screens <768px — full spec in PROJECT_NOTES.
 > Next priority: [whatever you're working on].
-> See PROJECT_NOTES.md in the GitHub repo (Ciiiv/icevault) for full context."
+> See PROJECT_NOTES.md in the GitHub repo (Ciiiv/icevault) for full context."/
