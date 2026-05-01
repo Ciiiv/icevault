@@ -22,7 +22,7 @@
 | Email | Brevo | Transactional email — welcome + password reset. Requires verified domain to send to all users |
 | AI | Anthropic Claude | `claude-opus-4-5` model — card OCR, grading, eBay descriptions |
 | Android app | PWABuilder | TWA wrapper — sideloaded APK, loads from GitHub Pages URL |
-| Worker deployment | Wrangler CLI | Local project at `C:\Users\civ2g\icevault-worker` — **requires Node.js installed locally** (tested on v24.15.0). Wrangler is installed globally via `npm install -g wrangler`. Without Node.js, `wrangler` command will not be recognized. Install from nodejs.org if missing. |
+| Worker deployment | Wrangler CLI | Local project at `C:\Users\civ2g\icevault-worker` — **requires Node.js installed locally** (any recent LTS version). Wrangler is installed globally via `npm install -g wrangler`. Without Node.js, `wrangler` command will not be recognized. Install from nodejs.org if missing. |
 
 ---
 
@@ -33,8 +33,8 @@
 - **GitHub username:** `Ciiiv`
 - **Wrangler project path:** `C:\Users\civ2g\icevault-worker`
 - **wrangler.toml main:** `src/index.js`
-- **Node.js version:** v24.15.0
-- **Wrangler version:** 4.84.0
+- **Node.js version:** run `node --version` to check current — any recent LTS version works
+- **Wrangler version:** run `wrangler --version` to check current
 
 ---
 
@@ -83,7 +83,7 @@ icevault/
 - Guest mode with red warning on save buttons
 - Password reset via email (Brevo — own verified email only without custom domain)
 - Password visibility toggle on all password fields
-- bcrypt password hashing (cost factor 12)
+- PBKDF2-HMAC-SHA256 password hashing (100k iterations, migrated from bcrypt)
 - Timing attack prevention on login
 - Origin check on Cloudflare Worker
 - PWA manifest + service worker (network-first caching)
@@ -94,7 +94,8 @@ icevault/
 - Liability disclaimer on all AI grade displays
 
 ### Security Completed
-- ✅ Priority #1 — bcrypt replacing SHA-256 (deployed via Wrangler)
+- ✅ Priority #1 — Password hashing: PBKDF2-HMAC-SHA256 100k iterations (migrated from bcrypt, deployed via Wrangler)
+- ✅ Priority #2 — Rate limiting: Cloudflare KV sliding window on all auth + proxy endpoints (deployed via Wrangler)
 
 ---
 
@@ -162,7 +163,7 @@ icevault/
 - ✅ Front + back card scanning — raw cards and graded slabs
 - ✅ Combined single API call — OCR + grade + optional eBay description
 - ✅ Optional eBay description at scan time — checkbox, default off
-- ✅ bcrypt password hashing — cost factor 12
+- ✅ PBKDF2-HMAC-SHA256 password hashing — 100k iterations (migrated from bcrypt cost 6)
 - ✅ Origin check on Cloudflare Worker
 - ✅ Serial number detection from back of card
 - ✅ AI grade disclaimer + liability disclaimer on all grade displays
@@ -181,7 +182,7 @@ icevault/
 - Images stored as base64 in D1 — won't scale, hits 1MB row limit
 - Full collection resync on every save — O(n) writes
 - Single HTML file — maintainable for now, needs refactor for commercial scale
-- No rate limiting — auth endpoints vulnerable to brute force
+- ✅ Rate limiting — KV sliding window on all auth + proxy endpoints (Priority #2 complete)
 - localStorage for API keys — vulnerable to XSS (acceptable for current scope)
 
 ---
@@ -198,7 +199,10 @@ icevault/
 # See all available wrangler commands and options
 wrangler
 
-# Update wrangler to latest version
+# Check current wrangler version
+wrangler --version
+
+# Update wrangler to latest version (run when terminal shows "update available X.X.X")
 npm install -g wrangler
 ```
 
@@ -324,24 +328,6 @@ CREATE INDEX IF NOT EXISTS idx_logs_event ON request_logs(event);
 CREATE INDEX IF NOT EXISTS idx_logs_ip ON request_logs(ip);
 ```
 
-### Create request_logs table (run once in Cloudflare D1 console)
-
-```sql
-CREATE TABLE IF NOT EXISTS request_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  timestamp TEXT NOT NULL,
-  ip TEXT NOT NULL,
-  path TEXT NOT NULL,
-  status INTEGER NOT NULL,
-  event TEXT NOT NULL,
-  detail TEXT,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_logs_created_at ON request_logs(created_at);
-CREATE INDEX IF NOT EXISTS idx_logs_event ON request_logs(event);
-CREATE INDEX IF NOT EXISTS idx_logs_ip ON request_logs(ip);
-```
-
 ### Useful D1 log queries
 
 ```sql
@@ -394,14 +380,17 @@ DELETE FROM request_logs
 WHERE created_at < datetime('now', '-7 days');
 ```
 
+### D1 table summary (quick reference)
+
 ```sql
 users (id, email, password_hash, created_at)
 sessions (token, user_id, expires_at)
 password_resets (token, user_id, expires_at)
 cards (id, user_id, card_data, created_at)
+request_logs (id, timestamp, ip, path, status, event, detail, created_at)
 ```
 
-Passwords: bcrypt `$2b$12$...` format. Login normalizes `$2b$` → `$2a$` for compatibility.
+Passwords: PBKDF2-HMAC-SHA256 100k iterations format `pbkdf2$100000$salt$hash`. Legacy bcrypt hashes ($2a/$2b$) still supported via fallback in verifyPassword() — migrate naturally on password reset.
 
 ---
 
@@ -421,7 +410,7 @@ Passwords: bcrypt `$2b$12$...` format. Login normalizes `$2b$` → `$2a$` for co
 |----------|--------|
 | Single HTML file | Easy to deploy anywhere, no build pipeline needed for hobby scale |
 | Cloudflare Workers + D1 | Free tier generous, all in one ecosystem, Wrangler CLI deployment |
-| bcrypt over SHA-256 | SHA-256 is a fast hash — bcrypt is intentionally slow, brute force resistant |
+| PBKDF2 over SHA-256 | SHA-256 is a fast hash — PBKDF2 at 100k iterations is intentionally slow, brute force resistant |
 | Brevo over Resend | Started with Resend but switched — both require a verified custom domain to send to arbitrary email addresses on free tier. Brevo has 300 emails/day free vs Resend's limitations. Neither works for all users without a domain (~$10/yr). |
 | PWABuilder over Capacitor | No Android Studio needed, 5 minute APK generation, auto-updates with web app |
 | Guest mode | Better UX than forcing accounts, localStorage collection still useful |
@@ -1445,7 +1434,7 @@ Paste this at the start of a new conversation:
 > "I'm continuing development of Ice Vault — a hockey card manager web app + Android app.
 > Stack: GitHub Pages (Ciiiv.github.io/icevault), Cloudflare Worker deployed via Wrangler CLI
 > at C:\Users\civ2g\icevault-worker, D1 database (icevault), Brevo for emails (needs verified
-> domain to send to all users). Completed: bcrypt auth (Priority #1), front+back scanning,
+> domain to send to all users). Completed: PBKDF2 password hashing (Priority #1), front+back scanning,
 > combined API call, optional eBay description at scan time.
 > UI: 6 approved themes — Classic (default, current app) + Light/Dark/Blue/Ice/Hybrid — with full CSS variable specs in PROJECT_NOTES.
 > Mobile nav: slide-out drawer replacing sidebar on screens <768px — full spec in PROJECT_NOTES.
