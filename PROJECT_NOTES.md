@@ -192,23 +192,50 @@ icevault/
 > Run once if not already set up: `npm install -g wrangler` then `wrangler login`
 > Full self-hosting setup steps are in README.md → "Deploy Your Own Copy" section.
 
+### Wrangler quick reference
+
 ```powershell
-# Day-to-day worker deployment (from your local machine)
+# See all available wrangler commands and options
+wrangler
+
+# Update wrangler to latest version
+npm install -g wrangler
+```
+
+### Common wrangler commands
+
+```powershell
 cd C:\Users\civ2g\icevault-worker
-# Edit src/index.js in VS Code, then:
+
+# Deploy worker
 wrangler deploy
 
-# Update a secret
-wrangler secret put BREVO_API_KEY
-
-# Real-time logs — expires after ~3 hours, reconnect when needed
+# Live request log stream — expires after ~3 hours, reconnect when needed
 wrangler tail
 
-# Filter wrangler tail to security events only (PowerShell)
+# Filter tail to security events only (PowerShell)
 wrangler tail --format pretty | Select-String "RATE LIMITED|ERROR|exceeded|LOGIN_FAILED"
 
-# List all secrets
-wrangler secret list
+# Secrets
+wrangler secret put BREVO_API_KEY   # add or update a secret
+wrangler secret list                 # list all secret names (not values)
+wrangler secret delete SECRET_NAME  # remove a secret
+
+# KV
+wrangler kv namespace list                        # list all KV namespaces
+wrangler kv namespace create "NAMESPACE_NAME"     # create new namespace
+wrangler kv key list --namespace-id=<id>          # list keys in a namespace
+wrangler kv key get --namespace-id=<id> "key"     # get a KV value
+wrangler kv key delete --namespace-id=<id> "key"  # delete a KV key
+
+# D1
+wrangler d1 list                                  # list all D1 databases
+wrangler d1 execute icevault --command="SELECT * FROM request_logs ORDER BY created_at DESC LIMIT 10"
+wrangler d1 execute icevault --file=./schema.sql  # run a SQL file
+
+# Worker info
+wrangler whoami      # show logged in Cloudflare account
+wrangler deployments # list recent deployments
 ```
 
 ### wrangler.toml (your actual config — do not commit sensitive values)
