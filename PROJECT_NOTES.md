@@ -104,7 +104,7 @@ icevault/
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 1 | bcrypt password hashing | ✅ Done | Cost factor 12, $2b$ → $2a$ normalization fix applied |
+| 1 | Password hashing | ✅ Done | Migrated from bcrypt cost 6 → PBKDF2-HMAC-SHA256 200k iterations. OWASP compliant, ~5ms CPU, no library. Legacy bcrypt hashes still verified for existing users |
 | 2 | Rate limiting on auth + proxy endpoints | ✅ Done | Cloudflare KV sliding window — 10 logins/15min, 5 signups/hr, 5 forgot/hr, 100 proxy/hr. Logs [RATE LIMITED] to wrangler tail |
 | 3 | Move card images to Cloudflare R2 | ⬜ Pending | Currently stored as base64 in D1 — hits 1MB row limit at scale |
 | 4 | Per-card collection sync | ⬜ Pending | Currently full delete+reinsert on every save — O(n) writes |
@@ -233,13 +233,16 @@ id = "94009b2958714bd88fc369c3a808997e"
 | Feature | Detail |
 |---------|--------|
 | Rate limiting | KV sliding window — 10 logins/15min, 5 signups/hr, 5 forgot/hr, 100 proxy/hr |
-| bcrypt cost factor | 6 — within Cloudflare Workers free tier CPU limit. Upgrade to Workers Paid ($5/mo) to use cost 12 |
+| Password hashing | PBKDF2-HMAC-SHA256 at 200,000 iterations — OWASP compliant, ~5ms CPU, well within free tier |
+| Legacy bcrypt support | verifyPassword() detects $2a$/$2b$ hashes and falls back to bcryptjs for existing users — migrates naturally |
 | Login fail delay | 100ms artificial delay on failed login — slows brute force within rate limit window |
-| Timing attack prevention | Always runs bcrypt compare even when user not found |
+| Timing attack prevention | Always runs full PBKDF2 verify even when user not found — dummy hash same format |
+| Constant-time comparison | Custom XOR comparison in verifyPassword() — prevents hash timing attacks |
 | D1 request logging | Writes RATE_LIMITED, LOGIN_FAILED, LOGIN_OK, SIGNUP, ERROR, PASSWORD_RESET_SENT events |
 | Log retention | 7 days — auto-purged on ~2% of requests via maybePurgeLogs() |
 | IPv4 preference | Uses CF-Connecting-IPv4 header when available, falls back to CF-Connecting-IP (may be IPv6) |
 | wrangler tail logging | [RATE LIMITED] ip (v4/v6) on /path printed to terminal |
+| No external dependencies for auth | PBKDF2 uses built-in Web Crypto API — bcryptjs only loaded lazily for legacy hash migration |
 
 ---
 
