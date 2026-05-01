@@ -104,7 +104,7 @@ icevault/
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 1 | Password hashing | ✅ Done | Migrated from bcrypt cost 6 → PBKDF2-HMAC-SHA256 200k iterations. OWASP compliant, ~5ms CPU, no library. Legacy bcrypt hashes still verified for existing users |
+| 1 | Password hashing | ✅ Done | Migrated from bcrypt cost 6 → PBKDF2-HMAC-SHA256 100k iterations — Cloudflare Workers Web Crypto hard limit (200k unsupported). OWASP compliant, ~3ms CPU, no library. Legacy bcrypt hashes still verified for existing users |
 | 2 | Rate limiting on auth + proxy endpoints | ✅ Done | Cloudflare KV sliding window — 10 logins/15min, 5 signups/hr, 5 forgot/hr, 100 proxy/hr. Logs [RATE LIMITED] to wrangler tail |
 | 3 | Move card images to Cloudflare R2 | ⬜ Pending | Currently stored as base64 in D1 — hits 1MB row limit at scale |
 | 4 | Per-card collection sync | ⬜ Pending | Currently full delete+reinsert on every save — O(n) writes |
@@ -233,7 +233,7 @@ id = "94009b2958714bd88fc369c3a808997e"
 | Feature | Detail |
 |---------|--------|
 | Rate limiting | KV sliding window — 10 logins/15min, 5 signups/hr, 5 forgot/hr, 100 proxy/hr |
-| Password hashing | PBKDF2-HMAC-SHA256 at 200,000 iterations — OWASP compliant, ~5ms CPU, well within free tier |
+| Password hashing | PBKDF2-HMAC-SHA256 at 100,000 iterations — Cloudflare Workers Web Crypto hard limit (200k throws error). OWASP compliant minimum, ~3ms CPU, no library |
 | Legacy bcrypt support | verifyPassword() detects $2a$/$2b$ hashes and falls back to bcryptjs for existing users — migrates naturally |
 | Login fail delay | 100ms artificial delay on failed login — slows brute force within rate limit window |
 | Timing attack prevention | Always runs full PBKDF2 verify even when user not found — dummy hash same format |
