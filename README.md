@@ -1,6 +1,6 @@
 # 🏒 Ice Vault — Hockey Card Manager
 
-A free, open-source hockey card collection manager with AI-powered scanning, condition grading, graded cert lookup, eBay listing, and cloud account sync — available as a web app and Android app.
+A free, open-source hockey card collection manager. Scan front and back with AI — get condition grades, parallel detection, serial numbers, and eBay descriptions in one tap. Graded cert lookup for 8 companies. Direct eBay listing. Cloud sync. Bring your own API key — no subscriptions, no markup, your data stays yours.
 
 ---
 

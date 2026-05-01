@@ -1,4 +1,5 @@
 # Ice Vault — Project Notes
+# Hockey card collection manager — AI scanning, condition grading, cert lookup, eBay listing, BYOK, open source
 # For use at the start of new Claude conversations to provide full context
 
 ---
@@ -200,8 +201,11 @@ wrangler deploy
 # Update a secret
 wrangler secret put BREVO_API_KEY
 
-# Real-time logs
+# Real-time logs — expires after ~3 hours, reconnect when needed
 wrangler tail
+
+# Filter wrangler tail to security events only (PowerShell)
+wrangler tail --format pretty | Select-String "RATE LIMITED|ERROR|exceeded|LOGIN_FAILED"
 
 # List all secrets
 wrangler secret list
@@ -217,13 +221,148 @@ compatibility_date = "2024-01-01"
 binding = "DB"
 database_name = "icevault"
 database_id = "3cacae20-fde1-4183-94af-eaa256eebb84"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "94009b2958714bd88fc369c3a808997e"
 ```
 
-> **Note:** The `database_id` above is non-sensitive (it's just an identifier, useless without Cloudflare login credentials). The `BREVO_API_KEY` is stored as a Cloudflare Worker Secret — never in `wrangler.toml` or any file.
+> **Note:** The `database_id` and KV `id` are non-sensitive identifiers — useless without Cloudflare login credentials. The `BREVO_API_KEY` is stored as a Cloudflare Worker Secret — never in `wrangler.toml` or any file.
+
+### Security features in current worker
+| Feature | Detail |
+|---------|--------|
+| Rate limiting | KV sliding window — 10 logins/15min, 5 signups/hr, 5 forgot/hr, 100 proxy/hr |
+| bcrypt cost factor | 6 — within Cloudflare Workers free tier CPU limit. Upgrade to Workers Paid ($5/mo) to use cost 12 |
+| Login fail delay | 100ms artificial delay on failed login — slows brute force within rate limit window |
+| Timing attack prevention | Always runs bcrypt compare even when user not found |
+| D1 request logging | Writes RATE_LIMITED, LOGIN_FAILED, LOGIN_OK, SIGNUP, ERROR, PASSWORD_RESET_SENT events |
+| Log retention | 7 days — auto-purged on ~2% of requests via maybePurgeLogs() |
+| IPv4 preference | Uses CF-Connecting-IPv4 header when available, falls back to CF-Connecting-IP (may be IPv6) |
+| wrangler tail logging | [RATE LIMITED] ip (v4/v6) on /path printed to terminal |
 
 ---
 
 ## 🗄 D1 Database Schema
+
+```sql
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- Sessions table
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+
+-- Password resets table
+CREATE TABLE IF NOT EXISTS password_resets (
+  token TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+
+-- Cards table
+CREATE TABLE IF NOT EXISTS cards (
+  id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  card_data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (id, user_id)
+);
+
+-- Request logs table — security events, 7 day rolling retention
+-- Auto-purged on ~2% of requests via maybePurgeLogs() in worker
+CREATE TABLE IF NOT EXISTS request_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  path TEXT NOT NULL,
+  status INTEGER NOT NULL,
+  event TEXT NOT NULL,
+  detail TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_logs_created_at ON request_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_logs_event ON request_logs(event);
+CREATE INDEX IF NOT EXISTS idx_logs_ip ON request_logs(ip);
+```
+
+### Create request_logs table (run once in Cloudflare D1 console)
+
+```sql
+CREATE TABLE IF NOT EXISTS request_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  path TEXT NOT NULL,
+  status INTEGER NOT NULL,
+  event TEXT NOT NULL,
+  detail TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_logs_created_at ON request_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_logs_event ON request_logs(event);
+CREATE INDEX IF NOT EXISTS idx_logs_ip ON request_logs(ip);
+```
+
+### Useful D1 log queries
+
+```sql
+-- All security events last 24 hours
+SELECT * FROM request_logs
+WHERE created_at > datetime('now', '-1 day')
+ORDER BY created_at DESC;
+
+-- All rate limit hits
+SELECT * FROM request_logs
+WHERE event = 'RATE_LIMITED'
+ORDER BY created_at DESC
+LIMIT 50;
+
+-- IPs hitting rate limits most — potential attackers
+SELECT ip, COUNT(*) as hits
+FROM request_logs
+WHERE event = 'RATE_LIMITED'
+GROUP BY ip
+ORDER BY hits DESC;
+
+-- Failed login attempts by IP
+SELECT ip, detail as email_attempted, COUNT(*) as attempts, MAX(created_at) as last_attempt
+FROM request_logs
+WHERE event = 'LOGIN_FAILED'
+GROUP BY ip
+ORDER BY attempts DESC;
+
+-- All errors in last 7 days
+SELECT * FROM request_logs
+WHERE event = 'ERROR'
+ORDER BY created_at DESC;
+
+-- Signups over time
+SELECT DATE(created_at) as date, COUNT(*) as signups
+FROM request_logs
+WHERE event = 'SIGNUP'
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+
+-- Successful logins by day
+SELECT DATE(created_at) as date, COUNT(*) as logins
+FROM request_logs
+WHERE event = 'LOGIN_OK'
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+
+-- Manual 7-day purge (runs automatically on ~2% of requests)
+DELETE FROM request_logs
+WHERE created_at < datetime('now', '-7 days');
+```
 
 ```sql
 users (id, email, password_hash, created_at)
