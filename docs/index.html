@@ -438,6 +438,25 @@
     outline: none;
     cursor: pointer;
   }
+  .export-btn {
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .export-btn:hover { background: var(--card-bg); color: var(--text-primary); border-color: var(--border-bright); }
+  .export-btn.import { border-style: dashed; }
+  .export-btn.import:hover { border-color: var(--ice-dark); color: var(--ice-dark); }
   .cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -916,23 +935,21 @@
   ═══════════════════════════════════════════════════════════════════════ */
 
   /* ── LAYOUT SWITCHING ── */
-  :root[data-theme="classic"] .sidebar-shell { display: none !important; }
+
+  /* Classic: header + tab nav visible, sidebar chrome hidden, main-content full width */
   :root[data-theme="classic"] header { display: flex !important; }
   :root[data-theme="classic"] nav { display: flex !important; }
-  :root[data-theme="classic"] .drawer-overlay { display: none !important; }
-
-  /* Classic: show header+nav, hide sidebar chrome, show just .main-content */
+  :root[data-theme="classic"] .sidebar-shell { display: block !important; width: 100%; }
   :root[data-theme="classic"] .sidebar-nav { display: none !important; }
   :root[data-theme="classic"] .sidebar-topbar { display: none !important; }
-  :root[data-theme="classic"] .main-content { background: transparent; }
-  :root[data-theme="classic"] .sidebar-shell { display: block !important; }
+  :root[data-theme="classic"] .drawer-overlay { display: none !important; }
+  :root[data-theme="classic"] .main-content { display: block !important; background: transparent; width: 100%; }
   :root[data-theme="classic"] .view { padding: 24px; }
 
-
+  /* Themes 1-5: sidebar shell is flex, header + classic nav hidden */
   :root:not([data-theme="classic"]) .sidebar-shell { display: flex !important; }
   :root:not([data-theme="classic"]) header { display: none !important; }
   :root:not([data-theme="classic"]) nav { display: none !important; }
-  :root:not([data-theme="classic"]) .app-body { display: flex; min-height: 100vh; }
   :root:not([data-theme="classic"]) .main-content { flex: 1; min-width: 0; overflow-x: hidden; }
   :root:not([data-theme="classic"]) .view { padding: 20px 24px; }
 
@@ -1505,6 +1522,10 @@
     <select class="filter-select" onchange="filterCards()" id="collectionFilter"><option value="">All Collections</option><option value="Personal">Personal</option><option value="For Sale">For Sale</option><option value="Trade">Trade</option><option value="Graded">Graded</option></select>
     <select class="filter-select" onchange="filterCards()" id="statusFilter"><option value="">All Status</option><option value="unlisted">Not Listed</option><option value="listed">Listed on eBay</option></select>
     <select class="filter-select" onchange="filterCards()" id="sortSelect"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="player-asc">Player A–Z</option><option value="player-desc">Player Z–A</option><option value="value-desc">Value High–Low</option><option value="value-asc">Value Low–High</option><option value="grade-desc">Grade High–Low</option><option value="grade-asc">Grade Low–High</option></select>
+    <button class="export-btn" onclick="exportJSON()" title="Download full collection as JSON — lossless backup including images">⬇ JSON</button>
+    <button class="export-btn" onclick="exportCSV()" title="Download collection as CSV — opens in Excel/Sheets, no images">⬇ CSV</button>
+    <button class="export-btn import" onclick="document.getElementById('importFileInput').click()" title="Restore collection from a JSON backup file">⬆ Import</button>
+    <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importJSON(event)">
   </div>
   <div id="tagFilterRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Filter by tag:</span></div>
   <div class="cards-grid" id="cardsGrid"><div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards yet!<br>Scan your first card to get started.</div></div></div>
@@ -2237,6 +2258,92 @@ function saveCertCard(){
   const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,team:'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:document.getElementById('certValue').value,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCollectionToCloud();updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
   document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certSlabImageData=null;certTags=[];
+}
+
+
+// ═══════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════
+
+function exportJSON() {
+  if (collection.length === 0) { showToast('No cards to export', 'error'); return; }
+  const date = new Date().toISOString().split('T')[0];
+  const blob = new Blob([JSON.stringify(collection, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `icevault-collection-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(`Exported ${collection.length} cards as JSON`, 'success');
+}
+
+function exportCSV() {
+  if (collection.length === 0) { showToast('No cards to export', 'error'); return; }
+  const headers = [
+    'Player','Year','Brand','Card Number','Team','Parallel',
+    'Serial Number','Estimated Value','Collection','Tags',
+    'AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale',
+    'Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added'
+  ];
+  const esc = v => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const rows = collection.map(c => [
+    c.player, c.year, c.brand, c.cardNumber, c.team, c.parallel,
+    c.serialNumber || '',
+    c.estimatedValue, c.collection,
+    (c.tags || []).join('; '),
+    c.aiGraded ? 'Yes' : 'No',
+    c.grade?.overall || '', c.grade?.centering || '', c.grade?.corners || '',
+    c.grade?.edges || '', c.grade?.surface || '', c.grade?.rationale || '',
+    c.certNumber || '', c.certGrader || '', c.officialGrade || '',
+    c.listedOnEbay ? 'Yes' : 'No',
+    c.addedAt ? new Date(c.addedAt).toLocaleDateString() : ''
+  ].map(esc).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const date = new Date().toISOString().split('T')[0];
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'icevault-collection-' + date + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Exported ' + collection.length + ' cards as CSV', 'success');
+}
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!Array.isArray(imported)) { showToast('Invalid file — expected a JSON array', 'error'); return; }
+      // Validate basic shape
+      const valid = imported.filter(c => c.id && c.player && c.addedAt);
+      if (valid.length === 0) { showToast('No valid cards found in file', 'error'); return; }
+      // Merge — add cards that don't already exist (match by id)
+      const existingIds = new Set(collection.map(c => c.id));
+      const newCards = valid.filter(c => !existingIds.has(c.id));
+      const duplicates = valid.length - newCards.length;
+      collection = [...collection, ...newCards];
+      localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+      if (currentUser) syncCollectionToCloud();
+      updateHeaderStats();
+      renderCollection();
+      const msg = duplicates > 0
+        ? `Imported ${newCards.length} cards (${duplicates} duplicates skipped)`
+        : `Imported ${newCards.length} cards`;
+      showToast(msg, 'success');
+    } catch (err) {
+      showToast('Import failed — invalid JSON file', 'error');
+    }
+    // Reset input so same file can be imported again if needed
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ═══════════════════════════════════════════════════════
