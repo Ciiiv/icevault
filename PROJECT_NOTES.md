@@ -371,4 +371,4 @@ Paste this at the start of a new conversation:
 > High priority backlog: R2 image migration, input validation on worker, public collection sharing.
 > Legal required before public launch: Privacy Policy, ToS, account deletion, age gate.
 >
-> See PROJECT_NOTES.md in GitHub repo (Ciiiv/icevault) for full context."/
+> See PROJECT_NOTES.md in GitHub repo (Ciiiv/icevault) for full context."
