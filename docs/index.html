@@ -2102,7 +2102,7 @@ async function submitAuth(){
     const r=await fetch(WORKER_URL+(isSignup?'/auth/signup':'/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
     const d=await r.json();if(!r.ok){errEl.textContent=d.error||'Something went wrong';return;}
     setAuthToken(d.token);currentUser={email:d.email,userId:d.userId};updateAuthUI(currentUser);
-    if(collection.length>0)await syncCollectionToCloud();else await syncCollectionFromCloud();
+    if(collection.length>0){collection=await migrateLocalImagesToR2(collection);await syncCollectionToCloud();}else await syncCollectionFromCloud();
     closeModal('authModal');showToast(isSignup?'Account created! Collection synced.':'Signed in! Collection synced.','success');
   }catch{errEl.textContent='Connection error — try again';}
   finally{btn.textContent=isSignup?'Create Account':'Sign In';btn.disabled=false;}
@@ -2136,6 +2136,23 @@ async function signOut(){
   updateAuthUI(null);updateHeaderStats();closeModal('authModal');showToast('Signed out','success');
 }
 
+
+// ─── MIGRATE GUEST IMAGES TO R2 ON ACCOUNT CREATION ──────────────────────
+// Called when a guest signs up or signs in with local cards containing base64
+// Uploads imageData to R2, replaces with imageUrl before pushing to D1
+// Prevents base64 blobs from ever landing in D1
+async function migrateLocalImagesToR2(col) {
+  const needs = col.filter(c => c.imageData && !c.imageUrl);
+  if (needs.length === 0) return col;
+  showToast(`Uploading ${needs.length} image${needs.length > 1 ? 's' : ''} to cloud storage...`, 'success');
+  for (const card of needs) {
+    const url = await uploadImageToR2(card.imageData, card.id);
+    if (url) { card.imageUrl = url; card.imageData = null; }
+    // If upload fails, imageData stays — better to have image than lose it
+  }
+  localStorage.setItem('iceVault_cards', JSON.stringify(col));
+  return col;
+}
 async function syncCollectionToCloud(){
   const t=getAuthToken();if(!t||!currentUser)return;
   try{await fetch(WORKER_URL+'/collection',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({collection})});}
