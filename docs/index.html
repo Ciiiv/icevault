@@ -2128,7 +2128,9 @@ async function submitReset(token){
 
 async function signOut(){
   const t=getAuthToken();if(t)fetch(WORKER_URL+'/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+t}}).catch(()=>{});
-  clearAuthToken();currentUser=null;updateAuthUI(null);closeModal('authModal');showToast('Signed out','success');
+  clearAuthToken();currentUser=null;
+  collection=[];localStorage.removeItem('iceVault_cards');
+  updateAuthUI(null);updateHeaderStats();closeModal('authModal');showToast('Signed out','success');
 }
 
 async function syncCollectionToCloud(){
