@@ -28,8 +28,6 @@ Ice Vault scans your actual card — front and back — and stores your photo, y
 
 A $50 card costs $0.04 to properly document with front + back scanning, AI condition grade, parallel detection, and serial number reading. A $200 card costs the same $0.04. For any card worth owning, the cost of scanning it correctly is negligible.
 
-What you can't do cheaply with any other method: see your card, grade your card, and know exactly what you have.
-
 ---
 
 ## ✨ Features
@@ -45,11 +43,10 @@ What you can't do cheaply with any other method: see your card, grade your card,
 - Front only: ~$0.01–0.02 | Front + back: ~$0.02–0.04 per scan
 
 ### ⬜ Graded Cert Lookup
-- **Option A — AI Slab Scan** (~$0.02–0.04): photograph **front and back** of your graded slab — AI reads both label sides through the plastic, filling in cert number, official grade, player, year, set, and variation. Back label often has clearer cert number and barcode
+- **Option A — AI Slab Scan** (~$0.02–0.04): photograph **front and back** of your graded slab — AI reads both label sides through the plastic, filling in cert number, official grade, player, year, set, and variation
 - **Option B — Free cert # / QR lookup**: enter a cert number or scan the QR/barcode on the slab — opens the official registry in a new tab for manual entry (zero API cost)
 - Supports **8 grading companies**: PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA
 - QR scanning auto-detects the grading company from the barcode URL
-- Both options can be used together — scan the slab with AI then verify cert # at the registry
 
 ### 🗂 Collection Management
 - Grid view with card thumbnails, grades, tags, and values
@@ -59,36 +56,45 @@ What you can't do cheaply with any other method: see your card, grade your card,
 - Custom tag system — add, remove, and filter by tags
 - Click any card for full details, edit tags, change collection, enlarge image
 - Lightbox image viewer — click card photo to expand full screen
-- Tags visible on cards in grid view
+- **Export JSON** — full lossless backup including images, reimportable
+- **Export CSV** — flat spreadsheet (22 columns), opens in Excel/Google Sheets
+- **Import JSON** — restore from backup, merges with existing collection, skips duplicates
 
 ### 🛒 List on eBay
 - Select any card to create a listing
 - Auto-generates listing title (80 character eBay limit)
-- **Optional AI description at scan time** — check "Generate eBay listing description too?" before scanning — description is ready when you go to list (~+$0.01 added to scan cost)
+- **Optional AI description at scan time** — check before scanning — description is ready when you list
 - Or generate description separately on the eBay tab (~$0.01–0.02)
-- **🔍 eBay Sold Listings** — opens eBay pre-filtered to completed sold listings for real market pricing
+- **🔍 eBay Sold Listings** — opens eBay pre-filtered to completed sold listings
 - **📈 130point** — copies search term to clipboard and opens 130point.com for price history
 - Direct eBay Trading API submission (requires eBay developer credentials)
 
 ### 👤 User Accounts & Cloud Sync
 - Free accounts — sign up with email and password
-- Collection syncs to the cloud via Cloudflare D1 — accessible from any device
+- Collection syncs to the cloud — accessible from any device
+- **Card images stored in Cloudflare R2** — not in the database, served from CDN, cached by browser
 - Guest mode — full app usable without an account, collection stored locally in browser only
-- Visible red warning on save buttons when not signed in
-- Forgot password — reset link sent to email via Brevo transactional email
-- Password visibility toggle on all password fields
+- **Sign out clears local collection** — prevents card data from bleeding between accounts on shared devices
+- **Guest → account migration** — when a guest signs up, all local card images are automatically uploaded to R2 before syncing to D1
+- Password reset via email (Maileroo — sends to any email address, no custom domain needed)
 - API keys are **never saved to your account** — stored locally on your device only
 - Session lasts 30 days before requiring re-login
 
 ### 🔒 Privacy & Security
 - All API keys stored in browser localStorage only — never sent to any server or database
-- Passwords hashed with **bcrypt (cost factor 12)** before storing — never stored as plain text
-- Timing attack prevention on login endpoint
+- Passwords hashed with **PBKDF2-HMAC-SHA256 at 100,000 iterations** — OWASP compliant, never stored as plain text
+- Timing attack prevention on login — always runs full hash verify even when user not found
+- 100ms artificial delay on failed login attempts
+- Rate limiting on all auth endpoints via Cloudflare KV
 - Cloudflare Worker locked to only accept requests from the Ice Vault domain (origin check)
-- Cost warnings on every AI-powered action so you always know when an API call is made
+- Cost warnings on every AI-powered action
 - Even with a user account, API keys are never saved to the database — by design
 
-> **Email limitation:** Transactional emails (welcome, password reset) require a verified sender domain. Without a custom domain, emails only work if you verify your own email address as a sender in Brevo. To send to all users, a custom domain (~$10/yr) is required.
+### 🎨 Themes
+- 6 built-in themes — Classic (dark navy), Light, Dark, Vibrant Blue, Ice, Hybrid
+- **Hybrid is the default** — ice dark sidebar + vibrant blue content
+- Theme picker in Settings (⚙ API Keys → scroll to bottom)
+- Theme persists across sessions
 
 ---
 
@@ -108,14 +114,8 @@ All AI features use your own Anthropic API key — you pay only for what you use
 | Cert # / QR lookup | 0 | Free |
 | eBay sold listings link | 0 | Free |
 | 130point link | 0 | Free |
-| Account sync | 0 | Free (Cloudflare D1) |
-| Password reset email | 0 | Free (Brevo) |
-
-### How the cost is calculated (Claude claude-opus-4-5 pricing)
-- Each image ≈ 1,000–2,000 tokens depending on resolution
-- Prompt text ≈ 300–500 tokens
-- JSON response ≈ 300–600 tokens (800–1,200 with eBay description)
-- Input tokens: $3.00 per million — Output tokens: $15.00 per million
+| Account sync | 0 | Free (Cloudflare D1 + R2) |
+| Password reset email | 0 | Free (Maileroo) |
 
 ### Monthly cost vs CollX Pro ($10/month flat)
 
@@ -127,7 +127,7 @@ All AI features use your own Anthropic API key — you pay only for what you use
 | 200 cards | $4.00 | $8.00 | $10.00 |
 | 250 cards | $5.00 | $10.00 | $12.50 |
 
-> **Break-even vs CollX Pro:** Ice Vault is cheaper for collectors scanning under ~200 cards/month with front+back. Most casual collectors scan 20–50 new cards/month, making Ice Vault cost **$0.40–$2.00/month** vs CollX Pro's flat $10/month. Note that CollX Pro includes features Ice Vault doesn't have — real-time market pricing and a 17M+ card identification database.
+> **Break-even vs CollX Pro:** Ice Vault is cheaper for collectors scanning under ~200 cards/month with front+back. Most casual collectors scan 20–50 new cards/month, making Ice Vault cost **$0.40–$2.00/month** vs CollX Pro's flat $10/month.
 
 ---
 
@@ -146,15 +146,15 @@ Visit and click **⚙ API Keys** to enter your keys. Click **👤 Sign In** to c
 | eBay App ID | [developer.ebay.com](https://developer.ebay.com) | eBay listing (optional) |
 | eBay OAuth Token | eBay OAuth flow with `sell.item` scope | eBay listing (optional) |
 
-> **Privacy:** API keys are stored only in your browser's local storage. They are never sent to, saved in, or accessible by this app, any server, or database — even if you have an account. You will need to re-enter your keys if you clear your browser cache, use a different browser, or switch devices.
+> **Privacy:** API keys are stored only in your browser's local storage. They are never sent to, saved in, or accessible by this app, any server, or database — even if you have an account.
 
-> **Security tip:** In your Anthropic console (console.anthropic.com → Settings → Limits), set a monthly spend limit and disable auto-reload in Billing settings. With prepaid credits and auto-reload off, your maximum possible exposure is your prepaid balance — no automatic card charges can occur. This is the recommended setup for Ice Vault users.
+> **Security tip:** In your Anthropic console, set a monthly spend limit and disable auto-reload. With prepaid credits and auto-reload off, your maximum possible exposure is your prepaid balance — no automatic card charges can occur.
 
 ---
 
 ## 📱 Android App
 
-The Android app is built using **PWABuilder** — a free Microsoft tool that wraps the web app into a native Android package (TWA — Trusted Web Activity). Since the app loads from your GitHub Pages URL, any update to `index.html` automatically updates the Android app too — no rebuild needed.
+The Android app is built using **PWABuilder** — a free Microsoft tool that wraps the web app into a native Android package. Since the app loads from your GitHub Pages URL, any update to `index.html` automatically updates the Android app too — no rebuild needed.
 
 ### Install via sideload (no Play Store needed)
 1. Go to [pwabuilder.com](https://pwabuilder.com)
@@ -165,11 +165,6 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 6. Open the APK and tap Install
 7. Ice Vault appears on your home screen as a native app
 
-### Google Play Store submission
-1. Use the **Google Play** tab in PWABuilder instead of Other Android
-2. You will need a Google Play developer account ($25 one-time fee)
-3. Follow PWABuilder's [packaging instructions](https://docs.pwabuilder.com/#/builder/android)
-
 ---
 
 ## 🏗 Full Stack & Dependencies
@@ -178,10 +173,11 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 |-----------|---------|---------|------|
 | Web hosting | GitHub Pages | Serves the app | Free |
 | API proxy + Auth | Cloudflare Workers | Forwards Anthropic requests, handles user auth | Free tier |
-| Database | Cloudflare D1 | Stores user accounts and card collections | Free tier (5GB) |
-| Email | Brevo | Welcome emails and password reset (requires verified domain) | Free tier (300/day) |
+| Database | Cloudflare D1 | Stores user accounts and card metadata | Free tier |
+| Image storage | Cloudflare R2 | Stores card photos — 10GB free, zero egress fees | Free tier |
+| Email | Maileroo | Welcome emails and password reset — 3,000/mo free, any recipient | Free tier |
 | AI | Anthropic Claude | Card OCR, condition grading, eBay descriptions | Pay per use |
-| Android app | PWABuilder | Wraps web app as Android APK / Play Store bundle | Free |
+| Android app | PWABuilder | Wraps web app as Android APK | Free |
 | Worker deployment | Wrangler CLI | Local development and deployment of Cloudflare Worker | Free |
 
 ### Cloudflare Worker — API endpoints
@@ -194,6 +190,7 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 | GET | `/auth/verify` | Verify session token |
 | POST | `/auth/forgot` | Request password reset email |
 | POST | `/auth/reset` | Reset password with token |
+| POST | `/upload` | Upload card image to R2 |
 | GET | `/collection` | Fetch user's collection from D1 |
 | PUT | `/collection` | Save/sync full collection to D1 |
 | DELETE | `/collection/:id` | Delete single card from D1 |
@@ -201,8 +198,12 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 ### Cloudflare Worker — environment bindings required
 | Variable | Type | Purpose |
 |----------|------|---------|
-| `DB` | D1 Database binding | `icevault` database |
-| `BREVO_API_KEY` | Secret | Brevo transactional email API key |
+| `DB` | D1 Database | `icevault` database |
+| `RATE_LIMIT_KV` | KV Namespace | Rate limiting sliding windows |
+| `IMAGES` | R2 Bucket | `icevault-images` card photo storage |
+| `MAILEROO_API_KEY` | Secret | Maileroo transactional email |
+| `EMAIL_FROM` | Secret | Sender address (e.g. `noreply@yourdomain.maileroo.org`) |
+| `ALERT_EMAIL` | Secret | Optional — rate limit alert recipient |
 
 ---
 
@@ -211,17 +212,17 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 ```
 icevault/
 ├── docs/                          # GitHub Pages web app (auto-deployed)
-│   ├── index.html                 # Entire app — HTML, CSS, and JS in one file
+│   ├── index.html                 # Entire app — HTML, CSS, and JS in one file (~2400 lines)
 │   ├── manifest.json              # PWA manifest — name, icons, theme colors
 │   ├── sw.js                      # Service worker — network-first caching
 │   └── icons/
-│       ├── icon-192.png           # App icon 192x192 (home screen, PWA)
-│       └── icon-512.png           # App icon 512x512 (splash screen, Play Store)
-├── icevault-worker.js             # Cloudflare Worker source — auth, API proxy, collection sync
+│       ├── icon-192.png           # App icon 192x192
+│       └── icon-512.png           # App icon 512x512
+├── icevault_worker.js             # Cloudflare Worker source — reference copy (manually synced)
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml             # Auto-deploys docs/ to GitHub Pages on every push to main
-├── README.md                      # Public-facing documentation
+│       └── deploy.yml             # Auto-deploys docs/ to GitHub Pages on push to main
+├── README.md
 └── PROJECT_NOTES.md               # Internal project context — architecture, decisions, pending work
 ```
 
@@ -229,82 +230,81 @@ icevault/
 
 ## 🚀 Deploy Your Own Copy
 
-Follow these steps exactly to get your own fully working instance.
-
 ### Prerequisites
 - A [GitHub](https://github.com) account
 - A [Cloudflare](https://cloudflare.com) account (free)
-- A [Brevo](https://brevo.com) account (free) + a verified domain for sending emails to all users
-- [Node.js](https://nodejs.org) LTS installed on your computer
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) installed: `npm install -g wrangler`
+- A [Maileroo](https://maileroo.com) account (free) — no custom domain needed
+- [Node.js](https://nodejs.org) LTS installed
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/): `npm install -g wrangler`
 
 ---
 
 ### Step 1 — Fork and host on GitHub Pages
 
-1. Click **Fork** on this repo → name it `icevault` → set to Public
-2. Go to your forked repo → **Settings → Pages → Source → GitHub Actions**
+1. Fork this repo → name it `icevault` → set to Public
+2. Go to **Settings → Pages → Source → GitHub Actions**
 3. Push any change to `main` — site auto-deploys in ~30 seconds
-4. Your site will be live at `https://YOUR-USERNAME.github.io/icevault`
+4. Your site: `https://YOUR-USERNAME.github.io/icevault`
 
 ---
 
 ### Step 2 — Create the D1 database
 
-1. Cloudflare dashboard → **Storage & Databases → D1**
-2. Click **Create database** → name it `icevault` → leave location as default → **Create**
-3. Go into the database → click **Console** tab
-4. Run each of these queries one at a time (paste and hit Execute after each):
+1. Cloudflare dashboard → **Storage & Databases → D1 → Create database** → name it `icevault`
+2. Go into the database → **Console** tab → run each query:
 
 ```sql
 CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)
 ```
 ```sql
-CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)
+CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL)
 ```
 ```sql
-CREATE TABLE IF NOT EXISTS password_resets (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)
+CREATE TABLE IF NOT EXISTS password_resets (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL)
 ```
 ```sql
-CREATE TABLE IF NOT EXISTS cards (id TEXT NOT NULL, user_id TEXT NOT NULL, card_data TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (id, user_id), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)
+CREATE TABLE IF NOT EXISTS cards (id TEXT NOT NULL, user_id TEXT NOT NULL, card_data TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (id, user_id))
 ```
 ```sql
-CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)
+CREATE TABLE IF NOT EXISTS request_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, ip TEXT NOT NULL, path TEXT NOT NULL, status INTEGER NOT NULL, event TEXT NOT NULL, detail TEXT, created_at TEXT NOT NULL)
 ```
 ```sql
-CREATE INDEX IF NOT EXISTS idx_resets_user ON password_resets(user_id)
+CREATE INDEX IF NOT EXISTS idx_logs_created_at ON request_logs(created_at)
 ```
 ```sql
 CREATE INDEX IF NOT EXISTS idx_cards_user ON cards(user_id)
 ```
-5. Verify by typing `/tables` — you should see `users`, `sessions`, `password_resets`, `cards`
-6. Note your **database ID** from the Overview tab
+
+3. Note your **database ID** from the Overview tab
 
 ---
 
-### Step 3 — Create a Brevo account and get an API key
+### Step 3 — Create R2 bucket
 
-1. Sign up free at [brevo.com](https://brevo.com)
-2. Go to **Settings → SMTP & API → API Keys & MCP** → generate a new API key named `icevault`
-3. Copy the API key (you only see it once)
-4. **Important:** To send emails to all users you must verify a custom domain in Brevo → **Settings → Senders, domains, IPs → Add a domain**. Without this, emails only work to your own verified address.
+1. Cloudflare dashboard → **R2 Object Storage → Create bucket** → name it `icevault-images`
+2. After creation → **Settings → Public Access → Enable** (type `allow` to confirm)
+3. Note the public URL: `https://pub-xxxxxxxx.r2.dev`
 
 ---
 
-### Step 4 — Set up the Cloudflare Worker with Wrangler
+### Step 4 — Create a Maileroo account
+
+1. Sign up free at [maileroo.com](https://maileroo.com)
+2. Add a domain (use their free shared domain if you don't have one)
+3. Go to your domain → **SMTP Accounts → New Account** → create `noreply@yourdomain.maileroo.org`
+4. Go to **Sending Keys → Create New Key** → copy it
+
+---
+
+### Step 5 — Set up the Cloudflare Worker
 
 ```powershell
-# Create project folder
 mkdir icevault-worker
 cd icevault-worker
 npm init -y
-npm install bcryptjs
-
-# Create config file
-New-Item wrangler.toml
 ```
 
-Paste this into `wrangler.toml` (update with your own database ID):
+Create `wrangler.toml`:
 ```toml
 name = "your-worker-name"
 main = "src/index.js"
@@ -314,48 +314,64 @@ compatibility_date = "2024-01-01"
 binding = "DB"
 database_name = "icevault"
 database_id = "YOUR-D1-DATABASE-ID"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "YOUR-KV-NAMESPACE-ID"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "icevault-images"
 ```
 
-Create `src/index.js` and paste the contents of `icevault-worker.js` from this repo.
+Create a KV namespace:
+```powershell
+wrangler kv namespace create RATE_LIMIT_KV
+# Copy the ID into wrangler.toml
+```
 
-Update these two lines with your own GitHub username:
-- Line 6: `'https://YOUR-USERNAME.github.io'`
-- Line 10: `const APP_URL = 'https://YOUR-USERNAME.github.io/icevault'`
+Create `src/index.js` and paste the contents of `icevault_worker.js` from this repo.
+
+Update these constants with your own values:
+- `ALLOWED_ORIGINS` — your GitHub Pages URL
+- `APP_URL` — your GitHub Pages URL
+- `R2_PUBLIC_URL` — your R2 public URL from Step 3
 
 Then deploy:
 ```powershell
 wrangler login
-wrangler secret put BREVO_API_KEY   # paste your Brevo API key when prompted
+wrangler secret put MAILEROO_API_KEY
+wrangler secret put EMAIL_FROM        # e.g. noreply@yourdomain.maileroo.org
 wrangler deploy
 ```
 
 ---
 
-### Step 5 — Update the app to point to your worker
+### Step 6 — Update the app to point to your worker
 
 1. In your forked repo, edit `docs/index.html`
 2. Find: `const WORKER_URL = 'https://...'`
-3. Replace with your own Cloudflare Worker URL (shown after `wrangler deploy`)
+3. Replace with your Cloudflare Worker URL (shown after `wrangler deploy`)
 4. Commit — GitHub Pages auto-deploys in ~30 seconds
 
 ---
 
-### Step 6 — Get your Anthropic API key
+### Step 7 — Get your Anthropic API key
 
 1. Sign up at [console.anthropic.com](https://console.anthropic.com)
-2. Go to **API Keys → Create Key** → copy it
+2. **API Keys → Create Key** → copy it
 3. In the app click **⚙ API Keys** → paste your key → Save
 4. This key stays in your browser only — never stored in the app or database
 
 ---
 
-### Step 7 — Test it
+### Step 8 — Test it
 
 1. Visit `https://YOUR-USERNAME.github.io/icevault`
 2. Click **⚙ API Keys** → paste your Anthropic key → Save
 3. Click **👤 Sign In** → Create Account
 4. Go to **Scan Card** → drop a card photo → watch the AI read it
-5. Save to collection — confirm it syncs to your D1 database
+5. Save to collection — image uploads to R2, metadata syncs to D1
 
 ---
 
@@ -364,13 +380,13 @@ wrangler deploy
 1. Go to [pwabuilder.com](https://pwabuilder.com)
 2. Enter your GitHub Pages URL
 3. Click **Package For Stores → Other Android → Download Package**
-4. Transfer the APK to your Android phone and install
+4. Transfer APK to Android phone and install
 
 ---
 
 ## 🗒 Project Notes
 
-See [`PROJECT_NOTES.md`](./PROJECT_NOTES.md) for full internal project context including architecture decisions, known issues, pending priority list, and deployment commands. Useful for contributors and for continuing development with AI assistance.
+See [`PROJECT_NOTES.md`](./PROJECT_NOTES.md) for full internal project context including architecture decisions, known issues, pending priority list, and deployment commands.
 
 ---
 
