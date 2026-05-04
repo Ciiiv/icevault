@@ -1,8 +1,9 @@
 // Ice Vault — Cloudflare Worker
-// Handles: Anthropic API proxy, Auth (signup/login/password reset), Collection sync via D1
+// Handles: Anthropic API proxy, Auth (signup/login/password reset), Collection sync via D1, R2 image upload
 // Security: Rate limiting via KV, D1 request logging, PBKDF2-100k password hashing, 100ms fail delay
-// Email: Provider-agnostic sendEmail() — supports Brevo and Maileroo via EMAIL_PROVIDER secret
+// Email: Maileroo via sendEmail()
 // Monitoring: Rate limit alert emails via alertRateLimit() — one email per IP per endpoint per hour
+// Images: Cloudflare R2 bucket (icevault-images) — cards/{userId}/{cardId}.jpg
 
 const ALLOWED_ORIGINS = [
   'https://Ciiiv.github.io',
@@ -10,9 +11,12 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:8080',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:5500',  // VS Code Live Server
+  'http://localhost:5500',   // VS Code Live Server
 ];
 
 const APP_URL = 'https://Ciiiv.github.io/icevault';
+const R2_PUBLIC_URL = 'https://pub-8fa31d4e964e401e8d40e2c4244f2868.r2.dev';
 
 // Log retention — 7 days
 const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -206,46 +210,25 @@ async function getUser(request, db) {
 }
 
 // ─── EMAIL ─────────────────────────────────────────────────────────────────
-// Provider-agnostic — set EMAIL_PROVIDER secret to 'maileroo' to switch
-// Maileroo: requires MAILEROO_API_KEY secret + verified sending domain
-// Brevo (default): requires BREVO_API_KEY secret — free 300/day, needs custom domain for all users
+// Maileroo — https://maileroo.com/docs/email-api/send-basic-email
+// Requires: MAILEROO_API_KEY secret + EMAIL_FROM secret
+// from address must be on a domain/SMTP account registered in Maileroo dashboard
 async function sendEmail(env, to, subject, html) {
-  const provider = env.EMAIL_PROVIDER || 'brevo';
-
-  if (provider === 'maileroo') {
-    // Docs: https://maileroo.com/docs/email-api/send-basic-email
-    // Endpoint: POST https://smtp.maileroo.com/api/v2/emails
-    // from must be an address on a domain verified in your Maileroo account
-    // Use their free shared domain (e.g. noreply@maileroo.org) or your own
-    const fromEmail = env.EMAIL_FROM || 'noreply@maileroo.org';
-    const res = await fetch('https://smtp.maileroo.com/api/v2/emails', {
-      method: 'POST',
-      headers: { 'X-Api-Key': env.MAILEROO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: { address: fromEmail, display_name: 'Ice Vault' },
-        to: [{ address: to }],
-        subject,
-        html,
-      }),
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      console.log(`[MAILEROO ERROR] Status: ${res.status} - ${errText}`);
-    }
-    return res.ok;
-  }
-
-  // Default: Brevo
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+  const fromEmail = env.EMAIL_FROM || 'noreply@af4c1dd0a43e50da.maileroo.org';
+  const res = await fetch('https://smtp.maileroo.com/api/v2/emails', {
     method: 'POST',
-    headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+    headers: { 'X-Api-Key': env.MAILEROO_API_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      sender: { name: 'Ice Vault', email: 'mtouch01@gmail.com' },
-      to: [{ email: to }],
+      from: { address: fromEmail, display_name: 'Ice Vault' },
+      to: [{ address: to }],
       subject,
-      htmlContent: html,
+      html,
     }),
   });
+  if (!res.ok) {
+    const errText = await res.text();
+    console.log(`[MAILEROO ERROR] Status: ${res.status} - ${errText}`);
+  }
   return res.ok;
 }
 
@@ -541,6 +524,40 @@ export default {
       } catch (e) {
         await writeLog(db, { ip, path: '/auth/reset', status: 500, event: 'ERROR', detail: e.message });
         return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── IMAGE UPLOAD TO R2 ──────────────────────────────────────────────
+    // Accepts: multipart/form-data with 'image' file + 'cardId' field
+    // Returns: { url } — public R2 URL to store in card data instead of base64
+    // Key format: cards/{userId}/{cardId}.{ext}
+    if (path === '/upload' && request.method === 'POST') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      try {
+        const formData = await request.formData();
+        const image = formData.get('image');
+        const cardId = formData.get('cardId');
+        if (!image) return err('No image provided', 400, cors);
+
+        // Determine extension from content type
+        const contentType = image.type || 'image/jpeg';
+        const ext = contentType === 'image/png' ? 'png' : 'jpg';
+        const key = `cards/${user.id}/${cardId || Date.now()}.${ext}`;
+
+        // Upload to R2
+        const imageBuffer = await image.arrayBuffer();
+        await env.IMAGES.put(key, imageBuffer, {
+          httpMetadata: { contentType },
+        });
+
+        // Return the R2 URL — served via Workers or public bucket URL
+        const url = `${R2_PUBLIC_URL}/${key}`;
+        console.log(`[R2 UPLOAD] ${user.email} uploaded ${key} (${imageBuffer.byteLength} bytes)`);
+        return json({ url, key }, 200, cors);
+      } catch (e) {
+        console.log(`[R2 ERROR] ${e.message}`);
+        return err('Upload failed: ' + e.message, 500, cors);
       }
     }
 
