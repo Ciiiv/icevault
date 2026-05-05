@@ -2803,8 +2803,8 @@ function openSharedCardDetail(idx) {
     <div class="modal-meta">${c.year || ''} · ${c.brand || ''} · ${c.team || ''}</div>
     <div class="modal-grid">
       <div style="display:flex;flex-direction:column;gap:8px;">
-        ${frontSrc ? `<img class="modal-img" src="${frontSrc}" alt="${c.player}" onclick="openLightbox(this.src,'${c.player} Front')" style="cursor:zoom-in;">` : '<div class="modal-img-placeholder">🏒</div>'}
-        ${backSrc ? `<img class="modal-img" src="${backSrc}" alt="Back" onclick="openLightbox(this.src,'${c.player} Back')" style="cursor:zoom-in;opacity:0.9;">` : ''}
+        ${frontSrc ? `<img class="modal-img lb-img" src="${frontSrc}" alt="${c.player}" data-cap="${c.player}" style="cursor:zoom-in;">` : '<div class="modal-img-placeholder">🏒</div>'}
+        ${backSrc ? `<img class="modal-img lb-img" src="${backSrc}" alt="Back" data-cap="${c.player} Back" style="cursor:zoom-in;opacity:0.9;">` : ''}
       </div>
       <div>
         <div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber || '—'}</span></div>
@@ -2816,6 +2816,9 @@ function openSharedCardDetail(idx) {
         ${gradeHtml}
       </div>
     </div>`;
+  document.querySelectorAll('#modalContent .lb-img').forEach(function(img){
+    img.addEventListener('click',function(){openLightbox(img.src,img.dataset.cap||'');});
+  });
   document.getElementById('cardModal').classList.add('open');
 }
 
