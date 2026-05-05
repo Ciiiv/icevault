@@ -30,6 +30,40 @@ const RATE_LIMITS = {
   '/proxy':       { limit: 100, window: 60 * 60, message: 'Too many scan requests — please wait 1 hour' },
 };
 
+// ─── INPUT LIMITS ──────────────────────────────────────────────────────────
+const LIMITS = {
+  email: 254,           // RFC 5321 max email length
+  password: 1024,       // no legitimate reason for longer
+  token: 128,           // reset/session tokens are 64 hex chars
+  cardCount: 2000,      // max cards per user
+  cardDataSize: 10000,  // max bytes per card JSON (metadata only, no base64)
+  imageSize: 8 * 1024 * 1024,  // 8MB max image upload
+  imageMimes: ['image/jpeg', 'image/png', 'image/webp', 'image/heic'],
+};
+
+function validateEmail(email) {
+  if (!email || typeof email !== 'string') return 'Email required';
+  const trimmed = email.trim().toLowerCase();
+  if (trimmed.length > LIMITS.email) return 'Email too long';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return 'Invalid email address';
+  return null; // valid
+}
+
+function validatePassword(password) {
+  if (!password || typeof password !== 'string') return 'Password required';
+  if (password.length < 6) return 'Password must be at least 6 characters';
+  if (password.length > LIMITS.password) return 'Password too long';
+  return null;
+}
+
+function validateToken(token) {
+  if (!token || typeof token !== 'string') return 'Token required';
+  if (token.length > LIMITS.token) return 'Invalid token';
+  if (!/^[a-f0-9]+$/i.test(token)) return 'Invalid token format';
+  return null;
+}
+
+
 // ─── D1 LOG WRITER ─────────────────────────────────────────────────────────
 // Writes security events to request_logs table — 7 day retention
 // Non-blocking — errors caught silently so logging never breaks the app
@@ -340,12 +374,13 @@ export default {
         return rateLimited(rl.message, rl.retryAfter, cors);
       }
       try {
-        const { email, password } = await request.json();
-        if (!email || !password) return err('Email and password required', 400, cors);
-        if (password.length < 6) return err('Password must be at least 6 characters', 400, cors);
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) return err('Invalid email address', 400, cors);
+        const body = await request.json();
+        const email = (body.email || '').trim().toLowerCase();
+        const password = body.password || '';
+        const emailErr = validateEmail(email);
+        if (emailErr) return err(emailErr, 400, cors);
+        const passErr = validatePassword(password);
+        if (passErr) return err(passErr, 400, cors);
 
         const existing = await db.prepare(
           'SELECT id FROM users WHERE email = ?'
@@ -392,8 +427,13 @@ export default {
         return rateLimited(rl.message, rl.retryAfter, cors);
       }
       try {
-        const { email, password } = await request.json();
-        if (!email || !password) return err('Email and password required', 400, cors);
+        const body = await request.json();
+        const email = (body.email || '').trim().toLowerCase();
+        const password = body.password || '';
+        const emailErr = validateEmail(email);
+        if (emailErr) return err(emailErr, 400, cors);
+        if (!password) return err('Password required', 400, cors);
+        if (password.length > LIMITS.password) return err('Password too long', 400, cors);
 
         const user = await db.prepare(
           'SELECT id, email, password_hash FROM users WHERE email = ?'
@@ -452,8 +492,10 @@ export default {
         return rateLimited(rl.message, rl.retryAfter, cors);
       }
       try {
-        const { email } = await request.json();
-        if (!email) return err('Email required', 400, cors);
+        const body = await request.json();
+        const email = (body.email || '').trim().toLowerCase();
+        const emailErr = validateEmail(email);
+        if (emailErr) return err(emailErr, 400, cors);
 
         const user = await db.prepare(
           'SELECT id, email FROM users WHERE email = ?'
@@ -500,9 +542,12 @@ export default {
         return rateLimited(rl.message, rl.retryAfter, cors);
       }
       try {
-        const { token, password } = await request.json();
-        if (!token || !password) return err('Token and password required', 400, cors);
-        if (password.length < 6) return err('Password must be at least 6 characters', 400, cors);
+        const body = await request.json();
+        const { token, password } = body;
+        const tokenErr = validateToken(token);
+        if (tokenErr) return err(tokenErr, 400, cors);
+        const passErr = validatePassword(password);
+        if (passErr) return err(passErr, 400, cors);
 
         const reset = await db.prepare(
           'SELECT user_id, expires_at FROM password_resets WHERE token = ?'
@@ -539,9 +584,12 @@ export default {
         const image = formData.get('image');
         const cardId = formData.get('cardId');
         if (!image) return err('No image provided', 400, cors);
+        if (image.size > LIMITS.imageSize) return err(`Image too large — max ${LIMITS.imageSize / 1024 / 1024}MB`, 400, cors);
+        if (cardId && (typeof cardId !== 'string' || cardId.length > 32)) return err('Invalid cardId', 400, cors);
 
         // Determine extension from content type
         const contentType = image.type || 'image/jpeg';
+        if (!LIMITS.imageMimes.includes(contentType)) return err(`Invalid image type — allowed: ${LIMITS.imageMimes.join(', ')}`, 400, cors);
         const ext = contentType === 'image/png' ? 'png' : 'jpg';
         const key = `cards/${user.id}/${cardId || Date.now()}.${ext}`;
 
@@ -576,11 +624,26 @@ export default {
     if (path === '/collection' && request.method === 'PUT') {
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
-      const { collection } = await request.json();
+      const body = await request.json();
+      const { collection } = body;
       if (!Array.isArray(collection)) return err('Invalid collection data', 400, cors);
+      if (collection.length > LIMITS.cardCount) return err(`Collection too large — max ${LIMITS.cardCount} cards`, 400, cors);
+
+      // Validate each card before writing
+      const validCards = [];
+      for (const card of collection) {
+        if (!card || typeof card !== 'object') continue;
+        if (!card.id || !card.player) continue; // skip malformed cards
+        const cardJson = JSON.stringify(card);
+        if (cardJson.length > LIMITS.cardDataSize) {
+          console.log(`[VALIDATION] Card ${card.id} too large (${cardJson.length} bytes) — skipping`);
+          continue; // skip oversized cards (likely still has base64 imageData)
+        }
+        validCards.push(card);
+      }
 
       await db.prepare('DELETE FROM cards WHERE user_id = ?').bind(user.id).run();
-      for (const card of collection) {
+      for (const card of validCards) {
         await db.prepare(
           'INSERT INTO cards (id, user_id, card_data, created_at) VALUES (?, ?, ?, ?)'
         ).bind(card.id.toString(), user.id, JSON.stringify(card), card.addedAt || new Date().toISOString()).run();
