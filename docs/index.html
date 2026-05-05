@@ -2055,34 +2055,44 @@ function filterCards(){
 
 function gradeClass(g){const n=parseFloat(g);if(n>=9)return'9';if(n>=7)return'7';if(n>=5)return'5';return'low';}
 
+function buildSharePriceHtml(c) {
+  const id = c.id;
+  const chk = c.sharePrice ? 'checked' : '';
+  const showOpts = c.sharePrice ? 'block' : 'none';
+  const aiChk = (!c.sharePriceType || c.sharePriceType === 'ai') ? 'checked' : '';
+  const ownChk = c.sharePriceType === 'owner' ? 'checked' : '';
+  const showOwn = c.sharePriceType === 'owner' ? 'flex' : 'none';
+  const aiPrice = c.estimatedValue || '?';
+  const ownPrice = c.ownerPrice || '';
+  const h = String.fromCharCode(34); // double quote helper to avoid nesting issues
+  return [
+    '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px;">',
+    '<div class="result-label" style="margin-bottom:6px;">Shared View Pricing</div>',
+    '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">',
+    '<input type="checkbox" id="sharePriceCheck_' + id + '" ' + chk + ' onchange="updateCardSharePrice(' + id + ')" style="width:16px;height:16px;cursor:pointer;">',
+    '<span>Show price on shared collection view</span></label>',
+    '<div id="sharePriceOptions_' + id + '" style="display:' + showOpts + ';margin-left:24px;">',
+    '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">',
+    '<input type="radio" name="sharePriceType_' + id + '" value="ai" ' + aiChk + ' onchange="updateCardSharePriceType(' + id + ',' + h + 'ai' + h + ')" style="cursor:pointer;">',
+    'AI Estimated \u2014 $' + aiPrice + ' <span style="color:var(--text-muted);font-size:10px;">(labeled AI Est.)</span></label>',
+    '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">',
+    '<input type="radio" name="sharePriceType_' + id + '" value="owner" ' + ownChk + ' onchange="updateCardSharePriceType(' + id + ',' + h + 'owner' + h + ')" style="cursor:pointer;">',
+    'My Price <span style="color:var(--text-muted);font-size:10px;">(labeled Owner\'s Price)</span></label>',
+    '<div id="ownerPriceRow_' + id + '" style="display:' + showOwn + ';gap:6px;align-items:center;margin-top:4px;">',
+    '<span style="font-size:12px;color:var(--text-muted);">$</span>',
+    '<input type="number" class="result-input" id="ownerPriceInput_' + id + '" value="' + ownPrice + '" placeholder="0.00" step="0.01" style="width:100px;font-size:13px;" onchange="updateCardOwnerPrice(' + id + ',this.value)">',
+    '</div></div></div>'
+  ].join('');
+}
+
 function openCardDetail(id){
   const c=collection.find(x=>x.id===id);if(!c)return;
   const _front=c.imageUrl||c.imageData||null;
   const _back=c.imageUrlBack||c.imageDataBack||null;
   const gradeHtml=c.grade?`<div class="grade-box" style="margin-top:16px;"><div class="grade-header"><span class="grade-title">${c.aiGraded?'AI Condition Estimate':'Official Grade'}</span><span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span></div>${c.aiGraded?`<div style="font-size:11px;color:#E74C3C;margin-bottom:8px;padding:6px 8px;background:rgba(192,57,43,0.08);border-radius:6px;">⚠ AI estimate only. Not an official grade.</div>`:''}<div class="grade-breakdown"><div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div><div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div><div class="grade-row"><span>Edges</span><span>${c.grade.edges}</span></div><div class="grade-row"><span>Surface</span><span>${c.grade.surface}</span></div></div><div class="grade-rationale" style="margin-top:8px;">${c.grade.rationale||''}</div></div>`:'';
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
-  const sharePriceHtml=`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px;">
-    <div class="result-label" style="margin-bottom:6px;">Shared View Pricing</div>
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
-      <input type="checkbox" id="sharePriceCheck_${c.id}" ${c.sharePrice?'checked':''} onchange="updateCardSharePrice(${c.id})" style="width:16px;height:16px;cursor:pointer;">
-      <span>Show price on shared collection view</span>
-    </label>
-    <div id="sharePriceOptions_${c.id}" style="display:${c.sharePrice?'block':'none'};margin-left:24px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">
-        <input type="radio" name="sharePriceType_${c.id}" value="ai" ${(!c.sharePriceType||c.sharePriceType==='ai')?'checked':''} onchange="updateCardSharePriceType(${c.id},'ai')" style="cursor:pointer;">
-        AI Estimated — $${c.estimatedValue||'?'} <span style="color:var(--text-muted);font-size:10px;">(labeled "AI Est.")</span>
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">
-        <input type="radio" name="sharePriceType_${c.id}" value="owner" ${c.sharePriceType==='owner'?'checked':''} onchange="updateCardSharePriceType(${c.id},'owner')" style="cursor:pointer;">
-        My Price <span style="color:var(--text-muted);font-size:10px;">(labeled "Owner's Price")</span>
-      </label>
-      <div id="ownerPriceRow_${c.id}" style="display:${c.sharePriceType==='owner'?'flex':'none'};gap:6px;align-items:center;margin-top:4px;">
-        <span style="font-size:12px;color:var(--text-muted);">$</span>
-        <input type="number" class="result-input" id="ownerPriceInput_${c.id}" value="${c.ownerPrice||''}" placeholder="0.00" step="0.01" style="width:100px;font-size:13px;" onchange="updateCardOwnerPrice(${c.id},this.value)">
-      </div>
-    </div>
-  </div>`;`
-  const colHtml=\`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option></select></div>`;
+  const sharePriceHtml = buildSharePriceHtml(c);
+    const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option></select></div>`;
   document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" onclick="openLightbox('${(c.imageUrl||c.imageData).replace(/'/g,"\\'")}','${c.player} · ${c.year||''} ${c.brand||''}')" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" onclick="openLightbox('${_back.replace(/'/g,"\\\'")}','${c.player} · Back')" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div><div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
   document.getElementById('cardModal').classList.add('open');
 }
