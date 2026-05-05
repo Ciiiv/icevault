@@ -1239,6 +1239,67 @@
     border-color: var(--gold);
     color: var(--gold);
   }
+
+  /* ── SHARE COLLECTION ── */
+  .share-modal-url {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 10px 0;
+  }
+  .share-url-text {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--ice-dark);
+    word-break: break-all;
+  }
+  .share-copy-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .share-copy-btn:hover { background: var(--rink-light); color: var(--text-primary); }
+  .shared-view-banner {
+    background: linear-gradient(135deg, var(--ice-dark), #0a8a9a);
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .shared-view-banner-text { font-size: 14px; font-weight: 500; }
+  .shared-view-banner-sub { font-size: 12px; opacity: 0.85; }
+  .shared-view-signup-btn {
+    padding: 7px 16px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.15);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .shared-view-signup-btn:hover { background: rgba(255,255,255,0.25); }
 </style>
 </head>
 <body>
@@ -1526,6 +1587,7 @@
     <button class="export-btn" onclick="exportCSV()" title="Download collection as CSV — opens in Excel/Sheets, no images">⬇ CSV</button>
     <button class="export-btn import" onclick="document.getElementById('importFileInput').click()" title="Restore collection from a JSON backup file">⬆ Import</button>
     <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importJSON(event)">
+    <button class="export-btn" id="shareCollectionBtn" onclick="openShareModal()" title="Share your collection via a public link" style="display:none;">🔗 Share</button>
   </div>
   <div id="tagFilterRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Filter by tag:</span></div>
   <div class="cards-grid" id="cardsGrid"><div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards yet!<br>Scan your first card to get started.</div></div></div>
@@ -1582,6 +1644,37 @@
 
   </div><!-- end .main-content -->
 </div><!-- end .sidebar-shell -->
+
+
+<!-- SHARE COLLECTION MODAL -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('shareModal')">✕</button>
+    <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--ice-dark);margin-bottom:4px;">Share Collection</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Anyone with the link can view your collection — no account needed.</div>
+    <div id="shareModalContent">
+      <div id="shareOffState">
+        <div style="text-align:center;padding:20px 0;">
+          <div style="font-size:36px;margin-bottom:10px;">🔗</div>
+          <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">Sharing is currently off. Generate a link to share your collection.</div>
+          <button class="save-btn" onclick="generateShareLink()" id="generateShareBtn">Generate Share Link</button>
+        </div>
+      </div>
+      <div id="shareOnState" style="display:none;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Your share link:</div>
+        <div class="share-modal-url">
+          <div class="share-url-text" id="shareUrlDisplay"></div>
+          <button class="share-copy-btn" onclick="copyShareUrl()">Copy</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;" id="shareCreatedAt"></div>
+        <div style="background:rgba(74,156,201,0.08);border:1px solid rgba(74,156,201,0.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+          ℹ Prices are hidden by default. You can control price visibility per card in each card's detail panel.
+        </div>
+        <button class="camera-btn" onclick="revokeShareLink()" style="width:100%;justify-content:center;border-color:rgba(192,57,43,0.4);color:#E74C3C;">🔒 Disable Sharing & Revoke Link</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- CARD DETAIL MODAL -->
 <div class="modal-overlay" id="cardModal">
@@ -1967,8 +2060,29 @@ function openCardDetail(id){
   const _back=c.imageUrlBack||c.imageDataBack||null;
   const gradeHtml=c.grade?`<div class="grade-box" style="margin-top:16px;"><div class="grade-header"><span class="grade-title">${c.aiGraded?'AI Condition Estimate':'Official Grade'}</span><span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span></div>${c.aiGraded?`<div style="font-size:11px;color:#E74C3C;margin-bottom:8px;padding:6px 8px;background:rgba(192,57,43,0.08);border-radius:6px;">⚠ AI estimate only. Not an official grade.</div>`:''}<div class="grade-breakdown"><div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div><div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div><div class="grade-row"><span>Edges</span><span>${c.grade.edges}</span></div><div class="grade-row"><span>Surface</span><span>${c.grade.surface}</span></div></div><div class="grade-rationale" style="margin-top:8px;">${c.grade.rationale||''}</div></div>`:'';
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
-  const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option></select></div>`;
-  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" onclick="openLightbox('${(c.imageUrl||c.imageData).replace(/'/g,"\\'")}','${c.player} · ${c.year||''} ${c.brand||''}')" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" onclick="openLightbox('${_back.replace(/'/g,"\\\'")}','${c.player} · Back')" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div><div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
+  const sharePriceHtml=`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px;">
+    <div class="result-label" style="margin-bottom:6px;">Shared View Pricing</div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+      <input type="checkbox" id="sharePriceCheck_${c.id}" ${c.sharePrice?'checked':''} onchange="updateCardSharePrice(${c.id})" style="width:16px;height:16px;cursor:pointer;">
+      <span>Show price on shared collection view</span>
+    </label>
+    <div id="sharePriceOptions_${c.id}" style="display:${c.sharePrice?'block':'none'};margin-left:24px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">
+        <input type="radio" name="sharePriceType_${c.id}" value="ai" ${(!c.sharePriceType||c.sharePriceType==='ai')?'checked':''} onchange="updateCardSharePriceType(${c.id},'ai')" style="cursor:pointer;">
+        AI Estimated — $${c.estimatedValue||'?'} <span style="color:var(--text-muted);font-size:10px;">(labeled "AI Est.")</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">
+        <input type="radio" name="sharePriceType_${c.id}" value="owner" ${c.sharePriceType==='owner'?'checked':''} onchange="updateCardSharePriceType(${c.id},'owner')" style="cursor:pointer;">
+        My Price <span style="color:var(--text-muted);font-size:10px;">(labeled "Owner's Price")</span>
+      </label>
+      <div id="ownerPriceRow_${c.id}" style="display:${c.sharePriceType==='owner'?'flex':'none'};gap:6px;align-items:center;margin-top:4px;">
+        <span style="font-size:12px;color:var(--text-muted);">$</span>
+        <input type="number" class="result-input" id="ownerPriceInput_${c.id}" value="${c.ownerPrice||''}" placeholder="0.00" step="0.01" style="width:100px;font-size:13px;" onchange="updateCardOwnerPrice(${c.id},this.value)">
+      </div>
+    </div>
+  </div>`;`
+  const colHtml=\`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option></select></div>`;
+  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" onclick="openLightbox('${(c.imageUrl||c.imageData).replace(/'/g,"\\'")}','${c.player} · ${c.year||''} ${c.brand||''}')" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" onclick="openLightbox('${_back.replace(/'/g,"\\\'")}','${c.player} · Back')" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div><div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
   document.getElementById('cardModal').classList.add('open');
 }
 
@@ -2078,17 +2192,20 @@ async function verifySession(){
 
 function updateAuthUI(user){
   const btn=document.getElementById('accountBtn'),sbBtn=document.getElementById('sbAccountBtn'),sbAv=document.getElementById('sbAvatar'),sbUn=document.getElementById('sbUsername'),sbUs=document.getElementById('sbUsersub'),sw=document.getElementById('scanGuestWarning'),cw=document.getElementById('certGuestWarning');
+  const shareBtn=document.getElementById('shareCollectionBtn');
   if(user){
     const ini=user.email.substring(0,2).toUpperCase();
     if(btn){btn.textContent='✓ '+user.email.split('@')[0];btn.className='auth-btn signed-in';}
     if(sbBtn){sbBtn.textContent='✓ '+user.email.split('@')[0];sbBtn.className='topbar-account-btn signed-in';}
     if(sbAv)sbAv.textContent=ini;if(sbUn)sbUn.textContent=user.email.split('@')[0];if(sbUs)sbUs.textContent='Signed in · synced';
     if(sw)sw.style.display='none';if(cw)cw.style.display='none';
+    if(shareBtn)shareBtn.style.display='flex';
   }else{
     if(btn){btn.textContent='👤 Sign In';btn.className='auth-btn';}
     if(sbBtn){sbBtn.textContent='👤 Sign In';sbBtn.className='topbar-account-btn';}
     if(sbAv)sbAv.textContent='?';if(sbUn)sbUn.textContent='Guest Mode';if(sbUs)sbUs.textContent='Click to sign in';
     if(sw)sw.style.display='flex';
+    if(shareBtn)shareBtn.style.display='none';
   }
 }
 
@@ -2450,6 +2567,236 @@ async function importJSON(e) {
   reader.readAsText(file);
 }
 
+
+// ═══════════════════════════════════════════════════════
+// COLLECTION SHARING
+// ═══════════════════════════════════════════════════════
+
+let currentShareUrl = null;
+
+async function openShareModal() {
+  document.getElementById('shareModal').classList.add('open');
+  // Check current share status
+  try {
+    const r = await fetch(WORKER_URL + '/share/status', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    const d = await r.json();
+    if (d.sharing) {
+      currentShareUrl = d.url;
+      showShareOnState(d.url, d.createdAt);
+    } else {
+      showShareOffState();
+    }
+  } catch (e) {
+    showShareOffState();
+  }
+}
+
+function showShareOffState() {
+  document.getElementById('shareOffState').style.display = 'block';
+  document.getElementById('shareOnState').style.display = 'none';
+}
+
+function showShareOnState(url, createdAt) {
+  document.getElementById('shareOffState').style.display = 'none';
+  document.getElementById('shareOnState').style.display = 'block';
+  document.getElementById('shareUrlDisplay').textContent = url;
+  if (createdAt) {
+    document.getElementById('shareCreatedAt').textContent = 'Created ' + new Date(createdAt).toLocaleDateString();
+  }
+}
+
+async function generateShareLink() {
+  const btn = document.getElementById('generateShareBtn');
+  btn.textContent = 'Generating...'; btn.disabled = true;
+  try {
+    const r = await fetch(WORKER_URL + '/share/generate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Failed to generate link', 'error'); return; }
+    currentShareUrl = d.url;
+    showShareOnState(d.url, new Date().toISOString());
+    showToast('Share link generated!', 'success');
+  } catch (e) {
+    showToast('Connection error', 'error');
+  } finally {
+    btn.textContent = 'Generate Share Link'; btn.disabled = false;
+  }
+}
+
+async function revokeShareLink() {
+  if (!confirm('Disable sharing? The current link will stop working immediately.')) return;
+  try {
+    const r = await fetch(WORKER_URL + '/share/revoke', {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    if (!r.ok) { showToast('Failed to revoke link', 'error'); return; }
+    currentShareUrl = null;
+    showShareOffState();
+    showToast('Sharing disabled — link revoked', 'success');
+  } catch (e) {
+    showToast('Connection error', 'error');
+  }
+}
+
+function copyShareUrl() {
+  if (!currentShareUrl) return;
+  navigator.clipboard.writeText(currentShareUrl)
+    .then(() => showToast('Link copied to clipboard!', 'success'))
+    .catch(() => showToast('Copy failed — select and copy manually', 'error'));
+}
+
+// ─── PER-CARD PRICE SHARING ──────────────────────────────────────────────
+function updateCardSharePrice(id) {
+  const c = collection.find(x => x.id === id); if (!c) return;
+  const checked = document.getElementById('sharePriceCheck_' + id)?.checked;
+  c.sharePrice = checked;
+  const optionsEl = document.getElementById('sharePriceOptions_' + id);
+  if (optionsEl) optionsEl.style.display = checked ? 'block' : 'none';
+  saveCollectionLocal();
+}
+
+function updateCardSharePriceType(id, type) {
+  const c = collection.find(x => x.id === id); if (!c) return;
+  c.sharePriceType = type;
+  const ownerRow = document.getElementById('ownerPriceRow_' + id);
+  if (ownerRow) ownerRow.style.display = type === 'owner' ? 'flex' : 'none';
+  saveCollectionLocal();
+}
+
+function updateCardOwnerPrice(id, value) {
+  const c = collection.find(x => x.id === id); if (!c) return;
+  c.ownerPrice = value;
+  saveCollectionLocal();
+}
+
+function saveCollectionLocal() {
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCollectionToCloud();
+}
+
+// ─── SHARED VIEW — load on ?collection=TOKEN ─────────────────────────────
+async function checkSharedCollectionUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('collection');
+  if (!token) return;
+
+  // Clear the URL param without reloading
+  window.history.replaceState({}, '', window.location.pathname);
+
+  try {
+    const r = await fetch(WORKER_URL + '/share/' + token);
+    if (!r.ok) { showToast('Collection not found or sharing has been disabled', 'error'); return; }
+    const data = await r.json();
+    renderSharedView(data, token);
+  } catch (e) {
+    showToast('Failed to load shared collection', 'error');
+  }
+}
+
+function renderSharedView(data, token) {
+  // Switch to collection view
+  switchView('collection');
+
+  // Inject shared view banner above collection
+  const collectionView = document.getElementById('view-collection');
+  const existingBanner = document.getElementById('sharedViewBanner');
+  if (existingBanner) existingBanner.remove();
+
+  const banner = document.createElement('div');
+  banner.id = 'sharedViewBanner';
+  banner.className = 'shared-view-banner';
+  banner.innerHTML = `
+    <div>
+      <div class="shared-view-banner-text">🏒 ${data.displayName}'s Collection</div>
+      <div class="shared-view-banner-sub">${data.cardCount} card${data.cardCount !== 1 ? 's' : ''} — read only view</div>
+    </div>
+    <button class="shared-view-signup-btn" onclick="openAuthModal()">Sign up to manage yours →</button>
+  `;
+  collectionView.insertBefore(banner, collectionView.firstChild);
+
+  // Render the shared collection (read-only)
+  const grid = document.getElementById('cardsGrid');
+  if (data.collection.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards in this collection yet.</div></div>';
+    return;
+  }
+
+  grid.innerHTML = data.collection.map(c => {
+    const gradeLabel = c.aiGraded ? 'AI Est.' : (c.certGrader || '');
+    const priceDisplay = c.sharePrice
+      ? (c.sharePriceType === 'owner' && c.ownerPrice
+          ? `<span class="card-status" style="color:var(--gold);">$${c.ownerPrice} <span style="font-size:9px;opacity:0.7;">Owner</span></span>`
+          : c.estimatedValue
+            ? `<span class="card-status" style="color:var(--text-muted);">$${c.estimatedValue} <span style="font-size:9px;opacity:0.7;">AI Est.</span></span>`
+            : '')
+      : '';
+    return `
+      <div class="card-item" onclick="openSharedCardDetail(${JSON.stringify(JSON.stringify(c))})">
+        <div class="card-thumb">${c.imageUrl ? `<img src="${c.imageUrl}" alt="${c.player}">` : '🏒'}</div>
+        <div class="card-info">
+          <div class="card-player">${c.player}</div>
+          <div class="card-meta">${c.year || ''} ${c.brand || ''}</div>
+          ${c.tags && c.tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${c.tags.map(t => `<span style="padding:1px 6px;background:rgba(74,156,201,0.12);border:1px solid rgba(74,156,201,0.25);border-radius:10px;font-size:10px;color:var(--ice-dark);">${t}</span>`).join('')}</div>` : ''}
+          <div class="card-bottom">
+            ${c.grade ? `<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">${gradeLabel} ${c.grade.overall}</span>` : '<span></span>'}
+            ${priceDisplay}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Hide toolbar controls for shared view
+  document.querySelector('.collection-toolbar').style.opacity = '0.4';
+  document.querySelector('.collection-toolbar').style.pointerEvents = 'none';
+  document.getElementById('tagFilterRow').style.display = 'none';
+}
+
+function openSharedCardDetail(jsonStr) {
+  const c = JSON.parse(jsonStr);
+  const gradeHtml = c.grade ? `<div class="grade-box" style="margin-top:16px;">
+    <div class="grade-header">
+      <span class="grade-title">${c.aiGraded ? 'AI Condition Estimate' : 'Official Grade'}</span>
+      <span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded ? 'AI Est. ' : (c.certGrader || '') + ' '}${c.grade.overall}</span>
+    </div>
+    ${c.aiGraded ? '<div style="font-size:11px;color:#E74C3C;margin-bottom:8px;padding:6px 8px;background:rgba(192,57,43,0.08);border-radius:6px;">⚠ AI estimate only.</div>' : ''}
+    <div class="grade-breakdown">
+      <div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div>
+      <div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div>
+      <div class="grade-row"><span>Edges</span><span>${c.grade.edges}</span></div>
+      <div class="grade-row"><span>Surface</span><span>${c.grade.surface}</span></div>
+    </div>
+    <div class="grade-rationale" style="margin-top:8px;">${c.grade.rationale || ''}</div>
+  </div>` : '';
+
+  const frontSrc = c.imageUrl || null;
+  const backSrc = c.imageUrlBack || null;
+
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-player">${c.player}</div>
+    <div class="modal-meta">${c.year || ''} · ${c.brand || ''} · ${c.team || ''}</div>
+    <div class="modal-grid">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${frontSrc ? `<img class="modal-img" src="${frontSrc}" alt="${c.player}" onclick="openLightbox('${frontSrc}','${c.player} · Front')" style="cursor:zoom-in;">` : '<div class="modal-img-placeholder">🏒</div>'}
+        ${backSrc ? `<img class="modal-img" src="${backSrc}" alt="Back" onclick="openLightbox('${backSrc}','${c.player} · Back')" style="cursor:zoom-in;opacity:0.9;">` : ''}
+      </div>
+      <div>
+        <div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber || '—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel || 'Base'}</span></div>
+        <div class="detail-row"><span class="detail-key">Collection</span><span class="detail-val">${c.collection || '—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
+        ${c.sharePrice && c.estimatedValue ? `<div class="detail-row"><span class="detail-key">${c.sharePriceType === 'owner' ? "Owner's Price" : 'AI Est. Value'}</span><span class="detail-val" style="color:var(--gold);">$${c.sharePriceType === 'owner' ? c.ownerPrice : c.estimatedValue}</span></div>` : ''}
+        ${c.tags && c.tags.length ? `<div style="margin-top:10px;"><div class="result-label">Tags</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${c.tags.map(t => `<div class="tag">${t}</div>`).join('')}</div></div>` : ''}
+        ${gradeHtml}
+      </div>
+    </div>`;
+  document.getElementById('cardModal').classList.add('open');
+}
+
 // ═══════════════════════════════════════════════════════
 // THEME SYSTEM
 // ═══════════════════════════════════════════════════════
@@ -2488,6 +2835,7 @@ updateHeaderStats();
 setTimeout(updateGraderInfo,100);
 verifySession();
 checkResetToken();
+checkSharedCollectionUrl();
 (function(){
   const saved=localStorage.getItem('icevault-theme')||'hybrid';
   applyTheme(saved);

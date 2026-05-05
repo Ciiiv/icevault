@@ -29,6 +29,8 @@ const RATE_LIMITS = {
   '/auth/reset':  { limit: 10,  window: 60 * 60, message: 'Too many reset attempts — please wait 1 hour' },
   '/proxy':       { limit: 100, window: 60 * 60, message: 'Too many scan requests — please wait 1 hour' },
   '/auth/change-password': { limit: 5, window: 60 * 60, message: 'Too many password change attempts — please wait 1 hour' },
+  '/share/generate': { limit: 5,  window: 60 * 60, message: 'Too many share requests — please wait 1 hour' },
+  '/share/view':     { limit: 60, window: 60 * 60, message: 'Too many requests — please wait 1 hour' },
 };
 
 // ─── INPUT LIMITS ──────────────────────────────────────────────────────────
@@ -706,6 +708,127 @@ export default {
         'DELETE FROM cards WHERE id = ? AND user_id = ?'
       ).bind(cardId, user.id).run();
       return json({ ok: true }, 200, cors);
+    }
+
+    // ─── SHARE: GENERATE TOKEN ──────────────────────────────────────────
+    if (path === '/share/generate' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/share/generate', ip);
+      if (rl.limited) {
+        console.log(`[RATE LIMITED] ${ip} (${ipVersion}) on /share/generate`);
+        await writeLog(db, { ip, path: '/share/generate', status: 429, event: 'RATE_LIMITED', detail: 'Share generate rate limit exceeded' });
+        alertRateLimit(env, kv, ip, '/share/generate');
+        return rateLimited(rl.message, rl.retryAfter, cors);
+      }
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      try {
+        // Delete any existing token for this user
+        await db.prepare('DELETE FROM share_tokens WHERE user_id = ?').bind(user.id).run();
+        // Generate new token
+        const token = generateToken(32); // 64 hex chars
+        await db.prepare(
+          'INSERT INTO share_tokens (token, user_id, created_at) VALUES (?, ?, ?)'
+        ).bind(token, user.id, new Date().toISOString()).run();
+        await writeLog(db, { ip, path: '/share/generate', status: 200, event: 'SHARE_GENERATED', detail: user.email });
+        return json({ token, url: `${APP_URL}?collection=${token}` }, 200, cors);
+      } catch (e) {
+        await writeLog(db, { ip, path: '/share/generate', status: 500, event: 'ERROR', detail: e.message });
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── SHARE: REVOKE TOKEN ─────────────────────────────────────────────
+    if (path === '/share/revoke' && request.method === 'DELETE') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      try {
+        await db.prepare('DELETE FROM share_tokens WHERE user_id = ?').bind(user.id).run();
+        await writeLog(db, { ip, path: '/share/revoke', status: 200, event: 'SHARE_REVOKED', detail: user.email });
+        return json({ ok: true }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── SHARE: GET STATUS ───────────────────────────────────────────────
+    // Returns current share token for the signed-in user (if any)
+    if (path === '/share/status' && request.method === 'GET') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      try {
+        const row = await db.prepare(
+          'SELECT token, created_at FROM share_tokens WHERE user_id = ?'
+        ).bind(user.id).first();
+        if (!row) return json({ sharing: false }, 200, cors);
+        return json({ sharing: true, token: row.token, url: `${APP_URL}?collection=${row.token}`, createdAt: row.created_at }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── SHARE: VIEW COLLECTION (PUBLIC) ─────────────────────────────────
+    // No auth required — rate limited to prevent scraping
+    if (path.startsWith('/share/') && request.method === 'GET' && path !== '/share/status') {
+      const rl = await checkRateLimit(kv, '/share/view', ip);
+      if (rl.limited) {
+        return rateLimited(rl.message, rl.retryAfter, cors);
+      }
+      try {
+        const token = path.split('/')[2];
+        if (!token || token.length > 128) return err('Invalid token', 400, cors);
+
+        // Look up user from token
+        const shareRow = await db.prepare(
+          'SELECT user_id FROM share_tokens WHERE token = ?'
+        ).bind(token).first();
+        if (!shareRow) return err('Collection not found or sharing disabled', 404, cors);
+
+        // Fetch owner info
+        const owner = await db.prepare(
+          'SELECT email FROM users WHERE id = ?'
+        ).bind(shareRow.user_id).first();
+
+        // Fetch collection
+        const cards = await db.prepare(
+          'SELECT card_data FROM cards WHERE user_id = ? ORDER BY created_at DESC'
+        ).bind(shareRow.user_id).all();
+
+        // Strip sensitive fields before returning
+        const publicCollection = cards.results.map(r => {
+          const c = JSON.parse(r.card_data);
+          return {
+            id: c.id,
+            player: c.player,
+            year: c.year,
+            brand: c.brand,
+            cardNumber: c.cardNumber,
+            team: c.team,
+            parallel: c.parallel,
+            collection: c.collection,
+            tags: c.tags,
+            grade: c.grade,
+            aiGraded: c.aiGraded,
+            certGrader: c.certGrader,
+            officialGrade: c.officialGrade,
+            imageUrl: c.imageUrl || null,
+            imageUrlBack: c.imageUrlBack || null,
+            listedOnEbay: c.listedOnEbay,
+            addedAt: c.addedAt,
+            // Price — only include if owner opted in per card
+            sharePrice: c.sharePrice || false,
+            sharePriceType: c.sharePriceType || null,
+            estimatedValue: c.sharePrice ? c.estimatedValue : null,
+            ownerPrice: c.sharePrice && c.sharePriceType === 'owner' ? c.ownerPrice : null,
+            // Explicitly exclude: imageData, imageDataBack, certNumber, ebayListingId, ebayListingId
+          };
+        });
+
+        // Display name — first part of email
+        const displayName = owner ? owner.email.split('@')[0] : 'Unknown';
+        return json({ displayName, cardCount: publicCollection.length, collection: publicCollection }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
     }
 
     return err('Not found', 404, cors);
