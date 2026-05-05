@@ -1811,6 +1811,7 @@
 <script>
 // STATE
 let collection = JSON.parse(localStorage.getItem('iceVault_cards') || '[]');
+let sharedCollection = [];
 let currentImage = null, currentImageData = null, currentGrade = null;
 let currentTags = [], selectedCardForEbay = null, cameraStream = null;
 
@@ -2726,7 +2727,8 @@ function renderSharedView(data, token) {
     return;
   }
 
-  grid.innerHTML = data.collection.map(c => {
+  sharedCollection = data.collection;
+  grid.innerHTML = data.collection.map((c, idx) => {
     const gradeLabel = c.aiGraded ? 'AI Est.' : (c.certGrader || '');
     const priceDisplay = c.sharePrice
       ? (c.sharePriceType === 'owner' && c.ownerPrice
@@ -2736,7 +2738,7 @@ function renderSharedView(data, token) {
             : '')
       : '';
     return `
-      <div class="card-item" onclick="openSharedCardDetail(${JSON.stringify(JSON.stringify(c))})">
+      <div class="card-item" onclick="openSharedCardDetail(${idx})">
         <div class="card-thumb">${c.imageUrl ? `<img src="${c.imageUrl}" alt="${c.player}">` : '🏒'}</div>
         <div class="card-info">
           <div class="card-player">${c.player}</div>
@@ -2756,8 +2758,8 @@ function renderSharedView(data, token) {
   document.getElementById('tagFilterRow').style.display = 'none';
 }
 
-function openSharedCardDetail(jsonStr) {
-  const c = JSON.parse(jsonStr);
+function openSharedCardDetail(idx) {
+  const c = sharedCollection[idx]; if (!c) return;
   const gradeHtml = c.grade ? `<div class="grade-box" style="margin-top:16px;">
     <div class="grade-header">
       <span class="grade-title">${c.aiGraded ? 'AI Condition Estimate' : 'Official Grade'}</span>
