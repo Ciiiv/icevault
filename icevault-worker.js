@@ -28,6 +28,7 @@ const RATE_LIMITS = {
   '/auth/forgot': { limit: 5,   window: 60 * 60, message: 'Too many password reset requests — please wait 1 hour' },
   '/auth/reset':  { limit: 10,  window: 60 * 60, message: 'Too many reset attempts — please wait 1 hour' },
   '/proxy':       { limit: 100, window: 60 * 60, message: 'Too many scan requests — please wait 1 hour' },
+  '/auth/change-password': { limit: 5, window: 60 * 60, message: 'Too many password change attempts — please wait 1 hour' },
 };
 
 // ─── INPUT LIMITS ──────────────────────────────────────────────────────────
@@ -49,10 +50,18 @@ function validateEmail(email) {
   return null; // valid
 }
 
-function validatePassword(password) {
+function validatePassword(password, strong = false) {
   if (!password || typeof password !== 'string') return 'Password required';
-  if (password.length < 6) return 'Password must be at least 6 characters';
   if (password.length > LIMITS.password) return 'Password too long';
+  if (strong) {
+    // Strong password rules — used for change password
+    if (password.length < 8) return 'Password must be at least 8 characters';
+    if (!/[a-zA-Z]/.test(password)) return 'Password must contain at least one letter';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
+    if (!/[^a-zA-Z0-9]/.test(password)) return 'Password must contain at least one symbol';
+  } else {
+    if (password.length < 6) return 'Password must be at least 6 characters';
+  }
   return null;
 }
 
@@ -598,13 +607,21 @@ export default {
 
     // ─── AUTH: CHANGE PASSWORD ──────────────────────────────────────────
     if (path === '/auth/change-password' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/auth/change-password', ip);
+      if (rl.limited) {
+        console.log(`[RATE LIMITED] ${ip} (${ipVersion}) on /auth/change-password`);
+        await writeLog(db, { ip, path: '/auth/change-password', status: 429, event: 'RATE_LIMITED', detail: 'Change password rate limit exceeded' });
+        alertRateLimit(env, kv, ip, '/auth/change-password');
+        return rateLimited(rl.message, rl.retryAfter, cors);
+      }
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
       try {
         const body = await request.json();
         const { currentPassword, newPassword } = body;
         if (!currentPassword) return err('Current password required', 400, cors);
-        const passErr = validatePassword(newPassword);
+        // Strong password rules — 8+ chars, letter + number + symbol
+        const passErr = validatePassword(newPassword, true);
         if (passErr) return err(passErr, 400, cors);
 
         // Fetch current hash
@@ -615,7 +632,15 @@ export default {
 
         // Verify current password
         const valid = await verifyPassword(currentPassword, row.password_hash);
-        if (!valid) return err('Current password is incorrect', 401, cors);
+        if (!valid) {
+          await new Promise(r => setTimeout(r, 100)); // delay on wrong pw
+          await writeLog(db, { ip, path: '/auth/change-password', status: 401, event: 'LOGIN_FAILED', detail: user.email });
+          return err('Current password is incorrect', 401, cors);
+        }
+
+        // Reject if new password is same as current
+        const sameAsCurrent = await verifyPassword(newPassword, row.password_hash);
+        if (sameAsCurrent) return err('New password must be different from current password', 400, cors);
 
         // Hash and save new password
         const newHash = await hashPassword(newPassword);
