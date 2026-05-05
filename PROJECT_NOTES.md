@@ -97,7 +97,6 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 
 ### Security Completed
 - ✅ PBKDF2-HMAC-SHA256 password hashing — 100k iterations
-- ✅ Legacy bcrypt fallback — migrates naturally on password reset
 - ✅ Rate limiting — KV sliding window on all 5 endpoints:
   - `/auth/login` — 10/15min, `/auth/signup` — 5/hr, `/auth/forgot` — 5/hr, `/auth/reset` — 10/hr, `/proxy` — 100/hr
 - ✅ Rate limit alert emails — alertRateLimit(), KV deduped, fire-and-forget
@@ -107,13 +106,15 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - ✅ IPv4 preference in logs
 - ✅ Origin check on worker
 - ✅ Sign out clears localStorage
+- ✅ Input validation on all worker endpoints — email 254 chars, password 1024, token hex format, collection max 2000 cards, card data max 10KB, image max 8MB, MIME type whitelist
 
 ### Image Storage Architecture
 - Signed-in users: images upload to R2 at save time via `uploadImageToR2()` → `imageUrl` stored in card, `imageData` null
 - Guests: images stay as base64 in localStorage (`imageData`) — never touch D1
 - Guest → account: `migrateLocalImagesToR2()` runs at sign-in, uploads all base64 images to R2 before `syncCollectionToCloud()`
 - Display: all image renders check `c.imageUrl || c.imageData` — backwards compatible with any legacy base64 cards
-- R2 key format: `cards/{userId}/{cardId}.jpg`
+- Back images stored separately: `imageUrlBack` / `imageDataBack` — shown in card modal, both clickable to lightbox
+- R2 key format: `cards/{userId}/{cardId}.jpg` (front), `cards/{userId}/{cardId}_back.jpg` (back)
 - R2 public URL: `https://pub-8fa31d4e964e401e8d40e2c4244f2868.r2.dev/{key}`
 
 ---
@@ -128,7 +129,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 | 2 | Rate limiting | ✅ Done | KV sliding window on all 5 endpoints |
 | 3 | Rate limit alerting | ✅ Done | Alert emails, KV deduped |
 | 4 | R2 image storage | ✅ Done | Images in R2, metadata in D1, guest migration on sign-in |
-| 5 | Input validation on worker endpoints | ⬜ High | No sanitization — SQL injection + oversized payload risk |
+| 5 | Input validation on worker endpoints | ✅ Done | Email/password/token limits, collection size cap, image size + MIME check |
 | 6 | Per-card collection sync | ⬜ Med | Full delete+reinsert on every save |
 | 7 | Session cleanup job | ⬜ Med | Expired sessions accumulate in D1 |
 | 8 | Pagination on collection fetch | ⬜ Med | Full collection loads every time |
@@ -261,7 +262,7 @@ CREATE INDEX IF NOT EXISTS idx_logs_event ON request_logs(event);
 CREATE INDEX IF NOT EXISTS idx_logs_ip ON request_logs(ip);
 ```
 
-Password hash format: `pbkdf2$100000$salt$hash`. Legacy bcrypt `$2a$/$2b$` still supported.
+Password hash format: `pbkdf2$100000$salt$hash`.
 
 ---
 
@@ -353,7 +354,7 @@ node C:\Users\civ2g\icevault-worker\migrate-images.js
 | R2 public bucket | `<img>` tags can't send auth headers. Card images aren't sensitive — URL not guessable |
 | Sign out clears localStorage | Prevents card bleed-over between accounts on shared devices |
 | Import is merge not replace | Existing cards preserved, duplicates skipped by ID |
-| PBKDF2 over bcrypt | Built-in Web Crypto API — no library. 100k = CF Workers hard limit |
+| PBKDF2 password hashing | Built-in Web Crypto API — no library dependency. 100k iterations = CF Workers hard limit |
 | Maileroo over Brevo | 3,000/mo free, sends to any email without custom domain |
 | alertRateLimit fire-and-forget | No await — never delays the 429 response |
 | Single HTML file | No build pipeline, maintainable at current scale |
@@ -362,7 +363,7 @@ node C:\Users\civ2g\icevault-worker\migrate-images.js
 
 ## ⚠️ Known Issues & Limitations
 
-- **No input validation:** Worker endpoints have no sanitization. Fix: backlog #5
+
 - **Full collection resync:** Every save deletes and reinserts all cards. Fix: per-card sync (backlog #6)
 - **eBay Trading API:** Legacy XML SOAP — deprecated but functional. Fix: REST migration (backlog #13)
 - **Maileroo shared domain:** Emails land in junk on Gmail and Yahoo. Fix: custom domain (~$10/yr)
@@ -387,14 +388,14 @@ node C:\Users\civ2g\icevault-worker\migrate-images.js
 >
 > Completed: PBKDF2-100k hashing, KV rate limiting (5 endpoints), rate limit alert emails,
 > Maileroo email, 6-theme system (Hybrid default, sidebar layout), JSON/CSV export + JSON import,
-> sign out clears localStorage, R2 image storage (upload at save, guest migration at sign-in,
-> imageUrl||imageData fallback for backwards compat).
+> sign out clears localStorage, R2 image storage (front + back uploaded at save, guest migration
+> at sign-in, imageUrl||imageData fallback), input validation on all worker endpoints.
 >
 > index.html ~2400 lines. Views inside .main-content inside .sidebar-shell always.
 > Classic theme: sidebar-shell display:block, sidebar-nav/topbar hidden, main-content display:block full width.
 > Never display:none the sidebar-shell in Classic — hides all views.
 >
-> Next priorities: input validation on worker, public collection sharing (key flywheel feature).
+> Next priorities: public collection sharing (key flywheel feature), account deletion, mark as sold.
 > Legal before public launch: Privacy Policy, ToS, account deletion, age gate.
 >
 > D1 ops: --remote flag, double quotes wrapping SQL, single quotes inside.
