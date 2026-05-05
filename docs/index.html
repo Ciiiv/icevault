@@ -1865,9 +1865,10 @@ async function saveCard(){
   const player=document.getElementById('fieldPlayer').value.trim();
   if(!player){showToast('Please analyze a card first','error');return;}
   const cardId=Date.now();
-  // Upload image to R2 if signed in, otherwise keep base64 for guest mode
+  // Upload front and back images to R2 if signed in, otherwise keep base64 for guest mode
   const imageUrl=await uploadImageToR2(currentImageData,cardId);
-  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:document.getElementById('fieldValue').value,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:true,imageUrl:imageUrl||null,imageData:imageUrl?null:currentImageData,listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
+  const imageUrlBack=currentBackImageData?await uploadImageToR2(currentBackImageData,cardId+'_back'):null;
+  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:document.getElementById('fieldValue').value,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:true,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
   if(currentUser)syncCollectionToCloud();
   updateHeaderStats();showToast(`"${player}" saved to collection!`,'success');
@@ -1935,10 +1936,12 @@ function gradeClass(g){const n=parseFloat(g);if(n>=9)return'9';if(n>=7)return'7'
 
 function openCardDetail(id){
   const c=collection.find(x=>x.id===id);if(!c)return;
+  const _front=c.imageUrl||c.imageData||null;
+  const _back=c.imageUrlBack||c.imageDataBack||null;
   const gradeHtml=c.grade?`<div class="grade-box" style="margin-top:16px;"><div class="grade-header"><span class="grade-title">${c.aiGraded?'AI Condition Estimate':'Official Grade'}</span><span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span></div>${c.aiGraded?`<div style="font-size:11px;color:#E74C3C;margin-bottom:8px;padding:6px 8px;background:rgba(192,57,43,0.08);border-radius:6px;">⚠ AI estimate only. Not an official grade.</div>`:''}<div class="grade-breakdown"><div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div><div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div><div class="grade-row"><span>Edges</span><span>${c.grade.edges}</span></div><div class="grade-row"><span>Surface</span><span>${c.grade.surface}</span></div></div><div class="grade-rationale" style="margin-top:8px;">${c.grade.rationale||''}</div></div>`:'';
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option></select></div>`;
-  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" onclick="openLightbox('${(c.imageUrl||c.imageData).replace(/'/g,"\\'")}','${c.player} · ${c.year||''} ${c.brand||''}')" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div><div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
+  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" onclick="openLightbox('${(c.imageUrl||c.imageData).replace(/'/g,"\\'")}','${c.player} · ${c.year||''} ${c.brand||''}')" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" onclick="openLightbox('${_back.replace(/'/g,"\\\'")}','${c.player} · Back')" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div><div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
   document.getElementById('cardModal').classList.add('open');
 }
 
@@ -2142,13 +2145,20 @@ async function signOut(){
 // Uploads imageData to R2, replaces with imageUrl before pushing to D1
 // Prevents base64 blobs from ever landing in D1
 async function migrateLocalImagesToR2(col) {
-  const needs = col.filter(c => c.imageData && !c.imageUrl);
+  const needs = col.filter(c => (c.imageData && !c.imageUrl) || (c.imageDataBack && !c.imageUrlBack));
   if (needs.length === 0) return col;
-  showToast(`Uploading ${needs.length} image${needs.length > 1 ? 's' : ''} to cloud storage...`, 'success');
+  showToast(`Uploading ${needs.length} card image${needs.length > 1 ? 's' : ''} to cloud storage...`, 'success');
   for (const card of needs) {
-    const url = await uploadImageToR2(card.imageData, card.id);
-    if (url) { card.imageUrl = url; card.imageData = null; }
-    // If upload fails, imageData stays — better to have image than lose it
+    // Migrate front image
+    if (card.imageData && !card.imageUrl) {
+      const url = await uploadImageToR2(card.imageData, card.id);
+      if (url) { card.imageUrl = url; card.imageData = null; }
+    }
+    // Migrate back image
+    if (card.imageDataBack && !card.imageUrlBack) {
+      const urlBack = await uploadImageToR2(card.imageDataBack, card.id + '_back');
+      if (urlBack) { card.imageUrlBack = urlBack; card.imageDataBack = null; }
+    }
   }
   localStorage.setItem('iceVault_cards', JSON.stringify(col));
   return col;
@@ -2335,11 +2345,11 @@ function exportCSV() {
   URL.revokeObjectURL(a.href);
   showToast('Exported ' + collection.length + ' cards as CSV', 'success');
 }
-function importJSON(e) {
+async function importJSON(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => {
+  reader.onload = async ev => {
     try {
       const imported = JSON.parse(ev.target.result);
       if (!Array.isArray(imported)) { showToast('Invalid file — expected a JSON array', 'error'); return; }
@@ -2352,7 +2362,10 @@ function importJSON(e) {
       const duplicates = valid.length - newCards.length;
       collection = [...collection, ...newCards];
       localStorage.setItem('iceVault_cards', JSON.stringify(collection));
-      if (currentUser) syncCollectionToCloud();
+      if (currentUser) {
+        collection = await migrateLocalImagesToR2(collection);
+        syncCollectionToCloud();
+      }
       updateHeaderStats();
       renderCollection();
       const msg = duplicates > 0
