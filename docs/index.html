@@ -2064,7 +2064,6 @@ function buildSharePriceHtml(c) {
   const showOwn = c.sharePriceType === 'owner' ? 'flex' : 'none';
   const aiPrice = c.estimatedValue || '?';
   const ownPrice = c.ownerPrice || '';
-  const h = String.fromCharCode(34); // double quote helper to avoid nesting issues
   return [
     '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px;">',
     '<div class="result-label" style="margin-bottom:6px;">Shared View Pricing</div>',
@@ -2073,10 +2072,10 @@ function buildSharePriceHtml(c) {
     '<span>Show price on shared collection view</span></label>',
     '<div id="sharePriceOptions_' + id + '" style="display:' + showOpts + ';margin-left:24px;">',
     '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">',
-    '<input type="radio" name="sharePriceType_' + id + '" value="ai" ' + aiChk + ' onchange="updateCardSharePriceType(' + id + ',' + h + 'ai' + h + ')" style="cursor:pointer;">',
+    '<input type="radio" name="sharePriceType_' + id + '" value="ai" ' + aiChk + ' onchange="updateCardSharePriceType(' + id + ',\'ai\')" style="cursor:pointer;">',
     'AI Estimated \u2014 $' + aiPrice + ' <span style="color:var(--text-muted);font-size:10px;">(labeled AI Est.)</span></label>',
     '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">',
-    '<input type="radio" name="sharePriceType_' + id + '" value="owner" ' + ownChk + ' onchange="updateCardSharePriceType(' + id + ',' + h + 'owner' + h + ')" style="cursor:pointer;">',
+    '<input type="radio" name="sharePriceType_' + id + '" value="owner" ' + ownChk + ' onchange="updateCardSharePriceType(' + id + ',\'owner\')" style="cursor:pointer;">',
     'My Price <span style="color:var(--text-muted);font-size:10px;">(labeled Owner&#39;s Price)</span></label>',
     '<div id="ownerPriceRow_' + id + '" style="display:' + showOwn + ';gap:6px;align-items:center;margin-top:4px;">',
     '<span style="font-size:12px;color:var(--text-muted);">$</span>',
