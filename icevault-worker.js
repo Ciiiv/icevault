@@ -596,6 +596,40 @@ export default {
       }
     }
 
+    // ─── AUTH: CHANGE PASSWORD ──────────────────────────────────────────
+    if (path === '/auth/change-password' && request.method === 'POST') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      try {
+        const body = await request.json();
+        const { currentPassword, newPassword } = body;
+        if (!currentPassword) return err('Current password required', 400, cors);
+        const passErr = validatePassword(newPassword);
+        if (passErr) return err(passErr, 400, cors);
+
+        // Fetch current hash
+        const row = await db.prepare(
+          'SELECT password_hash FROM users WHERE id = ?'
+        ).bind(user.id).first();
+        if (!row) return err('User not found', 404, cors);
+
+        // Verify current password
+        const valid = await verifyPassword(currentPassword, row.password_hash);
+        if (!valid) return err('Current password is incorrect', 401, cors);
+
+        // Hash and save new password
+        const newHash = await hashPassword(newPassword);
+        await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+          .bind(newHash, user.id).run();
+
+        await writeLog(db, { ip, path: '/auth/change-password', status: 200, event: 'PASSWORD_CHANGED', detail: user.email });
+        return json({ ok: true }, 200, cors);
+      } catch (e) {
+        await writeLog(db, { ip, path: '/auth/change-password', status: 500, event: 'ERROR', detail: e.message });
+        return err(e.message, 500, cors);
+      }
+    }
+
     // ─── COLLECTION: GET ─────────────────────────────────────────────────
     if (path === '/collection' && request.method === 'GET') {
       const user = await getUser(request, db);
