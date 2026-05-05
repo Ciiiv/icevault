@@ -77,12 +77,13 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Sign out clears local collection** — prevents card data from bleeding between accounts on shared devices
 - **Guest → account migration** — when a guest signs up, all local card images are automatically uploaded to R2 before syncing to D1
 - Password reset via email (Maileroo — sends to any email address, no custom domain needed)
+- **Change password** from account modal — requires current password, enforces 8+ chars with letter, number, and symbol
 - API keys are **never saved to your account** — stored locally on your device only
 - Session lasts 30 days before requiring re-login
 
 ### 🔒 Privacy & Security
 - All API keys stored in browser localStorage only — never sent to any server or database
-- Passwords hashed with **PBKDF2-HMAC-SHA256 at 100,000 iterations** — OWASP compliant, never stored as plain text
+- Passwords hashed with **PBKDF2-HMAC-SHA256 at 100,000 iterations** — OWASP compliant, no third-party library, never stored as plain text
 - Timing attack prevention on login — always runs full hash verify even when user not found
 - 100ms artificial delay on failed login attempts
 - Rate limiting on all auth endpoints via Cloudflare KV
@@ -190,6 +191,7 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 | GET | `/auth/verify` | Verify session token |
 | POST | `/auth/forgot` | Request password reset email |
 | POST | `/auth/reset` | Reset password with token |
+| POST | `/auth/change-password` | Change password while signed in |
 | POST | `/upload` | Upload card image to R2 |
 | GET | `/collection` | Fetch user's collection from D1 |
 | PUT | `/collection` | Save/sync full collection to D1 |

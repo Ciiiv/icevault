@@ -92,6 +92,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - **Sign out clears localStorage** — prevents account bleed-over on shared devices
 - **Guest → account migration** — base64 images auto-uploaded to R2 at sign-in before D1 sync
 - Password reset via Maileroo
+- **Change password** from signed-in account modal — requires current password, enforces 8+ chars with letter + number + symbol, rate limited, same-password check server-side
 - 6-theme system — Hybrid default
 - PWA + Android APK
 
@@ -129,7 +130,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 | 2 | Rate limiting | ✅ Done | KV sliding window on all 5 endpoints |
 | 3 | Rate limit alerting | ✅ Done | Alert emails, KV deduped |
 | 4 | R2 image storage | ✅ Done | Images in R2, metadata in D1, guest migration on sign-in |
-| 5 | Input validation on worker endpoints | ✅ Done | Email/password/token limits, collection size cap, image size + MIME check |
+| 5 | Input validation on worker endpoints | ✅ Done | Email/password/token limits, collection size cap, image size + MIME check, strong password rules on change-pw |
 | 6 | Per-card collection sync | ⬜ Med | Full delete+reinsert on every save |
 | 7 | Session cleanup job | ⬜ Med | Expired sessions accumulate in D1 |
 | 8 | Pagination on collection fetch | ⬜ Med | Full collection loads every time |
@@ -386,7 +387,7 @@ node C:\Users\civ2g\icevault-worker\migrate-images.js
 > Worker: C:\Users\civ2g\icevault-worker\src\index.js — edit in VS Code, wrangler deploy.
 > GitHub reference: icevault_worker.js (manually synced).
 >
-> Completed: PBKDF2-100k hashing, KV rate limiting (5 endpoints), rate limit alert emails,
+> Completed: PBKDF2-100k hashing, KV rate limiting (6 endpoints incl. change-password), rate limit alert emails,
 > Maileroo email, 6-theme system (Hybrid default, sidebar layout), JSON/CSV export + JSON import,
 > sign out clears localStorage, R2 image storage (front + back uploaded at save, guest migration
 > at sign-in, imageUrl||imageData fallback), input validation on all worker endpoints.
