@@ -2077,7 +2077,7 @@ function buildSharePriceHtml(c) {
     'AI Estimated \u2014 $' + aiPrice + ' <span style="color:var(--text-muted);font-size:10px;">(labeled AI Est.)</span></label>',
     '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">',
     '<input type="radio" name="sharePriceType_' + id + '" value="owner" ' + ownChk + ' onchange="updateCardSharePriceType(' + id + ',' + h + 'owner' + h + ')" style="cursor:pointer;">',
-    'My Price <span style="color:var(--text-muted);font-size:10px;">(labeled Owner\'s Price)</span></label>',
+    'My Price <span style="color:var(--text-muted);font-size:10px;">(labeled Owner&#39;s Price)</span></label>',
     '<div id="ownerPriceRow_' + id + '" style="display:' + showOwn + ';gap:6px;align-items:center;margin-top:4px;">',
     '<span style="font-size:12px;color:var(--text-muted);">$</span>',
     '<input type="number" class="result-input" id="ownerPriceInput_' + id + '" value="' + ownPrice + '" placeholder="0.00" step="0.01" style="width:100px;font-size:13px;" onchange="updateCardOwnerPrice(' + id + ',this.value)">',
