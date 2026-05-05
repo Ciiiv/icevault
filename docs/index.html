@@ -2726,7 +2726,7 @@ function renderSharedView(data, token) {
   banner.className = 'shared-view-banner';
   banner.innerHTML = `
     <div>
-      <div class="shared-view-banner-text">🏒 ${data.displayName}'s Collection</div>
+      <div class="shared-view-banner-text">🏒 ${data.displayName}&#39;s Collection</div>
       <div class="shared-view-banner-sub">${data.cardCount} card${data.cardCount !== 1 ? 's' : ''} — read only view</div>
     </div>
     <button class="shared-view-signup-btn" onclick="openAuthModal()">Sign up to manage yours →</button>
@@ -2771,6 +2771,13 @@ function renderSharedView(data, token) {
   document.getElementById('tagFilterRow').style.display = 'none';
 }
 
+
+function buildSharedPriceRow(c) {
+  const label = c.sharePriceType === 'owner' ? "Owner&#39;s Price" : 'AI Est. Value';
+  const val = c.sharePriceType === 'owner' ? c.ownerPrice : c.estimatedValue;
+  return '<div class="detail-row"><span class="detail-key">' + label +
+    '</span><span class="detail-val" style="color:var(--gold);">$' + val + '</span></div>';
+}
 function openSharedCardDetail(idx) {
   const c = sharedCollection[idx]; if (!c) return;
   const gradeHtml = c.grade ? `<div class="grade-box" style="margin-top:16px;">
@@ -2804,7 +2811,7 @@ function openSharedCardDetail(idx) {
         <div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel || 'Base'}</span></div>
         <div class="detail-row"><span class="detail-key">Collection</span><span class="detail-val">${c.collection || '—'}</span></div>
         <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
-        ${c.sharePrice && c.estimatedValue ? `<div class="detail-row"><span class="detail-key">${c.sharePriceType === 'owner' ? "Owner's Price" : 'AI Est. Value'}</span><span class="detail-val" style="color:var(--gold);">$${c.sharePriceType === 'owner' ? c.ownerPrice : c.estimatedValue}</span></div>` : ''}
+        ${c.sharePrice && c.estimatedValue ? buildSharedPriceRow(c) : ''}
         ${c.tags && c.tags.length ? `<div style="margin-top:10px;"><div class="result-label">Tags</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${c.tags.map(t => `<div class="tag">${t}</div>`).join('')}</div></div>` : ''}
         ${gradeHtml}
       </div>
