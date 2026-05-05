@@ -1,6 +1,6 @@
 // Ice Vault — Cloudflare Worker
 // Handles: Anthropic API proxy, Auth (signup/login/password reset), Collection sync via D1, R2 image upload
-// Security: Rate limiting via KV, D1 request logging, PBKDF2-100k password hashing, 100ms fail delay
+// Security: Rate limiting via KV, D1 request logging, PBKDF2-HMAC-SHA256 100k password hashing, 100ms fail delay
 // Email: Maileroo via sendEmail()
 // Monitoring: Rate limit alert emails via alertRateLimit() — one email per IP per endpoint per hour
 // Images: Cloudflare R2 bucket (icevault-images) — cards/{userId}/{cardId}.jpg
@@ -154,11 +154,6 @@ function err(msg, status, cors) {
 // OWASP compliant minimum, ~3ms CPU time, well within free tier
 // RTX 4090 cracks 8-char fully random password in ~644 years at this setting
 //
-// ⚠ MIGRATION NOTE: Existing bcrypt hashes ($2a$06$...) are handled by
-// verifyPassword() which detects the format and falls back to bcrypt verify.
-// New passwords are always hashed with PBKDF2. Over time all hashes migrate
-// naturally as users reset passwords.
-
 const PBKDF2_ITERATIONS = 100_000; // Cloudflare Workers Web Crypto max supported limit
 const PBKDF2_HASH = 'SHA-256';
 const PBKDF2_KEY_LENGTH = 32; // 256 bits
@@ -189,14 +184,6 @@ async function hashPassword(password) {
 }
 
 async function verifyPassword(password, storedHash) {
-  // Handle legacy bcrypt hashes ($2a$ or $2b$) — for existing users
-  // These will naturally migrate as users reset passwords
-  if (storedHash.startsWith('$2')) {
-    const { default: bcrypt } = await import('bcryptjs');
-    const normalized = storedHash.replace(/^\$2b\$/, '$2a$');
-    return bcrypt.compare(password, normalized);
-  }
-
   // PBKDF2 format: pbkdf2$iterations$salt$hash
   const parts = storedHash.split('$');
   if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
