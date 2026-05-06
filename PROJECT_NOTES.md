@@ -160,14 +160,15 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 ### Feature Backlog
 
 - ✅ **Public collection sharing** — read-only URL with per-card price controls and owner display name
-- ⬜ Account deletion — GDPR required before public launch
+- ⬜ **Optional AI grade on scan** — checkbox to include/skip condition estimate, save tokens when only card info needed
 - ⬜ Mark as sold — archive with date and price
 - ⬜ Card value tracking over time + charts
 - ⬜ Multi-AI — GPT-4o, Gemini, Ollama (BYOK)
 - ⬜ Ximilar API — purpose-built card grading
 - ⬜ Migrate eBay to REST Sell API
 - ⬜ eBay Partner Network affiliate links
-- ⬜ Privacy Policy, ToS, account deletion (GDPR), age gate (COPPA) — only if going public
+- ⬜ PWA cleanup — add favicon, fix deprecated `apple-mobile-web-app-capable` meta tag
+- ⬜ Account deletion + Privacy Policy, ToS, GDPR, COPPA — only if going public
 - ⬜ Freemium — free 500 cards, Pro $3.99/mo
 
 ---
