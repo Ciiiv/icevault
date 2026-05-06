@@ -438,7 +438,7 @@ export default {
         if (password.length > LIMITS.password) return err('Password too long', 400, cors);
 
         const user = await db.prepare(
-          'SELECT id, email, password_hash FROM users WHERE email = ?'
+          'SELECT id, email, password_hash, display_name FROM users WHERE email = ?'
         ).bind(email.toLowerCase()).first();
 
         // Always run verify even if user not found — prevents timing attacks
