@@ -2820,11 +2820,13 @@ function renderSharedView(data, token) {
   }
 
   sharedCollection = data.collection;
+  window._sharedDisplayName = data.displayName || '';
   grid.innerHTML = data.collection.map((c, idx) => {
     const gradeLabel = c.aiGraded ? 'AI Est.' : (c.certGrader || '');
+    const ownerLabel = window._sharedDisplayName ? window._sharedDisplayName : 'Owner';
     const priceDisplay = c.sharePrice
       ? (c.sharePriceType === 'owner' && c.ownerPrice
-          ? `<span class="card-status" style="color:var(--gold);">$${c.ownerPrice} <span style="font-size:9px;opacity:0.7;">Owner</span></span>`
+          ? `<span class="card-status" style="color:var(--gold);">$${c.ownerPrice} <span style="font-size:9px;opacity:0.7;">${ownerLabel}</span></span>`
           : c.estimatedValue
             ? `<span class="card-status" style="color:var(--text-muted);">$${c.estimatedValue} <span style="font-size:9px;opacity:0.7;">AI Est.</span></span>`
             : '')
@@ -2852,7 +2854,8 @@ function renderSharedView(data, token) {
 
 
 function buildSharedPriceRow(c) {
-  const label = c.sharePriceType === 'owner' ? "Owner&#39;s Price" : 'AI Est. Value';
+  const ownerName = window._sharedDisplayName || 'Owner';
+  const label = c.sharePriceType === 'owner' ? ownerName + '&#39;s Price' : 'AI Est. Value';
   const val = c.sharePriceType === 'owner' ? c.ownerPrice : c.estimatedValue;
   return '<div class="detail-row"><span class="detail-key">' + label +
     '</span><span class="detail-val" style="color:var(--gold);">$' + val + '</span></div>';
