@@ -1676,6 +1676,22 @@
   </div>
 </div>
 
+
+<!-- DISPLAY NAME PROMPT MODAL -->
+<div class="modal-overlay" id="displayNameModal">
+  <div class="modal" style="max-width:400px;">
+    <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--ice-dark);margin-bottom:4px;">Choose a Display Name</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">This is what others see when you share your collection. It never shows your email address.</div>
+    <div class="result-field">
+      <div class="result-label">Display Name</div>
+      <input type="text" class="result-input" id="promptDisplayName" placeholder="e.g. HockeyCollector99" maxlength="32" style="width:100%;" autocomplete="off">
+      <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Letters, numbers, spaces, _ - . only &middot; Max 32 chars</div>
+    </div>
+    <div id="displayNameError" style="margin-top:8px;font-size:13px;color:#E74C3C;display:none;"></div>
+    <button class="save-btn" style="margin-top:12px;" onclick="submitDisplayName()">Set Display Name</button>
+  </div>
+</div>
+
 <!-- CARD DETAIL MODAL -->
 <div class="modal-overlay" id="cardModal">
   <div class="modal">
@@ -1736,6 +1752,9 @@
           <input type="password" class="result-input" id="authPasswordConfirm" placeholder="••••••••" style="width:100%;padding-right:40px;">
           <button onclick="togglePasswordVisibility('authPasswordConfirm',this)" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">👁</button>
         </div>
+        <div class="result-label" style="margin-top:12px;">Display Name <span style="color:var(--text-muted);font-weight:400;font-size:10px;">(shown on shared collections)</span></div>
+        <input type="text" class="result-input" id="authDisplayName" placeholder="e.g. HockeyCollector99" maxlength="32" style="margin-top:4px;width:100%;" autocomplete="off">
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Letters, numbers, spaces, _ - . only &middot; Max 32 chars &middot; Never shows your email</div>
       </div>
       <div style="text-align:right;margin-top:6px;" id="authForgotLink">
         <span onclick="switchAuthTab('forgot')" style="font-size:12px;color:var(--ice-dark);cursor:pointer;text-decoration:underline;">Forgot password?</span>
@@ -1749,7 +1768,9 @@
     <div id="authSignedInContent" style="display:none;text-align:center;padding:10px 0;">
       <div style="font-size:36px;margin-bottom:10px;">✓</div>
       <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--green);margin-bottom:6px;">Signed In</div>
-      <div id="authSignedInEmail" style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;"></div>
+      <div id="authSignedInEmail" style="color:var(--text-secondary);font-size:14px;margin-bottom:4px;"></div>
+      <div id="authSignedInDisplayName" style="color:var(--ice-dark);font-size:13px;font-weight:500;margin-bottom:4px;"></div>
+      <button onclick="openChangeDisplayName()" style="font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;margin-bottom:16px;">Change display name</button>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">Your collection syncs automatically. Sign in on any device to access your cards.</div>
       <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px;text-align:left;">
         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Change Password</div>
@@ -2080,7 +2101,9 @@ function buildSharePriceHtml(c) {
     '<div id="ownerPriceRow_' + id + '" style="display:' + showOwn + ';gap:6px;align-items:center;margin-top:4px;">',
     '<span style="font-size:12px;color:var(--text-muted);">$</span>',
     '<input type="number" class="result-input" id="ownerPriceInput_' + id + '" value="' + ownPrice + '" placeholder="0.00" step="0.01" style="width:100px;font-size:13px;" onchange="updateCardOwnerPrice(' + id + ',this.value)">',
-    '</div></div></div>'
+    '</div>',
+    '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">&#8629; Press Enter or click away to save</div>',
+    '</div></div>'
   ].join('');
 }
 
@@ -2196,7 +2219,7 @@ function clearAuthToken(){localStorage.removeItem('iceVault_authToken');authToke
 
 async function verifySession(){
   const token=getAuthToken();if(!token)return updateAuthUI(null);
-  try{const r=await fetch(WORKER_URL+'/auth/verify',{headers:{'Authorization':'Bearer '+token}});if(r.ok){const d=await r.json();currentUser=d;authToken=token;updateAuthUI(d);await syncCollectionFromCloud();}else{clearAuthToken();updateAuthUI(null);}}
+  try{const r=await fetch(WORKER_URL+'/auth/verify',{headers:{'Authorization':'Bearer '+token}});if(r.ok){const d=await r.json();currentUser={email:d.email,userId:d.userId,displayName:d.displayName||null};authToken=token;updateAuthUI(currentUser);if(!currentUser.displayName){document.getElementById('displayNameModal').classList.add('open');return;}await syncCollectionFromCloud();}else{clearAuthToken();updateAuthUI(null);}}
   catch{updateAuthUI(null);}
 }
 
@@ -2221,7 +2244,12 @@ function updateAuthUI(user){
 
 function openAuthModal(){
   const m=document.getElementById('authModal'),si=document.getElementById('authSignedInContent'),f=document.getElementById('authModalContent');
-  if(currentUser){document.getElementById('authSignedInEmail').textContent=currentUser.email;f.style.display='none';si.style.display='block';}
+  if(currentUser){
+    document.getElementById('authSignedInEmail').textContent=currentUser.email;
+    const dnEl=document.getElementById('authSignedInDisplayName');
+    if(dnEl)dnEl.textContent=currentUser.displayName?'Display name: '+currentUser.displayName:'No display name set';
+    f.style.display='none';si.style.display='block';
+  }
   else{f.style.display='block';si.style.display='none';}
   m.classList.add('open');
 }
@@ -2256,9 +2284,10 @@ async function submitAuth(){
   if(isSignup){const c=document.getElementById('authPasswordConfirm').value;if(password!==c){errEl.textContent='Passwords do not match';return;}if(password.length<6){errEl.textContent='Password must be at least 6 characters';return;}}
   btn.textContent=isSignup?'Creating account...':'Signing in...';btn.disabled=true;
   try{
-    const r=await fetch(WORKER_URL+(isSignup?'/auth/signup':'/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+    const r=await fetch(WORKER_URL+(isSignup?'/auth/signup':'/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(isSignup?{email,password,displayName:(document.getElementById('authDisplayName')?.value||'').trim()}:{email,password})});
     const d=await r.json();if(!r.ok){errEl.textContent=d.error||'Something went wrong';return;}
-    setAuthToken(d.token);currentUser={email:d.email,userId:d.userId};updateAuthUI(currentUser);
+    setAuthToken(d.token);currentUser={email:d.email,userId:d.userId,displayName:d.displayName||null};updateAuthUI(currentUser);
+    if(!currentUser.displayName){closeModal('authModal');document.getElementById('displayNameModal').classList.add('open');return;}
     if(collection.length>0){collection=await migrateLocalImagesToR2(collection);await syncCollectionToCloud();}else await syncCollectionFromCloud();
     closeModal('authModal');showToast(isSignup?'Account created! Collection synced.':'Signed in! Collection synced.','success');
   }catch{errEl.textContent='Connection error — try again';}
@@ -2328,6 +2357,57 @@ async function changePassword() {
     if (btn) { btn.textContent = 'Update Password'; btn.disabled = false; }
   }
 }
+
+function openChangeDisplayName() {
+  const newName = prompt('New display name (max 32 chars):', currentUser.displayName || '');
+  if (!newName || !newName.trim()) return;
+  const val = newName.trim();
+  if (val.length > 32) { showToast('Max 32 characters', 'error'); return; }
+  if (!/^[a-zA-Z0-9 _.\-]+$/.test(val)) { showToast('Letters, numbers, spaces, _ - . only', 'error'); return; }
+  fetch(WORKER_URL + '/auth/display-name', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+    body: JSON.stringify({ displayName: val })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      currentUser.displayName = val;
+      const dnEl = document.getElementById('authSignedInDisplayName');
+      if (dnEl) dnEl.textContent = 'Display name: ' + val;
+      showToast('Display name updated!', 'success');
+    } else { showToast(d.error || 'Failed to update', 'error'); }
+  }).catch(() => showToast('Connection error', 'error'));
+}
+
+async function submitDisplayName() {
+  const input = document.getElementById('promptDisplayName');
+  const val = (input?.value || '').trim();
+  const errEl = document.getElementById('displayNameError');
+  errEl.style.display = 'none';
+  if (!val) { errEl.textContent = 'Display name required'; errEl.style.display = 'block'; return; }
+  if (val.length > 32) { errEl.textContent = 'Max 32 characters'; errEl.style.display = 'block'; return; }
+  if (!/^[a-zA-Z0-9 _.\-]+$/.test(val)) { errEl.textContent = 'Letters, numbers, spaces, _ - . only'; errEl.style.display = 'block'; return; }
+  const btn = document.querySelector('#displayNameModal .save-btn');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  try {
+    const r = await fetch(WORKER_URL + '/auth/display-name', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify({ displayName: val })
+    });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.error || 'Failed to set display name'; errEl.style.display = 'block'; return; }
+    currentUser.displayName = val;
+    document.getElementById('displayNameModal').classList.remove('open');
+    updateAuthUI(currentUser);
+    await syncCollectionFromCloud();
+    showToast('Display name set!', 'success');
+  } catch (e) {
+    errEl.textContent = 'Connection error'; errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.textContent = 'Set Display Name'; btn.disabled = false; }
+  }
+}
+
 async function signOut(){
   const t=getAuthToken();if(t)fetch(WORKER_URL+'/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+t}}).catch(()=>{});
   clearAuthToken();currentUser=null;

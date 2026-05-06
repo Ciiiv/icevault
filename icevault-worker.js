@@ -375,10 +375,14 @@ export default {
         const body = await request.json();
         const email = (body.email || '').trim().toLowerCase();
         const password = body.password || '';
+        const displayName = (body.displayName || '').trim();
         const emailErr = validateEmail(email);
         if (emailErr) return err(emailErr, 400, cors);
         const passErr = validatePassword(password);
         if (passErr) return err(passErr, 400, cors);
+        if (!displayName) return err('Display name required', 400, cors);
+        if (displayName.length > 32) return err('Display name must be 32 characters or less', 400, cors);
+        if (!/^[a-zA-Z0-9 _\-\.]+$/.test(displayName)) return err('Display name can only contain letters, numbers, spaces, and _ - .', 400, cors);
 
         const existing = await db.prepare(
           'SELECT id FROM users WHERE email = ?'
@@ -477,7 +481,7 @@ export default {
     if (path === '/auth/verify' && request.method === 'GET') {
       const user = await getUser(request, db);
       if (!user) return err('Invalid or expired session', 401, cors);
-      return json({ email: user.email, userId: user.id }, 200, cors);
+      return json({ email: user.email, userId: user.id, displayName: user.display_name || null }, 200, cors);
     }
 
     // ─── AUTH: FORGOT PASSWORD ───────────────────────────────────────────
@@ -785,7 +789,7 @@ export default {
 
         // Fetch owner info
         const owner = await db.prepare(
-          'SELECT email FROM users WHERE id = ?'
+          'SELECT email, display_name FROM users WHERE id = ?'
         ).bind(shareRow.user_id).first();
 
         // Fetch collection
@@ -824,8 +828,27 @@ export default {
         });
 
         // Display name — first part of email
-        const displayName = owner ? owner.email.split('@')[0] : 'Unknown';
+        const displayName = owner ? (owner.display_name || owner.email.split('@')[0]) : 'Unknown';
         return json({ displayName, cardCount: publicCollection.length, collection: publicCollection }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── AUTH: SET DISPLAY NAME ─────────────────────────────────────────
+    if (path === '/auth/display-name' && request.method === 'POST') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      try {
+        const body = await request.json();
+        const displayName = (body.displayName || '').trim();
+        if (!displayName) return err('Display name required', 400, cors);
+        if (displayName.length > 32) return err('Display name must be 32 characters or less', 400, cors);
+        if (!/^[a-zA-Z0-9 _\-\.]+$/.test(displayName)) return err('Display name can only contain letters, numbers, spaces, and _ - .', 400, cors);
+        await db.prepare('UPDATE users SET display_name = ? WHERE id = ?')
+          .bind(displayName, user.id).run();
+        await writeLog(db, { ip, path: '/auth/display-name', status: 200, event: 'DISPLAY_NAME_SET', detail: user.email });
+        return json({ ok: true, displayName }, 200, cors);
       } catch (e) {
         return err(e.message, 500, cors);
       }
