@@ -460,7 +460,7 @@ export default {
         ).bind(token, user.id, expires).run();
 
         await writeLog(db, { ip, path: '/auth/login', status: 200, event: 'LOGIN_OK', detail: user.email });
-        return json({ token, email: user.email, userId: user.id }, 200, cors);
+        return json({ token, email: user.email, userId: user.id, displayName: user.display_name || null }, 200, cors);
       } catch (e) {
         await writeLog(db, { ip, path: '/auth/login', status: 500, event: 'ERROR', detail: e.message });
         return err(e.message, 500, cors);
