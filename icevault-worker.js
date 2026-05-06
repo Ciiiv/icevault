@@ -236,7 +236,7 @@ async function getUser(request, db) {
   if (!session) return null;
   if (new Date(session.expires_at) < new Date()) return null;
   const user = await db.prepare(
-    'SELECT id, email FROM users WHERE id = ?'
+    'SELECT id, email, display_name FROM users WHERE id = ?'
   ).bind(session.user_id).first();
   return user;
 }
