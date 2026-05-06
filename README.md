@@ -78,6 +78,8 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Guest → account migration** — when a guest signs up, all local card images are automatically uploaded to R2 before syncing to D1
 - Password reset via email (Maileroo — sends to any email address, no custom domain needed)
 - **Change password** from account modal — requires current password, enforces 8+ chars with letter, number, and symbol
+- **Display name** — chosen at signup, shown on shared collections instead of your email. Editable from account modal
+- **Share your collection** — generate a public read-only link anyone can view without an account. Share the whole collection at once with per-card price controls — show AI estimated value or your own asking price, labeled with your display name. Revoke anytime
 - API keys are **never saved to your account** — stored locally on your device only
 - Session lasts 30 days before requiring re-login
 
@@ -117,6 +119,7 @@ All AI features use your own Anthropic API key — you pay only for what you use
 | 130point link | 0 | Free |
 | Account sync | 0 | Free (Cloudflare D1 + R2) |
 | Password reset email | 0 | Free (Maileroo) |
+| Share collection link | 0 | Free (Cloudflare D1) |
 
 ### Monthly cost vs CollX Pro ($10/month flat)
 
@@ -192,6 +195,11 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 | POST | `/auth/forgot` | Request password reset email |
 | POST | `/auth/reset` | Reset password with token |
 | POST | `/auth/change-password` | Change password while signed in |
+| POST | `/auth/display-name` | Set or update display name |
+| POST | `/share/generate` | Generate share token (rate limited 5/hr) |
+| DELETE | `/share/revoke` | Revoke share token — disables sharing immediately |
+| GET | `/share/status` | Check if sharing is enabled for current user |
+| GET | `/share/:token` | Public — fetch shared collection (rate limited 60/hr) |
 | POST | `/upload` | Upload card image to R2 |
 | GET | `/collection` | Fetch user's collection from D1 |
 | PUT | `/collection` | Save/sync full collection to D1 |
@@ -256,7 +264,7 @@ icevault/
 2. Go into the database → **Console** tab → run each query:
 
 ```sql
-CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, display_name TEXT, created_at TEXT NOT NULL)
 ```
 ```sql
 CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL)
@@ -275,6 +283,9 @@ CREATE INDEX IF NOT EXISTS idx_logs_created_at ON request_logs(created_at)
 ```
 ```sql
 CREATE INDEX IF NOT EXISTS idx_cards_user ON cards(user_id)
+```
+```sql
+CREATE TABLE IF NOT EXISTS share_tokens (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL)
 ```
 
 3. Note your **database ID** from the Overview tab

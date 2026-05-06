@@ -55,7 +55,7 @@
 ```
 icevault/                           ← Git repo (GitHub Pages)
 ├── docs/
-│   ├── index.html                  # Entire app — HTML, CSS, JS (~2400 lines)
+│   ├── index.html                  # Entire app — HTML, CSS, JS (~2950 lines)
 │   ├── manifest.json
 │   ├── sw.js
 │   └── icons/
@@ -87,19 +87,28 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - eBay Trading API XML integration (legacy)
 - User accounts with email/password auth
 - Cloud sync — metadata to D1, images to R2
-- **R2 image storage** — card photos served from CDN, cached 1 year, zero egress cost
+- **R2 image storage** — front + back card photos served from CDN, cached 1 year, zero egress cost
 - Guest mode with local-only storage
 - **Sign out clears localStorage** — prevents account bleed-over on shared devices
 - **Guest → account migration** — base64 images auto-uploaded to R2 at sign-in before D1 sync
 - Password reset via Maileroo
-- **Change password** from signed-in account modal — requires current password, enforces 8+ chars with letter + number + symbol, rate limited, same-password check server-side
+- **Change password** from signed-in account modal — requires current password, 8+ chars with letter + number + symbol, rate limited, server-side same-password check
+- **Display name** — required on signup, prompted on first login for existing accounts, editable from account modal. Never exposes email. Used on shared collection banner and owner price labels
+- **Public collection sharing** — generate a read-only URL (`?collection=TOKEN`). 64-char random token, 1 per user, revocable. Per-card price controls: off by default, owner can show AI estimated or their own asking price labeled with display name. Rate limited
 - 6-theme system — Hybrid default
 - PWA + Android APK
 
 ### Security Completed
 - ✅ PBKDF2-HMAC-SHA256 password hashing — 100k iterations
-- ✅ Rate limiting — KV sliding window on all 5 endpoints:
-  - `/auth/login` — 10/15min, `/auth/signup` — 5/hr, `/auth/forgot` — 5/hr, `/auth/reset` — 10/hr, `/proxy` — 100/hr
+- ✅ Rate limiting — KV sliding window on 8 endpoints:
+  - `/auth/login` — 10/15min
+  - `/auth/signup` — 5/hr
+  - `/auth/forgot` — 5/hr
+  - `/auth/reset` — 10/hr
+  - `/auth/change-password` — 5/hr
+  - `/share/generate` — 5/hr
+  - `/share/view` — 60/hr
+  - `/proxy` — 100/hr
 - ✅ Rate limit alert emails — alertRateLimit(), KV deduped, fire-and-forget
 - ✅ Login fail delay — 100ms
 - ✅ Timing attack prevention
@@ -107,7 +116,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - ✅ IPv4 preference in logs
 - ✅ Origin check on worker
 - ✅ Sign out clears localStorage
-- ✅ Input validation on all worker endpoints — email 254 chars, password 1024, token hex format, collection max 2000 cards, card data max 10KB, image max 8MB, MIME type whitelist
+- ✅ Input validation on all worker endpoints — email 254 chars, password 1024, token hex format, collection max 2000 cards, card data max 10KB, image max 8MB, MIME type whitelist, strong password rules on change-pw, display name max 32 chars alphanumeric
 
 ### Image Storage Architecture
 - Signed-in users: images upload to R2 at save time via `uploadImageToR2()` → `imageUrl` stored in card, `imageData` null
@@ -116,7 +125,15 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - Display: all image renders check `c.imageUrl || c.imageData` — backwards compatible with any legacy base64 cards
 - Back images stored separately: `imageUrlBack` / `imageDataBack` — shown in card modal, both clickable to lightbox
 - R2 key format: `cards/{userId}/{cardId}.jpg` (front), `cards/{userId}/{cardId}_back.jpg` (back)
-- R2 public URL: `https://pub-8fa31d4e964e401e8d40e2c4244f2868.r2.dev/{key}`
+
+### Collection Sharing Architecture
+- Share token: 64 random hex chars (2^256 possibilities), 1 per user, stored in `share_tokens` D1 table
+- Public endpoint strips sensitive fields: no base64, no cert numbers, no email, no internal IDs
+- Per-card price sharing fields: `sharePrice` (bool), `sharePriceType` ('ai'|'owner'), `ownerPrice` (string)
+- Price off by default. Owner enables per card in card detail modal
+- Owner display name shown next to owner price: e.g. "Ciiiv's Price · $45"
+- Shared view shows read-only banner with owner display name and card count
+- `window._sharedDisplayName` stores display name for use in price labels
 
 ---
 
@@ -127,10 +144,10 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 1 | Password hashing | ✅ Done | PBKDF2-HMAC-SHA256 100k iterations |
-| 2 | Rate limiting | ✅ Done | KV sliding window on all 5 endpoints |
+| 2 | Rate limiting | ✅ Done | KV sliding window on 8 endpoints |
 | 3 | Rate limit alerting | ✅ Done | Alert emails, KV deduped |
 | 4 | R2 image storage | ✅ Done | Images in R2, metadata in D1, guest migration on sign-in |
-| 5 | Input validation on worker endpoints | ✅ Done | Email/password/token limits, collection size cap, image size + MIME check, strong password rules on change-pw |
+| 5 | Input validation on worker endpoints | ✅ Done | Email/password/token limits, collection size cap, image size + MIME check, strong password rules, display name validation |
 | 6 | Per-card collection sync | ⬜ Med | Full delete+reinsert on every save |
 | 7 | Session cleanup job | ⬜ Med | Expired sessions accumulate in D1 |
 | 8 | Pagination on collection fetch | ⬜ Med | Full collection loads every time |
@@ -142,14 +159,15 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 
 ### Feature Backlog
 
-- ⬜ **Public collection sharing** — read-only URL, KEY FLYWHEEL FEATURE
-- ⬜ Card value tracking over time + charts
+- ✅ **Public collection sharing** — read-only URL with per-card price controls and owner display name
+- ⬜ Account deletion — GDPR required before public launch
 - ⬜ Mark as sold — archive with date and price
+- ⬜ Card value tracking over time + charts
 - ⬜ Multi-AI — GPT-4o, Gemini, Ollama (BYOK)
 - ⬜ Ximilar API — purpose-built card grading
 - ⬜ Migrate eBay to REST Sell API
 - ⬜ eBay Partner Network affiliate links
-- ⬜ Privacy Policy, ToS, account deletion (GDPR), age gate (COPPA) — **required before public launch**
+- ⬜ Privacy Policy, ToS, account deletion (GDPR), age gate (COPPA) — only if going public
 - ⬜ Freemium — free 500 cards, Pro $3.99/mo
 
 ---
@@ -189,20 +207,20 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 ```powershell
 cd C:\Users\civ2g\icevault-worker
 
+# Deploy — use API token if OAuth fails
+$env:CLOUDFLARE_API_TOKEN="your-token-here"
 wrangler deploy
+
+wrangler login   # re-authenticate via browser
 wrangler tail
 wrangler tail --format pretty | Select-String "RATE LIMITED|ERROR|LOGIN_FAILED|MAILEROO|R2"
 
 wrangler secret put MAILEROO_API_KEY
 wrangler secret put EMAIL_FROM
 wrangler secret list
-wrangler secret delete SECRET_NAME
 
 wrangler kv key list --namespace-id=94009b2958714bd88fc369c3a808997e
-
-wrangler whoami
-wrangler --version
-npm install -g wrangler
+wrangler r2 object list icevault-images
 ```
 
 ### wrangler.toml
@@ -226,8 +244,10 @@ bucket_name = "icevault-images"
 ```
 
 ### PowerShell D1 query tip
-Single quotes inside double quotes work. For complex queries use ascii-encoded file:
 ```powershell
+# Double quotes wrapping SQL, single quotes inside
+wrangler d1 execute icevault --remote --command "YOUR SQL HERE"
+# For complex queries use ascii-encoded file
 "YOUR SQL" | Out-File -FilePath query.sql -Encoding ascii
 wrangler d1 execute icevault --remote --file query.sql
 # Note: --file doesn't show SELECT results — use --command for queries
@@ -240,7 +260,7 @@ wrangler d1 execute icevault --remote --file query.sql
 ```sql
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL, created_at TEXT NOT NULL
+  password_hash TEXT NOT NULL, display_name TEXT, created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL
@@ -250,8 +270,11 @@ CREATE TABLE IF NOT EXISTS password_resets (
 );
 CREATE TABLE IF NOT EXISTS cards (
   id TEXT NOT NULL, user_id TEXT NOT NULL,
-  card_data TEXT NOT NULL,  -- JSON: metadata + imageUrl (R2) or imageData (base64 legacy/guest)
+  card_data TEXT NOT NULL,
   created_at TEXT NOT NULL, PRIMARY KEY (id, user_id)
+);
+CREATE TABLE IF NOT EXISTS share_tokens (
+  token TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS request_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL,
@@ -263,7 +286,10 @@ CREATE INDEX IF NOT EXISTS idx_logs_event ON request_logs(event);
 CREATE INDEX IF NOT EXISTS idx_logs_ip ON request_logs(ip);
 ```
 
-Password hash format: `pbkdf2$100000$salt$hash`.
+Notes:
+- Password hash format: `pbkdf2$100000$salt$hash`
+- `display_name` column added via `ALTER TABLE users ADD COLUMN display_name TEXT`
+- `share_tokens` created via `CREATE TABLE IF NOT EXISTS share_tokens ...`
 
 ---
 
@@ -272,16 +298,16 @@ Password hash format: `pbkdf2$100000$salt$hash`.
 ### User & Account Queries
 
 ```powershell
-# All users
-wrangler d1 execute icevault --remote --command "SELECT email, id, created_at FROM users ORDER BY created_at ASC"
+# All users with display names
+wrangler d1 execute icevault --remote --command "SELECT email, display_name, id, created_at FROM users ORDER BY created_at ASC"
 
 # Users with card counts and storage
-wrangler d1 execute icevault --remote --command "SELECT u.email, u.id, COUNT(c.id) as cards, SUM(LENGTH(c.card_data)) as bytes FROM users u LEFT JOIN cards c ON c.user_id = u.id GROUP BY u.id"
+wrangler d1 execute icevault --remote --command "SELECT u.email, u.display_name, COUNT(c.id) as cards, SUM(LENGTH(c.card_data)) as bytes FROM users u LEFT JOIN cards c ON c.user_id = u.id GROUP BY u.id"
 
-# Card IDs and emails
-wrangler d1 execute icevault --remote --command "SELECT u.email, c.id, c.user_id, LENGTH(c.card_data) as bytes FROM cards c JOIN users u ON u.id = c.user_id"
+# Check share tokens
+wrangler d1 execute icevault --remote --command "SELECT u.email, u.display_name, s.token, s.created_at FROM share_tokens s JOIN users u ON u.id = s.user_id"
 
-# Signup IPs (requires logs from after logging was added)
+# Signup IPs
 wrangler d1 execute icevault --remote --command "SELECT ip, event, detail, created_at FROM request_logs WHERE event = 'SIGNUP' ORDER BY created_at ASC"
 ```
 
@@ -292,10 +318,8 @@ wrangler d1 execute icevault --remote --command "SELECT ip, event, detail, creat
 wrangler d1 execute icevault --remote --command "DELETE FROM cards WHERE user_id = 'USER_ID'"
 wrangler d1 execute icevault --remote --command "DELETE FROM sessions WHERE user_id = 'USER_ID'"
 wrangler d1 execute icevault --remote --command "DELETE FROM password_resets WHERE user_id = 'USER_ID'"
+wrangler d1 execute icevault --remote --command "DELETE FROM share_tokens WHERE user_id = 'USER_ID'"
 wrangler d1 execute icevault --remote --command "DELETE FROM users WHERE id = 'USER_ID'"
-
-# Verify
-wrangler d1 execute icevault --remote --command "SELECT email, id FROM users"
 ```
 
 ### Log Queries
@@ -309,29 +333,6 @@ wrangler d1 execute icevault --remote --command "SELECT ip, detail, COUNT(*) as 
 
 # Recent activity
 wrangler d1 execute icevault --remote --command "SELECT ip, path, event, detail, created_at FROM request_logs ORDER BY created_at DESC LIMIT 20"
-
-# Storage check
-wrangler d1 execute icevault --remote --command "SELECT user_id, COUNT(*) as cards, SUM(LENGTH(card_data)) as bytes FROM cards GROUP BY user_id"
-```
-
-### R2 Operations
-
-```powershell
-# List objects in R2 bucket (via Cloudflare dashboard or wrangler)
-wrangler r2 object list icevault-images
-
-# Delete a specific image from R2
-wrangler r2 object delete icevault-images cards/USER_ID/CARD_ID.jpg
-
-# Check bucket usage — via Cloudflare dashboard → R2 → icevault-images → Metrics
-```
-
-### Image Migration Script
-`migrate-images.js` — migrates base64 cards from D1 to R2. Usage:
-```powershell
-# Get auth token from DevTools → Application → Local Storage → iceVault_authToken
-$env:IV_AUTH_TOKEN="your_token_here"
-node C:\Users\civ2g\icevault-worker\migrate-images.js
 ```
 
 ---
@@ -359,19 +360,22 @@ node C:\Users\civ2g\icevault-worker\migrate-images.js
 | Maileroo over Brevo | 3,000/mo free, sends to any email without custom domain |
 | alertRateLimit fire-and-forget | No await — never delays the 429 response |
 | Single HTML file | No build pipeline, maintainable at current scale |
+| Display name separate from email | Email never exposed publicly. Display name shown on shared collections |
+| Share token 64 hex chars | 2^256 possibilities — effectively unguessable. One per user, revocable |
+| Per-card price sharing off by default | Collectors control what price data is visible to others |
+| Cloudflare API token for deploy | OAuth token can expire; scoped API token more reliable for wrangler deploy |
 
 ---
 
 ## ⚠️ Known Issues & Limitations
 
-
 - **Full collection resync:** Every save deletes and reinserts all cards. Fix: per-card sync (backlog #6)
 - **eBay Trading API:** Legacy XML SOAP — deprecated but functional. Fix: REST migration (backlog #13)
 - **Maileroo shared domain:** Emails land in junk on Gmail and Yahoo. Fix: custom domain (~$10/yr)
 - **D1 transient errors:** Occasional startup errors — Cloudflare-side, self-resolves in seconds
-- **Guest collections shared on shared devices:** localStorage has no user concept — by design, covered by UI warning
 - **R2 public bucket:** Anyone with a URL can view an image. URLs are not guessable (userId + cardId) but not private
 - **PowerShell D1 queries:** Use double quotes wrapping SQL with single quotes inside. `--file` doesn't show SELECT output
+- **Wrangler OAuth expiry:** If `wrangler deploy` fails with KV permissions error, use `$env:CLOUDFLARE_API_TOKEN` instead
 
 ---
 
@@ -385,19 +389,22 @@ node C:\Users\civ2g\icevault-worker\migrate-images.js
 > Maileroo email (noreply@af4c1dd0a43e50da.maileroo.org).
 >
 > Worker: C:\Users\civ2g\icevault-worker\src\index.js — edit in VS Code, wrangler deploy.
+> If wrangler deploy fails with KV permissions: $env:CLOUDFLARE_API_TOKEN='token' then deploy.
 > GitHub reference: icevault_worker.js (manually synced).
 >
-> Completed: PBKDF2-100k hashing, KV rate limiting (6 endpoints incl. change-password), rate limit alert emails,
+> Completed: PBKDF2-100k hashing, KV rate limiting (8 endpoints), rate limit alert emails,
 > Maileroo email, 6-theme system (Hybrid default, sidebar layout), JSON/CSV export + JSON import,
-> sign out clears localStorage, R2 image storage (front + back uploaded at save, guest migration
-> at sign-in, imageUrl||imageData fallback), input validation on all worker endpoints.
+> sign out clears localStorage, R2 image storage (front + back, guest migration, import migration),
+> input validation on all worker endpoints, change password (strong rules, rate limited),
+> display names (required on signup, prompted on first login, shown in account modal),
+> public collection sharing (64-char token, per-card price controls, owner display name on price).
 >
-> index.html ~2400 lines. Views inside .main-content inside .sidebar-shell always.
+> D1 has display_name column on users (ALTER TABLE), share_tokens table.
+> index.html ~2950 lines. Views inside .main-content inside .sidebar-shell always.
 > Classic theme: sidebar-shell display:block, sidebar-nav/topbar hidden, main-content display:block full width.
-> Never display:none the sidebar-shell in Classic — hides all views.
 >
-> Next priorities: public collection sharing (key flywheel feature), account deletion, mark as sold.
-> Legal before public launch: Privacy Policy, ToS, account deletion, age gate.
+> Next priorities: account deletion, mark as sold, per-card sync.
+> Legal (Privacy Policy, ToS, GDPR, COPPA) only if going public.
 >
 > D1 ops: --remote flag, double quotes wrapping SQL, single quotes inside.
 > See PROJECT_NOTES.md for full context."
