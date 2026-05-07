@@ -102,6 +102,20 @@ async function maybePurgeLogs(db) {
   }
 }
 
+// ─── SESSION PURGE ────────────────────────────────────────────────────────
+// Deletes expired sessions — runs on ~5% of requests to spread load
+// Also called explicitly on login to clean up the logging-in user's old sessions
+async function maybePurgeSessions(db) {
+  if (Math.random() > 0.05) return;
+  try {
+    const now = new Date().toISOString();
+    const result = await db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
+    if (result.meta?.changes > 0) console.log(`[SESSION PURGE] Deleted ${result.meta.changes} expired sessions`);
+  } catch (e) {
+    console.log(`[SESSION PURGE ERROR] ${e.message}`);
+  }
+}
+
 // ─── RATE LIMITER ──────────────────────────────────────────────────────────
 async function checkRateLimit(kv, endpoint, ip) {
   if (!kv) return { limited: false };
@@ -455,6 +469,9 @@ export default {
 
         const token = generateToken();
         const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        // Clean up this user's expired sessions before creating a new one
+        await db.prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at < ?')
+          .bind(user.id, new Date().toISOString()).run();
         await db.prepare(
           'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'
         ).bind(token, user.id, expires).run();
