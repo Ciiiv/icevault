@@ -167,7 +167,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - ⬜ Ximilar API — purpose-built card grading
 - ⬜ Migrate eBay to REST Sell API
 - ⬜ eBay Partner Network affiliate links
-- ⬜ PWA cleanup — add favicon, fix deprecated `apple-mobile-web-app-capable` meta tag
+- ✅ PWA cleanup — favicon added, `mobile-web-app-capable` meta tag added
 - ⬜ Account deletion + Privacy Policy, ToS, GDPR, COPPA — only if going public
 - ⬜ Freemium — free 500 cards, Pro $3.99/mo
 
