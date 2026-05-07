@@ -678,7 +678,43 @@ export default {
       }
     }
 
-    // ─── COLLECTION: GET ─────────────────────────────────────────────────
+     // ─── COLLECTION: META (lightweight sync check) ──────────────────────────
+    if (path === '/collection/meta' && request.method === 'GET') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      try {
+        const result = await db.prepare(
+          'SELECT COUNT(*) as count, MAX(COALESCE(updated_at, created_at)) as lastUpdated FROM cards WHERE user_id = ?'
+        ).bind(user.id).first();
+        return json({ count: result.count || 0, lastUpdated: result.lastUpdated || null }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── COLLECTION: UPSERT SINGLE CARD ─────────────────────────────────────
+    if (path.startsWith('/collection/') && request.method === 'PUT') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      const cardId = path.split('/')[2];
+      if (!cardId) return err('Card ID required', 400, cors);
+      try {
+        const body = await request.json();
+        const { card } = body;
+        if (!card || !card.id || !card.player) return err('Invalid card data', 400, cors);
+        const cardJson = JSON.stringify(card);
+        if (cardJson.length > LIMITS.cardDataSize) return err('Card data too large', 400, cors);
+        const now = new Date().toISOString();
+        await db.prepare(
+          'INSERT INTO cards (id, user_id, card_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id, user_id) DO UPDATE SET card_data = excluded.card_data, updated_at = excluded.updated_at'
+        ).bind(cardId.toString(), user.id, cardJson, card.addedAt || now, now).run();
+        return json({ ok: true }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
+    }
+
+   // ─── COLLECTION: GET ─────────────────────────────────────────────────
     if (path === '/collection' && request.method === 'GET') {
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
