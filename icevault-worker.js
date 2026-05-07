@@ -713,9 +713,10 @@ export default {
 
       await db.prepare('DELETE FROM cards WHERE user_id = ?').bind(user.id).run();
       for (const card of validCards) {
+        const now = new Date().toISOString();
         await db.prepare(
-          'INSERT INTO cards (id, user_id, card_data, created_at) VALUES (?, ?, ?, ?)'
-        ).bind(card.id.toString(), user.id, JSON.stringify(card), card.addedAt || new Date().toISOString()).run();
+          'INSERT INTO cards (id, user_id, card_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+        ).bind(card.id.toString(), user.id, JSON.stringify(card), card.addedAt || now, now).run();
       }
       return json({ ok: true, count: collection.length }, 200, cors);
     }

@@ -2014,7 +2014,7 @@ async function saveCard(){
   const imageUrlBack=currentBackImageData?await uploadImageToR2(currentBackImageData,cardId+'_back'):null;
   const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:document.getElementById('fieldValue').value,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:true,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
-  if(currentUser)syncCollectionToCloud();
+  if(currentUser)syncCardToCloud(card);
   updateHeaderStats();showToast(`"${player}" saved to collection!`,'success');
   document.getElementById('previewBox').innerHTML='<div class="preview-placeholder"><div style="font-size:32px;">🏒</div></div>';
   document.getElementById('analyzeBtn').disabled=true;document.getElementById('clearBtn').classList.remove('visible');
@@ -2121,11 +2121,11 @@ function openCardDetail(id){
   document.getElementById('cardModal').classList.add('open');
 }
 
-function addModalTag(id){const t=prompt('Enter tag:');if(!t||!t.trim())return;const c=collection.find(x=>x.id===id);if(!c)return;if(!c.tags)c.tags=[];if(!c.tags.includes(t.trim())){c.tags.push(t.trim());localStorage.setItem('iceVault_cards',JSON.stringify(collection));openCardDetail(id);renderTagFilterRow();}}
-function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)return;c.tags=(c.tags||[]).filter(t=>t!==tag);localStorage.setItem('iceVault_cards',JSON.stringify(collection));openCardDetail(id);renderTagFilterRow();}
-function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','');localStorage.setItem('iceVault_cards',JSON.stringify(collection));showToast('Collection updated','success');}
+function addModalTag(id){const t=prompt('Enter tag:');if(!t||!t.trim())return;const c=collection.find(x=>x.id===id);if(!c)return;if(!c.tags)c.tags=[];if(!c.tags.includes(t.trim())){c.tags.push(t.trim());localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}}
+function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)return;c.tags=(c.tags||[]).filter(t=>t!==tag);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}
+function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
 function listOnEbayFromModal(id){closeModal('cardModal');selectedCardForEbay=collection.find(c=>c.id===id);switchView('ebay');populateEbayForm(selectedCardForEbay);}
-function deleteCard(id){if(!confirm('Delete this card?'))return;collection=collection.filter(c=>c.id!==id);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCollectionToCloud();closeModal('cardModal');renderCollection();showToast('Card deleted','success');}
+function deleteCard(id){if(!confirm('Delete this card?'))return;collection=collection.filter(c=>c.id!==id);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)deleteCardFromCloud(id);closeModal('cardModal');renderCollection();showToast('Card deleted','success');}
 
 function renderEbayCardSelect(){
   const ctr=document.getElementById('ebayCardSelect');
@@ -2413,7 +2413,7 @@ async function submitDisplayName() {
 async function signOut(){
   const t=getAuthToken();if(t)fetch(WORKER_URL+'/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+t}}).catch(()=>{});
   clearAuthToken();currentUser=null;
-  collection=[];localStorage.removeItem('iceVault_cards');
+  collection=[];localStorage.removeItem('iceVault_cards');localStorage.removeItem('iceVault_lastSync');
   updateAuthUI(null);updateHeaderStats();closeModal('authModal');showToast('Signed out','success');
 }
 
@@ -2442,13 +2442,61 @@ async function migrateLocalImagesToR2(col) {
   return col;
 }
 async function syncCollectionToCloud(){
+  // Bulk sync — used for import and guest migration only
   const t=getAuthToken();if(!t||!currentUser)return;
-  try{await fetch(WORKER_URL+'/collection',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({collection})});}
+  try{
+    await fetch(WORKER_URL+'/collection',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({collection})});
+    localStorage.setItem('iceVault_lastSync', new Date().toISOString());
+  }
   catch(e){console.warn('Cloud sync failed:',e);}
+}
+
+async function syncCardToCloud(card){
+  // Single card upsert — used for all individual card saves/edits
+  const t=getAuthToken();if(!t||!currentUser||!card)return;
+  try{
+    await fetch(WORKER_URL+'/collection/'+card.id,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({card})});
+    localStorage.setItem('iceVault_lastSync', new Date().toISOString());
+  }
+  catch(e){console.warn('Card sync failed:',e);}
+}
+
+async function deleteCardFromCloud(cardId){
+  const t=getAuthToken();if(!t||!currentUser)return;
+  try{await fetch(WORKER_URL+'/collection/'+cardId,{method:'DELETE',headers:{'Authorization':'Bearer '+t}});}
+  catch(e){console.warn('Card delete sync failed:',e);}
 }
 async function syncCollectionFromCloud(){
   const t=getAuthToken();if(!t||!currentUser)return;
-  try{const r=await fetch(WORKER_URL+'/collection',{headers:{'Authorization':'Bearer '+t}});if(!r.ok)return;const d=await r.json();if(d.collection&&d.collection.length>0){collection=d.collection;localStorage.setItem('iceVault_cards',JSON.stringify(collection));updateHeaderStats();}}
+  try{
+    // Smart sync — check meta first to avoid unnecessary full pulls
+    const lastSync=localStorage.getItem('iceVault_lastSync');
+    const metaR=await fetch(WORKER_URL+'/collection/meta',{headers:{'Authorization':'Bearer '+t}});
+    if(metaR.ok){
+      const meta=await metaR.json();
+      const localCount=collection.length;
+      // Skip full pull if counts match and we synced after server's last update
+      if(lastSync && meta.lastUpdated && lastSync >= meta.lastUpdated && localCount === meta.count){
+        console.log('[SYNC] Collection up to date — skipping full pull');
+        return;
+      }
+    }
+    // Full pull needed
+    const r=await fetch(WORKER_URL+'/collection',{headers:{'Authorization':'Bearer '+t}});
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d.collection&&d.collection.length>0){
+      collection=d.collection;
+      localStorage.setItem('iceVault_cards',JSON.stringify(collection));
+      localStorage.setItem('iceVault_lastSync', new Date().toISOString());
+      updateHeaderStats();
+    } else if(d.collection&&d.collection.length===0){
+      collection=[];
+      localStorage.setItem('iceVault_cards','[]');
+      localStorage.setItem('iceVault_lastSync', new Date().toISOString());
+      updateHeaderStats();
+    }
+  }
   catch(e){console.warn('Cloud fetch failed:',e);}
 }
 
@@ -2566,7 +2614,7 @@ function saveCertCard(){
   if(!player){showToast('Enter the player name first','error');return;}
   const gl=currentGrader==='AUT'?'Authority':currentGrader;
   const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,team:'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:document.getElementById('certValue').value,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
-  collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCollectionToCloud();updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
+  collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(card);updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
   document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certSlabImageData=null;certTags=[];
 }
 
@@ -2750,7 +2798,7 @@ function updateCardSharePrice(id) {
   c.sharePrice = checked;
   const optionsEl = document.getElementById('sharePriceOptions_' + id);
   if (optionsEl) optionsEl.style.display = checked ? 'block' : 'none';
-  saveCollectionLocal();
+  saveCollectionLocal(c);
 }
 
 function updateCardSharePriceType(id, type) {
@@ -2759,19 +2807,22 @@ function updateCardSharePriceType(id, type) {
   c.sharePriceType = type;
   const ownerRow = document.getElementById('ownerPriceRow_' + id);
   if (ownerRow) ownerRow.style.display = type === 'owner' ? 'flex' : 'none';
-  saveCollectionLocal();
+  saveCollectionLocal(c);
 }
 
 function updateCardOwnerPrice(id, value) {
   id = typeof id === 'string' ? parseInt(id) : id;
   const c = collection.find(x => x.id === id); if (!c) return;
   c.ownerPrice = value;
-  saveCollectionLocal();
+  saveCollectionLocal(c);
 }
 
-function saveCollectionLocal() {
+function saveCollectionLocal(card) {
   localStorage.setItem('iceVault_cards', JSON.stringify(collection));
-  if (currentUser) syncCollectionToCloud();
+  if (currentUser) {
+    if (card) syncCardToCloud(card);
+    else syncCollectionToCloud();
+  }
 }
 
 // ─── SHARED VIEW — load on ?collection=TOKEN ─────────────────────────────
