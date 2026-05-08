@@ -29,8 +29,10 @@ const RATE_LIMITS = {
   '/auth/reset':  { limit: 10,  window: 60 * 60, message: 'Too many reset attempts — please wait 1 hour' },
   '/proxy':       { limit: 100, window: 60 * 60, message: 'Too many scan requests — please wait 1 hour' },
   '/auth/change-password': { limit: 5, window: 60 * 60, message: 'Too many password change attempts — please wait 1 hour' },
-  '/share/generate': { limit: 5,  window: 60 * 60, message: 'Too many share requests — please wait 1 hour' },
-  '/share/view':     { limit: 60, window: 60 * 60, message: 'Too many requests — please wait 1 hour' },
+  '/share/generate':  { limit: 5,   window: 60 * 60, message: 'Too many share requests — please wait 1 hour' },
+  '/share/view':      { limit: 60,  window: 60 * 60, message: 'Too many requests — please wait 1 hour' },
+  '/collection/put':  { limit: 200, window: 60 * 60, message: 'Too many card saves — please wait 1 hour' },
+  '/collection/bulk': { limit: 10,  window: 60 * 60, message: 'Too many bulk syncs — please wait 1 hour' },
 };
 
 // ─── INPUT LIMITS ──────────────────────────────────────────────────────────
@@ -694,6 +696,8 @@ export default {
 
     // ─── COLLECTION: UPSERT SINGLE CARD ─────────────────────────────────────
     if (path.startsWith('/collection/') && request.method === 'PUT') {
+      const rl = await checkRateLimit(kv, '/collection/put', ip);
+      if (rl.limited) return rateLimited(rl.message, rl.retryAfter, cors);
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
       const cardId = path.split('/')[2];
