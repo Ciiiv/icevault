@@ -80,6 +80,8 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - Graded cert lookup — Option A (AI slab) + Option B (free QR/cert #)
 - 8 grading companies: PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA
 - Collection management — grid, search, filter, sort, tags, lightbox
+- **Serial number** — AI reads from card back, saved to card, shown in modal and shared view, included in eBay title and search URL
+- **Optional AI grade** — checkbox on scan, unchecked skips grade to save tokens. Auto-scan removed — user controls when AI runs
 - **Export JSON** — full lossless backup, reimportable
 - **Export CSV** — 22-column flat file for Excel/Sheets
 - **Import JSON** — merge backup, skip duplicates by ID, sync to cloud
@@ -108,6 +110,8 @@ icevault-worker\                    ← Separate folder, NOT a git repo
   - `/auth/change-password` — 5/hr
   - `/share/generate` — 5/hr
   - `/share/view` — 60/hr
+  - `/collection/:id PUT` — 200/hr
+  - `/collection` bulk PUT — 10/hr
   - `/proxy` — 100/hr
 - ✅ Rate limit alert emails — alertRateLimit(), KV deduped, fire-and-forget
 - ✅ Login fail delay — 100ms
@@ -117,6 +121,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - ✅ Origin check on worker
 - ✅ Sign out clears localStorage
 - ✅ Input validation on all worker endpoints — email 254 chars, password 1024, token hex format, collection max 2000 cards, card data max 10KB, image max 8MB, MIME type whitelist, strong password rules on change-pw, display name max 32 chars alphanumeric
+- ✅ Rate limits on collection endpoints — single card PUT 200/hr, bulk PUT 10/hr
 
 ### Image Storage Architecture
 - Signed-in users: images upload to R2 at save time via `uploadImageToR2()` → `imageUrl` stored in card, `imageData` null
@@ -148,7 +153,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 | 3 | Rate limit alerting | ✅ Done | Alert emails, KV deduped |
 | 4 | R2 image storage | ✅ Done | Images in R2, metadata in D1, guest migration on sign-in |
 | 5 | Input validation on worker endpoints | ✅ Done | Email/password/token limits, collection size cap, image size + MIME check, strong password rules, display name validation |
-| 6 | Per-card collection sync | ✅ Done | Single card upsert on save/edit/delete, smart meta check on login skips full pull if up to date |
+| 6 | Per-card collection sync | ✅ Done | Single card upsert on save/edit/delete, smart meta check on login skips full pull if up to date. Rate limited 200/hr single, 10/hr bulk |
 | 7 | Session cleanup job | ✅ Done | Per-user cleanup on login + probabilistic 5% global purge |
 | 8 | Pagination on collection fetch | ⬜ Med | Full collection loads every time |
 | 9 | D1 schema redesign for OAuth | ⬜ Low | Prerequisite for Google/Discord OAuth |
@@ -160,7 +165,8 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 ### Feature Backlog
 
 - ✅ **Public collection sharing** — read-only URL with per-card price controls and owner display name
-- ⬜ **Optional AI grade on scan** — checkbox to include/skip condition estimate, save tokens when only card info needed
+- ✅ **Optional AI grade on scan** — checkbox to include/skip condition estimate. Auto-scan removed — user controls when AI runs
+- ✅ **Serial number** — read from card back by AI, saved to card, shown in modal/shared view, included in eBay search URL and listing title. Player name first in eBay title, AI grade removed, official grade kept
 - ⬜ Mark as sold — archive with date and price
 - ⬜ Card value tracking over time + charts
 - ⬜ Multi-AI — GPT-4o, Gemini, Ollama (BYOK)
@@ -404,7 +410,7 @@ wrangler d1 execute icevault --remote --command "SELECT ip, path, event, detail,
 > index.html ~2950 lines. Views inside .main-content inside .sidebar-shell always.
 > Classic theme: sidebar-shell display:block, sidebar-nav/topbar hidden, main-content display:block full width.
 >
-> Next priorities: optional AI grade checkbox on scan, mark as sold, value tracking.
+> Next priorities: mark as sold, value tracking, pagination on collection fetch.
 > Legal (Privacy Policy, ToS, GDPR, COPPA) only if going public.
 >
 > D1 ops: --remote flag, double quotes wrapping SQL, single quotes inside.

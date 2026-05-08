@@ -36,9 +36,11 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - Upload or photograph **front and back** of any hockey card
 - **AI reads both images in one call** — player name, year, brand/set, card number, team, parallel/variation, serial number
 - **Back of card improves accuracy** — parallel names (e.g. Speckled Rainbow Foil), serial numbers, and card numbers are often clearer on the back
-- **AI condition estimate** — PSA-style 1–10 grade with centering, corners, edges, and surface — weighted 70% front / 30% back
+- **AI condition estimate** — PSA-style 1–10 grade with centering, corners, edges, and surface — weighted 70% front / 30% back. Optional — uncheck to skip and save tokens
 - Clearly labeled as **AI estimate only** — not an official grading company grade
+- **Serial number detection** — AI reads serial number from back of card (e.g. 47/99), saved to card, shown in modal and included in eBay title and search
 - **Optional eBay description** — checkbox before scanning to generate listing copy in the same API call (~+$0.01)
+- No auto-scan — images load without triggering AI. You control when the API call happens
 - ✕ Clear button to rescan instantly
 - Front only: ~$0.01–0.02 | Front + back: ~$0.02–0.04 per scan
 
@@ -64,6 +66,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - Select any card to create a listing
 - Auto-generates listing title (80 character eBay limit)
 - **Optional AI description at scan time** — check before scanning — description is ready when you list
+- **eBay title** — player name first, includes serial number and official grade (PSA/BGS etc.) if graded. AI estimates never included in title
 - Or generate description separately on the eBay tab (~$0.01–0.02)
 - **🔍 eBay Sold Listings** — opens eBay pre-filtered to completed sold listings
 - **📈 130point** — copies search term to clipboard and opens 130point.com for price history
