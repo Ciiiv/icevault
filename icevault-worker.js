@@ -32,7 +32,8 @@ const RATE_LIMITS = {
   '/share/generate':  { limit: 5,   window: 60 * 60, message: 'Too many share requests — please wait 1 hour' },
   '/share/view':      { limit: 60,  window: 60 * 60, message: 'Too many requests — please wait 1 hour' },
   '/collection/put':  { limit: 200, window: 60 * 60, message: 'Too many card saves — please wait 1 hour' },
-  '/collection/bulk': { limit: 10,  window: 60 * 60, message: 'Too many bulk syncs — please wait 1 hour' },
+  '/collection/bulk':     { limit: 10,  window: 60 * 60, message: 'Too many bulk syncs — please wait 1 hour' },
+  '/auth/display-name':  { limit: 10,  window: 60 * 60, message: 'Too many display name changes — please wait 1 hour' },
 };
 
 // ─── INPUT LIMITS ──────────────────────────────────────────────────────────
@@ -900,6 +901,8 @@ export default {
 
     // ─── AUTH: SET DISPLAY NAME ─────────────────────────────────────────
     if (path === '/auth/display-name' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/auth/display-name', ip);
+      if (rl.limited) return rateLimited(rl.message, rl.retryAfter, cors);
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
       try {
