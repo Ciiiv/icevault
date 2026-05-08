@@ -874,6 +874,7 @@ export default {
             officialGrade: c.officialGrade,
             imageUrl: c.imageUrl || null,
             imageUrlBack: c.imageUrlBack || null,
+            serialNumber: c.serialNumber || null,
             listedOnEbay: c.listedOnEbay,
             addedAt: c.addedAt,
             // Price — only include if owner opted in per card

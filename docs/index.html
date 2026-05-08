@@ -1421,6 +1421,10 @@
             <div class="preview-box" id="previewBoxBack" style="flex:1;"><div class="preview-placeholder"><div style="font-size:24px;margin-bottom:4px;">🔄</div><div style="font-size:11px;">Back</div></div></div>
           </div>
           <div style="margin-top:10px;padding:8px 12px;background:var(--rink);border-radius:8px;border:1px solid var(--border);">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">
+              <input type="checkbox" id="includeGrade" checked style="width:16px;height:16px;cursor:pointer;">
+              <span>Include AI condition grade <span style="color:var(--text-muted);font-size:11px;">(saves tokens if unchecked)</span></span>
+            </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);">
               <input type="checkbox" id="includeEbayDesc" style="width:16px;height:16px;cursor:pointer;">
               <span>Generate eBay listing description too <span style="color:var(--text-muted);font-size:11px;">(~+$0.01)</span></span>
@@ -1441,6 +1445,7 @@
           <div class="result-field"><div class="result-label">Year</div><input type="text" class="result-input" id="fieldYear" placeholder="—" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Brand / Set</div><input type="text" class="result-input" id="fieldBrand" placeholder="—" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Card Number</div><input type="text" class="result-input" id="fieldNumber" placeholder="—" autocomplete="off"></div>
+          <div class="result-field"><div class="result-label">Serial Number <span style="font-size:9px;color:var(--text-muted);">(e.g. 47/99)</span></div><input type="text" class="result-input" id="fieldSerial" placeholder="—" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Team</div><input type="text" class="result-input" id="fieldTeam" placeholder="—" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Parallel / Variation</div><input type="text" class="result-input" id="fieldParallel" placeholder="Base" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Estimated Value ($)</div><input type="text" class="result-input" id="fieldValue" placeholder="—" autocomplete="off" data-lpignore="true" data-form-type="other"></div>
@@ -1930,7 +1935,7 @@ function clearCard(){
 }
 
 function resetFields(){
-  ['fieldPlayer','fieldYear','fieldBrand','fieldNumber','fieldTeam','fieldParallel','fieldValue'].forEach(id=>document.getElementById(id).value='');
+  ['fieldPlayer','fieldYear','fieldBrand','fieldNumber','fieldSerial','fieldTeam','fieldParallel','fieldValue'].forEach(id=>document.getElementById(id).value='');
   currentTags=[];renderTagRow();
   document.getElementById('gradeResult').style.display='none';
   document.getElementById('gradePlaceholder').style.display='block';
@@ -1959,6 +1964,7 @@ async function analyzeCard(){
   const btn=document.getElementById('analyzeBtn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> &nbsp; Analyzing...';
   const includeEbay=document.getElementById('includeEbayDesc').checked;
+  const includeGrade=document.getElementById('includeGrade')?.checked !== false;
   const hasBack=!!currentBackImageData;
   try{
     const fb64=currentImageData.split(',')[1];
@@ -1966,8 +1972,9 @@ async function analyzeCard(){
     const imgs=[{type:'image',source:{type:'base64',media_type:fmt,data:fb64}}];
     if(hasBack){const bb=currentBackImageData.split(',')[1];const bm=currentBackImageData.startsWith('data:image/png')?'image/png':'image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
     const ebayF=includeEbay?`,\n  "ebayTitle":"eBay title max 80 chars",\n  "ebayDescription":"Collector eBay description 2-3 paragraphs"`:'';
+    const gradeF=includeGrade?`,\n  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}`:'';
     const backN=hasBack?'Second image is the BACK — use it for card number, parallel, serial number, back condition.':'Only front provided.';
-    const prompt=`You are an expert hockey card grader. ${backN}\nAnalyze this hockey card and respond ONLY with JSON:\n{\n  "player":"Full player name",\n  "year":"Card year",\n  "brand":"Brand and set name",\n  "cardNumber":"Card number if visible",\n  "team":"Player team",\n  "parallel":"Parallel or Base",\n  "serialNumber":"Serial number or null",\n  "estimatedValue":"Market value USD as number string",\n  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}${ebayF}\n}`;
+    const prompt=`You are an expert hockey card analyst. ${backN}\nAnalyze this hockey card and respond ONLY with JSON:\n{\n  "player":"Full player name",\n  "year":"Card year",\n  "brand":"Brand and set name",\n  "cardNumber":"Card number if visible",\n  "team":"Player team",\n  "parallel":"Parallel or Base",\n  "serialNumber":"Serial number if present e.g. 47/99 or null",\n  "estimatedValue":"Market value USD as number string"${gradeF}${ebayF}\n}`;
     const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':keys.anthropic,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:includeEbay?2000:1200,messages:[{role:'user',content:[...imgs,{type:'text',text:prompt}]}]})});
     const data=await res.json();
     if(data.error)throw new Error(data.error.message);
@@ -1980,10 +1987,12 @@ async function analyzeCard(){
     if(r.team)document.getElementById('fieldTeam').value=r.team;
     if(r.parallel)document.getElementById('fieldParallel').value=r.parallel;
     if(r.estimatedValue)document.getElementById('fieldValue').value=r.estimatedValue;
-    if(r.serialNumber)showToast(`Serial number detected: ${r.serialNumber}`,'success');
+    if(r.serialNumber){document.getElementById('fieldSerial').value=r.serialNumber;showToast(`Serial number detected: ${r.serialNumber}`,'success');}
     if(r.ebayTitle||r.ebayDescription)window._lastEbayData={title:r.ebayTitle||'',description:r.ebayDescription||''};
-    currentGrade=r.grade;showGrade(r.grade);
-    showToast(`Card analyzed${hasBack?' (front + back)':''}${includeEbay?' + eBay desc ready':''}!`,'success');
+    currentGrade=r.grade||null;
+    if(includeGrade&&r.grade)showGrade(r.grade);
+    else{document.getElementById('gradeResult').style.display='none';document.getElementById('gradePlaceholder').style.display='block';}
+    showToast(`Card analyzed${hasBack?' (front + back)':''}${includeGrade?'':' (no grade)'}${includeEbay?' + eBay desc ready':''}!`,'success');
   }catch(err){showToast('Analysis failed: '+err.message,'error');console.error(err);}
   btn.disabled=false;btn.innerHTML='✦ &nbsp; Analyze with AI';
 }
@@ -2045,7 +2054,7 @@ async function saveCard(){
   // Upload front and back images to R2 if signed in, otherwise keep base64 for guest mode
   const imageUrl=await uploadImageToR2(currentImageData,cardId);
   const imageUrlBack=currentBackImageData?await uploadImageToR2(currentBackImageData,cardId+'_back'):null;
-  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:document.getElementById('fieldValue').value,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:true,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
+  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:document.getElementById('fieldValue').value,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
   if(currentUser)syncCardToCloud(card);
   updateHeaderStats();showToast(`"${player}" saved to collection!`,'success');
@@ -2150,7 +2159,7 @@ function openCardDetail(id){
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const sharePriceHtml = buildSharePriceHtml(c);
     const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option></select></div>`;
-  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" data-cap="${c.player}" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" data-cap="${c.player} Back" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div><div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
+  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" data-cap="${c.player}" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" data-cap="${c.player} Back" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div>${c.serialNumber?`<div class="detail-row"><span class="detail-key">Serial #</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.serialNumber}</span></div>`:''}<div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
   document.getElementById('cardModal').classList.add('open');
 }
 
@@ -2977,6 +2986,7 @@ function openSharedCardDetail(idx) {
       <div>
         <div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber || '—'}</span></div>
         <div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel || 'Base'}</span></div>
+        ${c.serialNumber ? `<div class="detail-row"><span class="detail-key">Serial #</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.serialNumber}</span></div>` : ''}
         <div class="detail-row"><span class="detail-key">Collection</span><span class="detail-val">${c.collection || '—'}</span></div>
         <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
         ${c.sharePrice && c.estimatedValue ? buildSharedPriceRow(c) : ''}
