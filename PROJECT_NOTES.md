@@ -148,8 +148,8 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 | 3 | Rate limit alerting | ✅ Done | Alert emails, KV deduped |
 | 4 | R2 image storage | ✅ Done | Images in R2, metadata in D1, guest migration on sign-in |
 | 5 | Input validation on worker endpoints | ✅ Done | Email/password/token limits, collection size cap, image size + MIME check, strong password rules, display name validation |
-| 6 | Per-card collection sync | ⬜ Med | Full delete+reinsert on every save |
-| 7 | Session cleanup job | ⬜ Med | Expired sessions accumulate in D1 |
+| 6 | Per-card collection sync | ✅ Done | Single card upsert on save/edit/delete, smart meta check on login skips full pull if up to date |
+| 7 | Session cleanup job | ✅ Done | Per-user cleanup on login + probabilistic 5% global purge |
 | 8 | Pagination on collection fetch | ⬜ Med | Full collection loads every time |
 | 9 | D1 schema redesign for OAuth | ⬜ Low | Prerequisite for Google/Discord OAuth |
 | 10 | Google + Discord OAuth | ⬜ Low | Depends on #9 |
@@ -404,7 +404,7 @@ wrangler d1 execute icevault --remote --command "SELECT ip, path, event, detail,
 > index.html ~2950 lines. Views inside .main-content inside .sidebar-shell always.
 > Classic theme: sidebar-shell display:block, sidebar-nav/topbar hidden, main-content display:block full width.
 >
-> Next priorities: account deletion, mark as sold, per-card sync.
+> Next priorities: optional AI grade checkbox on scan, mark as sold, value tracking.
 > Legal (Privacy Policy, ToS, GDPR, COPPA) only if going public.
 >
 > D1 ops: --remote flag, double quotes wrapping SQL, single quotes inside.
