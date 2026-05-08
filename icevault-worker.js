@@ -399,6 +399,10 @@ export default {
         if (!displayName) return err('Display name required', 400, cors);
         if (displayName.length > 32) return err('Display name must be 32 characters or less', 400, cors);
         if (!/^[a-zA-Z0-9 _\-\.]+$/.test(displayName)) return err('Display name can only contain letters, numbers, spaces, and _ - .', 400, cors);
+        const emailPrefix = email.split('@')[0].toLowerCase();
+        if (displayName.toLowerCase() === emailPrefix || displayName.toLowerCase().includes(emailPrefix)) {
+          return err('Display name cannot match or contain your email username — choose something different', 400, cors);
+        }
 
         const existing = await db.prepare(
           'SELECT id FROM users WHERE email = ?'
@@ -904,6 +908,10 @@ export default {
         if (!displayName) return err('Display name required', 400, cors);
         if (displayName.length > 32) return err('Display name must be 32 characters or less', 400, cors);
         if (!/^[a-zA-Z0-9 _\-\.]+$/.test(displayName)) return err('Display name can only contain letters, numbers, spaces, and _ - .', 400, cors);
+        const userEmailPrefix = user.email ? user.email.split('@')[0].toLowerCase() : '';
+        if (userEmailPrefix && (displayName.toLowerCase() === userEmailPrefix || displayName.toLowerCase().includes(userEmailPrefix))) {
+          return err('Display name cannot match or contain your email username — choose something different', 400, cors);
+        }
         await db.prepare('UPDATE users SET display_name = ? WHERE id = ?')
           .bind(displayName, user.id).run();
         await writeLog(db, { ip, path: '/auth/display-name', status: 200, event: 'DISPLAY_NAME_SET', detail: user.email });

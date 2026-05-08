@@ -1761,7 +1761,7 @@
         </div>
         <div class="result-label" style="margin-top:12px;">Display Name <span style="color:var(--text-muted);font-weight:400;font-size:10px;">(shown on shared collections)</span></div>
         <input type="text" class="result-input" id="authDisplayName" placeholder="e.g. HockeyCollector99" maxlength="32" style="margin-top:4px;width:100%;" autocomplete="off">
-        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Letters, numbers, spaces, _ - . only &middot; Max 32 chars &middot; Never shows your email</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Letters, numbers, spaces, _ - . only &middot; Max 32 chars &middot; Cannot match your email username</div>
       </div>
       <div style="text-align:right;margin-top:6px;" id="authForgotLink">
         <span onclick="switchAuthTab('forgot')" style="font-size:12px;color:var(--ice-dark);cursor:pointer;text-decoration:underline;">Forgot password?</span>
@@ -2407,6 +2407,8 @@ function openChangeDisplayName() {
   const val = newName.trim();
   if (val.length > 32) { showToast('Max 32 characters', 'error'); return; }
   if (!/^[a-zA-Z0-9 _.\-]+$/.test(val)) { showToast('Letters, numbers, spaces, _ - . only', 'error'); return; }
+  const emailPfx = currentUser?.email ? currentUser.email.split('@')[0].toLowerCase() : '';
+  if (emailPfx && (val.toLowerCase() === emailPfx || val.toLowerCase().includes(emailPfx))) { showToast('Display name cannot match or contain your email username', 'error'); return; }
   fetch(WORKER_URL + '/auth/display-name', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
@@ -2429,6 +2431,8 @@ async function submitDisplayName() {
   if (!val) { errEl.textContent = 'Display name required'; errEl.style.display = 'block'; return; }
   if (val.length > 32) { errEl.textContent = 'Max 32 characters'; errEl.style.display = 'block'; return; }
   if (!/^[a-zA-Z0-9 _.\-]+$/.test(val)) { errEl.textContent = 'Letters, numbers, spaces, _ - . only'; errEl.style.display = 'block'; return; }
+  const emailPrefix = currentUser?.email ? currentUser.email.split('@')[0].toLowerCase() : '';
+  if (emailPrefix && (val.toLowerCase() === emailPrefix || val.toLowerCase().includes(emailPrefix))) { errEl.textContent = 'Display name cannot match or contain your email username'; errEl.style.display = 'block'; return; }
   const btn = document.querySelector('#displayNameModal .save-btn');
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
