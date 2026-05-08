@@ -2181,9 +2181,9 @@ function open130point(card){if(!card)return;const p=[card.player,card.year,card.
 
 function populateEbayForm(card){
   if(!card)return;
-  const gl=card.aiGraded?'AI Est.':(card.certGrader||'PSA');
-  const gs=card.grade?` ${gl} ${card.grade.overall}`:'';
-  const t=`${card.year||''} ${card.brand||''} ${card.player}${card.cardNumber?' #'+card.cardNumber:''} ${card.parallel!=='Base'?card.parallel:''}${card.serialNumber?' '+card.serialNumber:''}${gs}`.trim().replace(/\s+/g,' ');
+  // Official grade only in title — never AI estimates (eBay policy + accuracy concerns)
+  const officialGrade=!card.aiGraded&&card.grade?(card.certGrader||'PSA')+' '+card.grade.overall:'';
+  const t=`${card.player} ${card.year||''} ${card.brand||''} ${card.cardNumber?'#'+card.cardNumber:''} ${card.parallel&&card.parallel!=='Base'?card.parallel:''} ${card.serialNumber||''} ${officialGrade}`.trim().replace(/\s+/g,' ');
   document.getElementById('ebayTitle').value=t.substring(0,80);
   if(card.estimatedValue){document.getElementById('ebayPrice').value=(parseFloat(card.estimatedValue)*0.7).toFixed(2);document.getElementById('ebayBIN').value=card.estimatedValue;}
   document.getElementById('ebayAppId').value=getKeys().ebayApp||'';
