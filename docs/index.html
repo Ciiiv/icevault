@@ -2176,14 +2176,14 @@ function renderEbayCardSelect(){
 }
 function selectCardForEbay(id){selectedCardForEbay=collection.find(c=>c.id===id);renderEbayCardSelect();populateEbayForm(selectedCardForEbay);}
 
-function ebaySearchUrl(card){const p=[card.player,card.year,card.brand,card.cardNumber?'#'+card.cardNumber:'',card.parallel&&card.parallel!=='Base'?card.parallel:'',card.certGrader&&!card.aiGraded?card.certGrader:'',card.grade&&!card.aiGraded?card.grade.overall:''].filter(Boolean).join(' ').trim();return`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(p)}&LH_Sold=1&LH_Complete=1&_sop=13`;}
+function ebaySearchUrl(card){const p=[card.player,card.year,card.brand,card.cardNumber?'#'+card.cardNumber:'',card.parallel&&card.parallel!=='Base'?card.parallel:'',card.serialNumber||'',card.certGrader&&!card.aiGraded?card.certGrader:'',card.grade&&!card.aiGraded?card.grade.overall:''].filter(Boolean).join(' ').trim();return`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(p)}&LH_Sold=1&LH_Complete=1&_sop=13`;}
 function open130point(card){if(!card)return;const p=[card.player,card.year,card.brand,card.parallel&&card.parallel!=='Base'?card.parallel:'',card.certGrader&&!card.aiGraded?card.certGrader:'',card.grade&&!card.aiGraded?card.grade.overall:''].filter(Boolean).join(' ').trim();navigator.clipboard.writeText(p).then(()=>showToast('Search copied — paste into 130point!','success')).catch(()=>showToast('Open 130point and search: '+p,'success'));window.open('https://130point.com/sales/','_blank');}
 
 function populateEbayForm(card){
   if(!card)return;
   const gl=card.aiGraded?'AI Est.':(card.certGrader||'PSA');
   const gs=card.grade?` ${gl} ${card.grade.overall}`:'';
-  const t=`${card.year||''} ${card.brand||''} ${card.player}${card.cardNumber?' #'+card.cardNumber:''} ${card.parallel!=='Base'?card.parallel:''}${gs}`.trim().replace(/\s+/g,' ');
+  const t=`${card.year||''} ${card.brand||''} ${card.player}${card.cardNumber?' #'+card.cardNumber:''} ${card.parallel!=='Base'?card.parallel:''}${card.serialNumber?' '+card.serialNumber:''}${gs}`.trim().replace(/\s+/g,' ');
   document.getElementById('ebayTitle').value=t.substring(0,80);
   if(card.estimatedValue){document.getElementById('ebayPrice').value=(parseFloat(card.estimatedValue)*0.7).toFixed(2);document.getElementById('ebayBIN').value=card.estimatedValue;}
   document.getElementById('ebayAppId').value=getKeys().ebayApp||'';
