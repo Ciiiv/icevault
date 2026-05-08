@@ -1917,8 +1917,7 @@ function setPreviewImage(src,side){
   document.getElementById('analyzeBtn').disabled=false;
   document.getElementById('clearBtn').classList.add('visible');
   resetFields();
-  if(getKeys().anthropic)analyzeCard();
-  else showToast('Front image loaded — add back image for better accuracy, then hit Analyze','success');
+  showToast('Front image loaded — add back image if available, then click Analyze','success');
 }
 
 function clearCard(){
