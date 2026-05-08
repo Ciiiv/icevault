@@ -2005,6 +2005,39 @@ function renderTagRow(){const row=document.getElementById('tagRow');row.innerHTM
 function addTag(){const t=prompt('Enter tag:');if(t&&t.trim()&&!currentTags.includes(t.trim())){currentTags.push(t.trim());renderTagRow();}}
 function removeTag(t){currentTags=currentTags.filter(x=>x!==t);renderTagRow();}
 
+
+// ─── R2 IMAGE UPLOAD ─────────────────────────────────────────────────────
+// Uploads a base64 image to R2 via the worker /upload endpoint
+// Returns the public R2 URL or null if upload fails / user not signed in
+async function uploadImageToR2(base64Data, cardId) {
+  if (!base64Data || !currentUser) return null;
+  try {
+    const token = getAuthToken();
+    if (!token) return null;
+    // Convert base64 to blob
+    const parts = base64Data.split(',');
+    const mimeType = parts[0].match(/:(.*?);/)[1];
+    const binary = atob(parts[1]);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+    const blob = new Blob([array], { type: mimeType });
+    const formData = new FormData();
+    formData.append('image', blob, cardId + '.jpg');
+    formData.append('cardId', String(cardId));
+    const r = await fetch(WORKER_URL + '/upload', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: formData
+    });
+    if (!r.ok) { console.warn('[R2] Upload failed:', r.status); return null; }
+    const d = await r.json();
+    return d.url || null;
+  } catch (e) {
+    console.warn('[R2] Upload error:', e.message);
+    return null;
+  }
+}
+
 async function saveCard(){
   const player=document.getElementById('fieldPlayer').value.trim();
   if(!player){showToast('Please analyze a card first','error');return;}
