@@ -413,8 +413,8 @@ export default {
         const hash = await hashPassword(password);
         const userId = generateToken(8);
         await db.prepare(
-          'INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)'
-        ).bind(userId, email.toLowerCase(), hash, new Date().toISOString()).run();
+          'INSERT INTO users (id, email, password_hash, display_name, created_at) VALUES (?, ?, ?, ?, ?)'
+        ).bind(userId, email.toLowerCase(), hash, displayName, new Date().toISOString()).run();
 
         const token = generateToken();
         const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
