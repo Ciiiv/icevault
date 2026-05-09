@@ -1716,7 +1716,7 @@
 
 
 <!-- DISPLAY NAME PROMPT MODAL -->
-<div class="modal-overlay" id="displayNameModal">
+<div class="modal-overlay" id="displayNameModal" onclick="event.stopPropagation()">
   <div class="modal" style="max-width:400px;">
     <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--ice-dark);margin-bottom:4px;">Choose a Display Name</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">This is what others see when you share your collection. It never shows your email address.</div>
@@ -2747,7 +2747,7 @@ async function syncCollectionFromCloud(page, params){
 
 function openLightbox(src,cap){document.getElementById('lightboxImg').src=src;document.getElementById('lightboxCaption').textContent=cap||'';document.getElementById('lightboxModal').classList.add('open');}
 function closeLightbox(){document.getElementById('lightboxModal').classList.remove('open');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLightbox();closeDrawer();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.getElementById('displayNameModal').classList.contains('open'))return;closeLightbox();closeDrawer();}});
 
 let currentScanMode='card';
 function setScanMode(mode){
