@@ -129,7 +129,7 @@ icevault-worker\            # NOT a git repo
 |---|------|--------|
 | 1-8 | Hashing, rate limiting, R2, validation, per-card sync, session cleanup, pagination | ✅ Done |
 | 9 | Email verification | ✅ Done |
-| 10 | Sentry error monitoring | ⬜ Low |
+| 10 | Sentry error monitoring | ⬜ Next — do before mark as sold |
 | 11 | eBay REST API migration | ⬜ Low |
 | 12 | D1 schema + Google OAuth | ⚪ If public |
 
@@ -319,7 +319,7 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 > D1 schema: users(id,email,password_hash,display_name,verified,created_at),
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> Next priorities: test email verification with yahoo account, then mark as sold feature.
+> Next priorities: Sentry error monitoring setup, then mark as sold feature.
 > Legal/OAuth only if going public.
 >
 > D1 ops: --remote flag, $env:CLOUDFLARE_API_TOKEN if auth fails.
