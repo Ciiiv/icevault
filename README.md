@@ -52,9 +52,10 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 
 ### 🗂 Collection Management
 - Grid view with card thumbnails, grades, tags, and values
-- Search by player, year, brand, team, or tag
+- Search by player, year, brand, team, or tag — server-side search across full collection
 - Filter by collection bucket and eBay listing status
 - Sort by newest, oldest, player name, value, or grade
+- **Paginated display** — 100 cards per page with numbered page navigation
 - Custom tag system — add, remove, and filter by tags
 - Click any card for full details, edit tags, change collection, enlarge image
 - Lightbox image viewer — click card photo to expand full screen

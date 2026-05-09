@@ -82,6 +82,7 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - Collection management — grid, search, filter, sort, tags, lightbox
 - **Serial number** — AI reads from card back, saved to card, shown in modal and shared view, included in eBay title and search URL
 - **Optional AI grade** — checkbox on scan, unchecked skips grade to save tokens. Auto-scan removed — user controls when AI runs
+- **Server-side pagination** — 100 cards/page, search/filter/sort hit D1, page number nav with ellipsis. Guest mode stays local. Debounced search (300ms). Smart login pull skips full fetch if up to date
 - **Export JSON** — full lossless backup, reimportable
 - **Export CSV** — 22-column flat file for Excel/Sheets
 - **Import JSON** — merge backup, skip duplicates by ID, sync to cloud
@@ -121,7 +122,9 @@ icevault-worker\                    ← Separate folder, NOT a git repo
 - ✅ Origin check on worker
 - ✅ Sign out clears localStorage
 - ✅ Input validation on all worker endpoints — email 254 chars, password 1024, token hex format, collection max 2000 cards, card data max 10KB, image max 8MB, MIME type whitelist, strong password rules on change-pw, display name max 32 chars alphanumeric
+- ✅ Display name cannot match or contain email username — checked on signup and change, both frontend and worker
 - ✅ Rate limits on collection endpoints — single card PUT 200/hr, bulk PUT 10/hr
+- ✅ `/auth/display-name` rate limited 10/hr
 
 ### Image Storage Architecture
 - Signed-in users: images upload to R2 at save time via `uploadImageToR2()` → `imageUrl` stored in card, `imageData` null
@@ -399,7 +402,7 @@ wrangler d1 execute icevault --remote --command "SELECT ip, path, event, detail,
 > If wrangler deploy fails with KV permissions: $env:CLOUDFLARE_API_TOKEN='token' then deploy.
 > GitHub reference: icevault_worker.js (manually synced).
 >
-> Completed: PBKDF2-100k hashing, KV rate limiting (8 endpoints), rate limit alert emails,
+> Completed: PBKDF2-100k hashing, KV rate limiting (11 endpoints), rate limit alert emails,
 > Maileroo email, 6-theme system (Hybrid default, sidebar layout), JSON/CSV export + JSON import,
 > sign out clears localStorage, R2 image storage (front + back, guest migration, import migration),
 > input validation on all worker endpoints, change password (strong rules, rate limited),
@@ -410,7 +413,7 @@ wrangler d1 execute icevault --remote --command "SELECT ip, path, event, detail,
 > index.html ~2950 lines. Views inside .main-content inside .sidebar-shell always.
 > Classic theme: sidebar-shell display:block, sidebar-nav/topbar hidden, main-content display:block full width.
 >
-> Next priorities: mark as sold, value tracking, pagination on collection fetch.
+> Next priorities: mark as sold, value tracking, OAuth.
 > Legal (Privacy Policy, ToS, GDPR, COPPA) only if going public.
 >
 > D1 ops: --remote flag, double quotes wrapping SQL, single quotes inside.
