@@ -1302,6 +1302,36 @@
     display: inline-block;
   }
   .shared-view-signup-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .page-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .page-btn:hover { background: var(--card-bg); color: var(--text-primary); border-color: var(--border-bright); }
+  .page-btn.active { background: var(--ice-dark); border-color: var(--ice-dark); color: white; font-weight: 600; }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .page-ellipsis { color: var(--text-muted); font-size: 13px; padding: 0 4px; }
 </style>
 </head>
 <body>
@@ -1598,6 +1628,7 @@
   </div>
   <div id="tagFilterRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Filter by tag:</span></div>
   <div class="cards-grid" id="cardsGrid"><div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards yet!<br>Scan your first card to get started.</div></div></div>
+  <div class="pagination" id="paginationBar" style="display:none;"></div>
 </div>
 
 <!-- EBAY VIEW -->
@@ -1840,6 +1871,10 @@
 // STATE
 let collection = JSON.parse(localStorage.getItem('iceVault_cards') || '[]');
 let sharedCollection = [];
+let currentPage = 1;
+let totalPages = 1;
+let totalCards = 0;
+let isServerPaginated = false; // true when signed in and using server-side pagination
 let currentImage = null, currentImageData = null, currentGrade = null;
 let currentTags = [], selectedCardForEbay = null, cameraStream = null;
 
@@ -2063,7 +2098,67 @@ async function saveCard(){
 }
 
 let activeTagFilter=null;
-function renderCollection(){updateHeaderStats();renderTagFilterRow();filterCards();}
+
+function renderGridFromCollection(){
+  const grid=document.getElementById('cardsGrid');
+  if(collection.length===0){
+    grid.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">${currentPage>1?'No cards on this page':'No cards match your filters'}</div></div>`;
+    return;
+  }
+  grid.innerHTML=collection.map(c=>`
+    <div class="card-item ${c.listedOnEbay?'listed':''}" onclick="openCardDetail(${c.id})">
+      ${c.listedOnEbay?'<div class="ebay-indicator">eBay</div>':''}
+      <div class="card-thumb">${(c.imageUrl||c.imageData)?`<img src="${c.imageUrl||c.imageData}" alt="${c.player}">`:'🏒'}</div>
+      <div class="card-info">
+        <div class="card-player">${c.player}</div>
+        <div class="card-meta">${c.year||''} ${c.brand||''}</div>
+        ${c.tags&&c.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${c.tags.map(t=>`<span style="padding:1px 6px;background:rgba(74,156,201,0.12);border:1px solid rgba(74,156,201,0.25);border-radius:10px;font-size:10px;color:var(--ice-dark);">${t}</span>`).join('')}</div>`:''}
+        <div class="card-bottom">
+          ${c.grade?`<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span>`:'<span></span>'}
+          <span class="card-status ${c.listedOnEbay?'listed':''}">${c.listedOnEbay?'● Listed':c.estimatedValue?'$'+c.estimatedValue:''}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderPaginationBar(){
+  const bar=document.getElementById('paginationBar');
+  if(!isServerPaginated||totalPages<=1){bar.style.display='none';return;}
+  bar.style.display='flex';
+  const pages=[];
+  // Always show first, last, current, and 2 around current
+  const show=new Set([1,totalPages,currentPage,currentPage-1,currentPage+1,currentPage-2,currentPage+2].filter(p=>p>=1&&p<=totalPages));
+  const sorted=[...show].sort((a,b)=>a-b);
+  let html='';
+  html+=`<button class="page-btn" onclick="goToPage(${currentPage-1})" ${currentPage===1?'disabled':''}>←</button>`;
+  let prev=0;
+  for(const p of sorted){
+    if(prev&&p>prev+1)html+=`<span class="page-ellipsis">…</span>`;
+    html+=`<button class="page-btn${p===currentPage?' active':''}" onclick="goToPage(${p})">${p}</button>`;
+    prev=p;
+  }
+  html+=`<button class="page-btn" onclick="goToPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>→</button>`;
+  html+=`<span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${totalCards} cards</span>`;
+  bar.innerHTML=html;
+}
+
+function goToPage(page){
+  if(page<1||page>totalPages||page===currentPage)return;
+  fetchFilteredPage(page);
+  // Scroll to top of collection
+  document.getElementById('view-collection').scrollIntoView({behavior:'smooth'});
+}
+
+function renderCollection(){
+  updateHeaderStats();
+  renderTagFilterRow();
+  if(isServerPaginated&&currentUser){
+    renderGridFromCollection();
+    renderPaginationBar();
+  } else {
+    _renderFilteredLocal();
+  }
+}
 function getAllTags(){const t=new Set();collection.forEach(c=>(c.tags||[]).forEach(t2=>t.add(t2)));return[...t].sort();}
 function renderTagFilterRow(){
   const allT=getAllTags(),row=document.getElementById('tagFilterRow');
@@ -2075,7 +2170,32 @@ function renderTagFilterRow(){
 }
 function setTagFilter(tag){activeTagFilter=tag;renderTagFilterRow();filterCards();}
 
+let _filterDebounce=null;
 function filterCards(){
+  if(isServerPaginated&&currentUser){
+    // Debounce server requests
+    clearTimeout(_filterDebounce);
+    _filterDebounce=setTimeout(()=>fetchFilteredPage(1),300);
+    return;
+  }
+  // Guest mode — local filter
+  _renderFilteredLocal();
+}
+
+async function fetchFilteredPage(page){
+  const search=(document.getElementById('searchInput').value||'').trim();
+  const col=document.getElementById('collectionFilter').value;
+  const sort=document.getElementById('sortSelect').value;
+  const params={};
+  if(search)params.search=search;
+  if(col)params.collection=col;
+  if(sort)params.sort=sort;
+  await syncCollectionFromCloud(page||currentPage,params);
+  renderGridFromCollection();
+  renderPaginationBar();
+}
+
+function _renderFilteredLocal(){
   const search=(document.getElementById('searchInput').value||'').toLowerCase();
   const col=document.getElementById('collectionFilter').value;
   const status=document.getElementById('statusFilter').value;
@@ -2115,6 +2235,7 @@ function filterCards(){
         </div>
       </div>
     </div>`).join('');
+  document.getElementById('paginationBar').style.display='none';
 }
 
 function gradeClass(g){const n=parseFloat(g);if(n>=9)return'9';if(n>=7)return'7';if(n>=5)return'5';return'low';}
@@ -2241,12 +2362,12 @@ function simulateListing(){
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 function updateHeaderStats(){
-  document.getElementById('statTotal').textContent=collection.length;
+  document.getElementById('statTotal').textContent=isServerPaginated?totalCards:collection.length;
   document.getElementById('statListed').textContent=collection.filter(c=>c.listedOnEbay).length;
   const val=collection.reduce((s,c)=>s+(parseFloat(c.estimatedValue)||0),0);
   document.getElementById('statValue').textContent='$'+val.toFixed(0);
   const s=document.getElementById('sbStatTotal'),sv=document.getElementById('sbStatValue'),badge=document.getElementById('sbBadgeCollection');
-  if(s)s.textContent=collection.length;
+  if(s)s.textContent=isServerPaginated?totalCards:collection.length;
   if(sv)sv.textContent='$'+val.toFixed(0);
   if(badge){badge.textContent=collection.length;badge.style.display=collection.length>0?'inline':'none';}
 }
@@ -2458,7 +2579,7 @@ async function submitDisplayName() {
 async function signOut(){
   const t=getAuthToken();if(t)fetch(WORKER_URL+'/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+t}}).catch(()=>{});
   clearAuthToken();currentUser=null;
-  collection=[];localStorage.removeItem('iceVault_cards');localStorage.removeItem('iceVault_lastSync');
+  collection=[];localStorage.removeItem('iceVault_cards');localStorage.removeItem('iceVault_lastSync');isServerPaginated=false;currentPage=1;totalPages=1;totalCards=0;
   updateAuthUI(null);updateHeaderStats();closeModal('authModal');showToast('Signed out','success');
 }
 
@@ -2511,36 +2632,38 @@ async function deleteCardFromCloud(cardId){
   try{await fetch(WORKER_URL+'/collection/'+cardId,{method:'DELETE',headers:{'Authorization':'Bearer '+t}});}
   catch(e){console.warn('Card delete sync failed:',e);}
 }
-async function syncCollectionFromCloud(){
+async function syncCollectionFromCloud(page, params){
   const t=getAuthToken();if(!t||!currentUser)return;
   try{
-    // Smart sync — check meta first to avoid unnecessary full pulls
-    const lastSync=localStorage.getItem('iceVault_lastSync');
-    const metaR=await fetch(WORKER_URL+'/collection/meta',{headers:{'Authorization':'Bearer '+t}});
-    if(metaR.ok){
-      const meta=await metaR.json();
-      const localCount=collection.length;
-      // Skip full pull if counts match and we synced after server's last update
-      if(lastSync && meta.lastUpdated && lastSync >= meta.lastUpdated && localCount === meta.count){
-        console.log('[SYNC] Collection up to date — skipping full pull');
-        return;
+    if(!page){
+      // Smart sync check on initial login
+      const lastSync=localStorage.getItem('iceVault_lastSync');
+      const metaR=await fetch(WORKER_URL+'/collection/meta',{headers:{'Authorization':'Bearer '+t}});
+      if(metaR.ok){
+        const meta=await metaR.json();
+        const localCount=isServerPaginated?totalCards:collection.length;
+        if(lastSync && meta.lastUpdated && lastSync >= meta.lastUpdated && localCount === meta.count){
+          console.log('[SYNC] Collection up to date — skipping full pull');
+          isServerPaginated=true;
+          return;
+        }
       }
+      page=1;
     }
-    // Full pull needed
-    const r=await fetch(WORKER_URL+'/collection',{headers:{'Authorization':'Bearer '+t}});
+    // Fetch page from server
+    const qp=new URLSearchParams({page:page||1,limit:100,...(params||{})});
+    const r=await fetch(WORKER_URL+'/collection?'+qp.toString(),{headers:{'Authorization':'Bearer '+t}});
     if(!r.ok)return;
     const d=await r.json();
-    if(d.collection&&d.collection.length>0){
-      collection=d.collection;
-      localStorage.setItem('iceVault_cards',JSON.stringify(collection));
-      localStorage.setItem('iceVault_lastSync', new Date().toISOString());
-      updateHeaderStats();
-    } else if(d.collection&&d.collection.length===0){
-      collection=[];
-      localStorage.setItem('iceVault_cards','[]');
-      localStorage.setItem('iceVault_lastSync', new Date().toISOString());
-      updateHeaderStats();
-    }
+    collection=d.collection||[];
+    currentPage=d.page||1;
+    totalPages=d.pages||1;
+    totalCards=d.total||collection.length;
+    isServerPaginated=true;
+    localStorage.setItem('iceVault_cards',JSON.stringify(collection));
+    localStorage.setItem('iceVault_lastSync', new Date().toISOString());
+    updateHeaderStats();
+    renderCollection();
   }
   catch(e){console.warn('Cloud fetch failed:',e);}
 }

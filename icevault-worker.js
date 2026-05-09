@@ -723,15 +723,57 @@ export default {
       }
     }
 
-   // ─── COLLECTION: GET ─────────────────────────────────────────────────
+   // ─── COLLECTION: GET (paginated + server-side search) ───────────────────
     if (path === '/collection' && request.method === 'GET') {
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
-      const cards = await db.prepare(
-        'SELECT card_data FROM cards WHERE user_id = ? ORDER BY created_at DESC'
-      ).bind(user.id).all();
-      const collection = cards.results.map(r => JSON.parse(r.card_data));
-      return json({ collection }, 200, cors);
+      try {
+        const params = url.searchParams;
+        const page = Math.max(1, parseInt(params.get('page') || '1'));
+        const limit = Math.min(200, Math.max(1, parseInt(params.get('limit') || '100')));
+        const search = (params.get('search') || '').trim().toLowerCase();
+        const colFilter = (params.get('collection') || '').trim();
+        const sort = params.get('sort') || 'date-desc';
+        const offset = (page - 1) * limit;
+
+        // Build WHERE clause
+        let where = 'user_id = ?';
+        const binds = [user.id];
+
+        if (search) {
+          where += ' AND LOWER(card_data) LIKE ?';
+          binds.push('%' + search + '%');
+        }
+        if (colFilter) {
+          where += ' AND LOWER(card_data) LIKE ?';
+          binds.push('%"collection":"' + colFilter.toLowerCase() + '"%');
+        }
+
+        // Sort order
+        const orderMap = {
+          'date-desc': 'created_at DESC',
+          'date-asc': 'created_at ASC',
+          'updated-desc': 'COALESCE(updated_at, created_at) DESC',
+        };
+        const orderBy = orderMap[sort] || 'created_at DESC';
+
+        // Count total matching
+        const countResult = await db.prepare(
+          `SELECT COUNT(*) as total FROM cards WHERE ${where}`
+        ).bind(...binds).first();
+        const total = countResult?.total || 0;
+        const pages = Math.ceil(total / limit);
+
+        // Fetch page
+        const cards = await db.prepare(
+          `SELECT card_data FROM cards WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+        ).bind(...binds, limit, offset).all();
+
+        const collection = cards.results.map(r => JSON.parse(r.card_data));
+        return json({ collection, total, page, pages, limit }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
     }
 
     // ─── COLLECTION: SAVE ────────────────────────────────────────────────
