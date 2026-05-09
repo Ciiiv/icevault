@@ -89,7 +89,7 @@ icevault-worker\            # NOT a git repo
 - **eBay title** — player first, serial number included, official grade only (AI grades excluded)
 - User accounts with email/password auth
 - **Email verification** — required on signup, click link in email, 24hr expiry. Spam folder warning shown. Resend option. Existing accounts pre-verified
-- **Display name** — required on signup, cannot match email username (frontend + backend check), prompted on first login for existing accounts, editable from account modal
+- **Display name** — required on signup, saved immediately at account creation (no re-prompt after email verification), cannot match email username (frontend + backend check), **must be unique across all accounts** (DB unique index + backend check at signup and update), prompted on first login for existing accounts, editable from account modal
 - Cloud sync — metadata to D1, images to R2
 - **Per-card sync** — single card upsert on save/edit/delete. Smart meta check on login skips full pull if up to date
 - **R2 image storage** — front + back uploaded at save, guest migration at sign-in
@@ -113,6 +113,9 @@ icevault-worker\            # NOT a git repo
 - ✅ Rate limit alert emails — KV deduped, fire-and-forget
 - ✅ Input validation on all endpoints
 - ✅ Display name cannot match email username — frontend + backend
+- ✅ Display name unique across all accounts — DB unique index + backend check on signup and update
+- ✅ Display name saved at signup INSERT — no redundant prompt after email verification
+- ✅ Display name modal cannot be dismissed — no X button, ESC blocked, backdrop click blocked
 - ✅ Email verification on signup
 - ✅ Login fail delay 100ms + timing attack prevention
 - ✅ D1 request logging — 7-day retention
@@ -187,6 +190,7 @@ CREATE TABLE IF NOT EXISTS request_logs (
 
 Notes:
 - Password hash format: `pbkdf2$100000$salt$hash`
+- `display_name` has a unique index: `CREATE UNIQUE INDEX idx_users_display_name ON users(display_name)`
 - `display_name`, `verified`, `updated_at` added via ALTER TABLE
 - `email_verifications` table added for signup flow
 - Existing accounts have `verified = 1` (set via UPDATE users SET verified = 1)

@@ -82,7 +82,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Guest → account migration** — when a guest signs up, all local card images are automatically uploaded to R2 before syncing to D1
 - Password reset via email (Maileroo — sends to any email address, no custom domain needed)
 - **Change password** from account modal — requires current password, enforces 8+ chars with letter, number, and symbol
-- **Display name** — chosen at signup, shown on shared collections instead of your email. Editable from account modal
+- **Display name** — chosen at signup, saved immediately — no re-prompt after email verification. Shown on shared collections instead of your email. Must be unique across all accounts. Editable from account modal
 - **Share your collection** — generate a public read-only link anyone can view without an account. Share the whole collection at once with per-card price controls — show AI estimated value or your own asking price, labeled with your display name. Revoke anytime
 - API keys are **never saved to your account** — stored locally on your device only
 - Session lasts 30 days before requiring re-login
