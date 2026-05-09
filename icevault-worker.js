@@ -405,6 +405,11 @@ export default {
           return err('Display name cannot match or contain your email username — choose something different', 400, cors);
         }
 
+        const nameTaken = await db.prepare(
+          'SELECT id FROM users WHERE display_name = ?'
+        ).bind(displayName).first();
+        if (nameTaken) return err('Display name already taken — choose a different one', 400, cors);
+
         const existing = await db.prepare(
           'SELECT id FROM users WHERE email = ?'
         ).bind(email.toLowerCase()).first();
@@ -971,6 +976,11 @@ export default {
         if (userEmailPrefix && (displayName.toLowerCase() === userEmailPrefix || displayName.toLowerCase().includes(userEmailPrefix))) {
           return err('Display name cannot match or contain your email username — choose something different', 400, cors);
         }
+        const dnTaken = await db.prepare(
+          'SELECT id FROM users WHERE display_name = ? AND id != ?'
+        ).bind(displayName, user.id).first();
+        if (dnTaken) return err('Display name already taken — choose a different one', 400, cors);
+
         await db.prepare('UPDATE users SET display_name = ? WHERE id = ?')
           .bind(displayName, user.id).run();
         await writeLog(db, { ip, path: '/auth/display-name', status: 200, event: 'DISPLAY_NAME_SET', detail: user.email });
