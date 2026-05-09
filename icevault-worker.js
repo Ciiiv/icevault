@@ -424,16 +424,24 @@ export default {
 
         await writeLog(db, { ip, path: '/auth/signup', status: 200, event: 'SIGNUP', detail: email.toLowerCase() });
 
+        // Send email verification
+        const verifyToken = generateToken(16); // 32 hex chars
+        const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+        await db.prepare('INSERT INTO email_verifications (token, user_id, expires_at) VALUES (?, ?, ?)')
+          .bind(verifyToken, userId, verifyExpires).run();
+        const verifyUrl = `${APP_URL}?verify=${verifyToken}`;
         await sendEmail(
-          env, email, 'Welcome to Ice Vault!',
+          env, email, 'Verify your Ice Vault email',
           `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
             <h2 style="color:#4A9CC9;">🏒 Welcome to Ice Vault!</h2>
-            <p>Your account has been created. Your hockey card collection is now saved to the cloud and syncs across any device.</p>
-            <p style="color:#888;font-size:13px;">Your Anthropic and eBay API keys are stored locally on your device only — never saved to your account or our servers.</p>
-            <a href="${APP_URL}" style="display:inline-block;background:#4A9CC9;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;margin-top:10px;">Open Ice Vault</a>
+            <p>Click the button below to verify your email address and activate your account.</p>
+            <a href="${verifyUrl}" style="display:inline-block;background:#4A9CC9;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;margin-top:10px;">Verify Email Address</a>
+            <p style="color:#888;font-size:12px;margin-top:20px;">This link expires in <strong>24 hours</strong>.</p>
+            <p style="color:#C0392B;font-size:12px;margin-top:8px;">⚠ <strong>Check your spam/junk folder</strong> if you don't see this email in your inbox.</p>
+            <p style="color:#888;font-size:12px;">Or copy this link: ${verifyUrl}</p>
           </div>`
         );
-        return json({ token, email: email.toLowerCase(), userId }, 200, cors);
+        return json({ needsVerification: true, email: email.toLowerCase() }, 200, cors);
       } catch (e) {
         await writeLog(db, { ip, path: '/auth/signup', status: 500, event: 'ERROR', detail: e.message });
         return err(e.message, 500, cors);
@@ -459,7 +467,7 @@ export default {
         if (password.length > LIMITS.password) return err('Password too long', 400, cors);
 
         const user = await db.prepare(
-          'SELECT id, email, password_hash, display_name FROM users WHERE email = ?'
+          'SELECT id, email, password_hash, display_name, verified FROM users WHERE email = ?'
         ).bind(email.toLowerCase()).first();
 
         // Always run verify even if user not found — prevents timing attacks
@@ -472,6 +480,12 @@ export default {
           await new Promise(resolve => setTimeout(resolve, 100));
           await writeLog(db, { ip, path: '/auth/login', status: 401, event: 'LOGIN_FAILED', detail: email.toLowerCase() });
           return err('Invalid email or password', 401, cors);
+        }
+
+        // Check email verification
+        if (!user.verified) {
+          await writeLog(db, { ip, path: '/auth/login', status: 403, event: 'LOGIN_UNVERIFIED', detail: user.email });
+          return err('Please verify your email address before signing in. Check your inbox and spam folder.', 403, cors);
         }
 
         const token = generateToken();
@@ -961,6 +975,87 @@ export default {
           .bind(displayName, user.id).run();
         await writeLog(db, { ip, path: '/auth/display-name', status: 200, event: 'DISPLAY_NAME_SET', detail: user.email });
         return json({ ok: true, displayName }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── AUTH: VERIFY EMAIL ──────────────────────────────────────────────
+    if (path === '/auth/verify-email' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { token } = body;
+        const tokenErr = validateToken(token);
+        if (tokenErr) return err(tokenErr, 400, cors);
+
+        const verification = await db.prepare(
+          'SELECT user_id, expires_at FROM email_verifications WHERE token = ?'
+        ).bind(token).first();
+
+        if (!verification) return err('Invalid or expired verification link', 401, cors);
+        if (new Date(verification.expires_at) < new Date()) {
+          await db.prepare('DELETE FROM email_verifications WHERE token = ?').bind(token).run();
+          return err('Verification link has expired — please sign up again', 401, cors);
+        }
+
+        // Mark user as verified
+        await db.prepare('UPDATE users SET verified = 1 WHERE id = ?').bind(verification.user_id).run();
+        await db.prepare('DELETE FROM email_verifications WHERE token = ?').bind(token).run();
+
+        // Create session so user is logged in immediately after verification
+        const user = await db.prepare(
+          'SELECT id, email, display_name FROM users WHERE id = ?'
+        ).bind(verification.user_id).first();
+
+        const sessionToken = generateToken();
+        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        await db.prepare(
+          'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'
+        ).bind(sessionToken, user.id, expires).run();
+
+        await writeLog(db, { ip, path: '/auth/verify-email', status: 200, event: 'EMAIL_VERIFIED', detail: user.email });
+        return json({ token: sessionToken, email: user.email, userId: user.id, displayName: user.display_name || null }, 200, cors);
+      } catch (e) {
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── AUTH: RESEND VERIFICATION EMAIL ─────────────────────────────────
+    if (path === '/auth/resend-verification' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/auth/forgot', ip); // reuse forgot rate limit
+      if (rl.limited) return rateLimited(rl.message, rl.retryAfter, cors);
+      try {
+        const body = await request.json();
+        const email = (body.email || '').trim().toLowerCase();
+        const emailErr = validateEmail(email);
+        if (emailErr) return err(emailErr, 400, cors);
+
+        const user = await db.prepare(
+          'SELECT id, email, verified FROM users WHERE email = ?'
+        ).bind(email).first();
+
+        if (!user || user.verified) return json({ ok: true }, 200, cors); // silent — don't leak info
+
+        // Delete old verification tokens for this user
+        await db.prepare('DELETE FROM email_verifications WHERE user_id = ?').bind(user.id).run();
+
+        const verifyToken = generateToken(16);
+        const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        await db.prepare('INSERT INTO email_verifications (token, user_id, expires_at) VALUES (?, ?, ?)')
+          .bind(verifyToken, user.id, verifyExpires).run();
+
+        const verifyUrl = `${APP_URL}?verify=${verifyToken}`;
+        await sendEmail(
+          env, user.email, 'Verify your Ice Vault email',
+          `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
+            <h2 style="color:#4A9CC9;">🏒 Verify Your Email</h2>
+            <p>Click the button below to verify your email address.</p>
+            <a href="${verifyUrl}" style="display:inline-block;background:#4A9CC9;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;margin-top:10px;">Verify Email Address</a>
+            <p style="color:#888;font-size:12px;margin-top:20px;">This link expires in <strong>24 hours</strong>.</p>
+            <p style="color:#C0392B;font-size:12px;margin-top:8px;">⚠ <strong>Check your spam/junk folder</strong> if you don't see this email in your inbox.</p>
+          </div>`
+        );
+        return json({ ok: true }, 200, cors);
       } catch (e) {
         return err(e.message, 500, cors);
       }

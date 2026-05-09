@@ -2450,6 +2450,11 @@ async function submitAuth(){
   try{
     const r=await fetch(WORKER_URL+(isSignup?'/auth/signup':'/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(isSignup?{email,password,displayName:(document.getElementById('authDisplayName')?.value||'').trim()}:{email,password})});
     const d=await r.json();if(!r.ok){errEl.textContent=d.error||'Something went wrong';return;}
+    // Handle email verification required (new signup)
+    if(d.needsVerification){
+      showVerificationPending(d.email);
+      return;
+    }
     setAuthToken(d.token);currentUser={email:d.email,userId:d.userId,displayName:d.displayName||null};updateAuthUI(currentUser);
     if(!currentUser.displayName){closeModal('authModal');document.getElementById('displayNameModal').classList.add('open');return;}
     if(collection.length>0){collection=await migrateLocalImagesToR2(collection);await syncCollectionToCloud();}else await syncCollectionFromCloud();
@@ -2573,6 +2578,78 @@ async function submitDisplayName() {
     errEl.textContent = 'Connection error'; errEl.style.display = 'block';
   } finally {
     if (btn) { btn.textContent = 'Set Display Name'; btn.disabled = false; }
+  }
+}
+
+
+function showVerificationPending(email) {
+  const f = document.getElementById('authModalContent');
+  f.innerHTML = `
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:48px;margin-bottom:12px;">📧</div>
+      <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--ice-dark);margin-bottom:8px;">Check Your Email</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">We sent a verification link to <strong>${email}</strong></div>
+      <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#E74C3C;line-height:1.6;">
+        ⚠ <strong>Check your spam/junk folder</strong> if you don't see it in your inbox within a few minutes.
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Click the link in the email to verify your account and start using Ice Vault.</div>
+      <button class="camera-btn" style="width:100%;justify-content:center;margin-bottom:8px;" onclick="resendVerification('${email}')">Resend Verification Email</button>
+      <button class="camera-btn" style="width:100%;justify-content:center;" onclick="closeModal('authModal')">Close</button>
+      <div id="resendStatus" style="margin-top:8px;font-size:12px;text-align:center;"></div>
+    </div>`;
+  document.getElementById('authModal').classList.add('open');
+}
+
+async function resendVerification(email) {
+  const btn = document.querySelector('#authModalContent .camera-btn');
+  const status = document.getElementById('resendStatus');
+  if (btn) { btn.textContent = 'Sending...'; btn.disabled = true; }
+  try {
+    await fetch(WORKER_URL + '/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (status) { status.textContent = '✓ Sent! Check your inbox and spam folder.'; status.style.color = 'var(--green)'; }
+  } catch (e) {
+    if (status) { status.textContent = 'Connection error — try again'; status.style.color = '#E74C3C'; }
+  } finally {
+    if (btn) { btn.textContent = 'Resend Verification Email'; btn.disabled = false; }
+  }
+}
+
+async function checkVerifyToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('verify');
+  if (!token) return;
+  window.history.replaceState({}, '', window.location.pathname);
+  try {
+    const r = await fetch(WORKER_URL + '/auth/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      // Show error in auth modal
+      document.getElementById('authModalContent').style.display = 'block';
+      document.getElementById('authSignedInContent').style.display = 'none';
+      document.getElementById('authModal').classList.add('open');
+      document.getElementById('authError').textContent = d.error || 'Verification failed';
+      return;
+    }
+    // Verified and logged in
+    setAuthToken(d.token);
+    currentUser = { email: d.email, userId: d.userId, displayName: d.displayName || null };
+    updateAuthUI(currentUser);
+    showToast('Email verified! Welcome to Ice Vault.', 'success');
+    if (!currentUser.displayName) {
+      document.getElementById('displayNameModal').classList.add('open');
+      return;
+    }
+    await syncCollectionFromCloud();
+  } catch (e) {
+    showToast('Verification failed — try again', 'error');
   }
 }
 
@@ -3164,6 +3241,7 @@ updateHeaderStats();
 setTimeout(updateGraderInfo,100);
 verifySession();
 checkResetToken();
+checkVerifyToken();
 checkSharedCollectionUrl();
 (function(){
   const saved=localStorage.getItem('icevault-theme')||'hybrid';
