@@ -102,6 +102,7 @@ icevault-worker\            # NOT a git repo
 - **Manual field editing** — inline click-to-edit on all card fields in detail modal (Player, Year, Brand, Team, Card #, Parallel, Serial #, Est. Value). Click field to edit, Enter or click away to save, Escape to cancel. Save hint shown while editing. Updates modal header instantly. Syncs to D1 via per-card upsert
 - **AI grade matrix** — replaces single grade box in card detail modal with 4-source matrix (Claude, GPT-4o, Gemini, Ximilar). Summary row shows all grades at a glance. Tabs switch detail view per source. Re-grade with Claude fetches existing R2 images (front + back), runs grade-only prompt, confirms before overwrite. Set as card grade copies selected source grade to main card grade. GPT-4o, Gemini, Ximilar tabs show coming soon. Grades stored per-source in card.grades object. Existing c.grade migrated to Claude slot automatically
 - **R2 CORS policy** — configured on icevault-images bucket to allow all app origins (GitHub Pages + Live Server). Required for browser fetch of R2 images during re-grade
+- **Re-scan card** — full card re-scan from existing R2 images. Checkbox to include updated grade (affects cost ~$0.01-0.02 without grade, ~$0.02-0.04 with). Shows diff review panel before saving — changed fields highlighted teal with old→new, unchanged shown muted. Cancel hides panel, Save applies all changes and syncs to D1. Only available on cards with R2 imageUrl. Re-scan and re-grade are independent — re-scan optionally includes grade, re-grade is grade-only
 - 6-theme system — Hybrid default
 - Session cleanup — per-user on login + 5% probabilistic global purge
 - Favicon + PWA meta tags fixed
@@ -150,7 +151,7 @@ icevault-worker\            # NOT a git repo
 | 3 | Mark as sold | ✅ Done |
 | 3b | Re-grade from existing card images — grade matrix with AI source tabs | ✅ Done |
 | 3c | Manual field editing in card detail modal — inline click-to-edit per field | ✅ Done |
-| 3d | Re-scan full card (update all fields from existing images) | ⬜ Next |
+| 3d | Re-scan full card — field diff review panel, include grade option | ✅ Done |
 | 4 | Value tracking + charts | ⬜ Med |
 | 5 | Multi-AI (GPT-4o, Gemini, Ollama) | ⬜ Med |
 | 6 | eBay Partner Network affiliate links | ⬜ Low |

@@ -41,6 +41,9 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Serial number detection** — AI reads serial number from back of card (e.g. 47/99), saved to card, shown in modal and included in eBay title and search
 - **Optional eBay description** — checkbox before scanning to generate listing copy in the same API call (~+$0.01)
 - No auto-scan — images load without triggering AI. You control when the API call happens
+- **Re-scan from collection** — re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. Optional grade included
+- **Re-grade from collection** — re-run condition grading only on any card using stored images, without touching other card data
+- **Manual field editing** — click any field in the card detail view to edit inline. Enter or click away to save, Escape to cancel
 - ✕ Clear button to rescan instantly
 - Front only: ~$0.01–0.02 | Front + back: ~$0.02–0.04 per scan
 
