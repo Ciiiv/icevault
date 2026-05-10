@@ -1373,6 +1373,99 @@
     display: none;
   }
   .edit-save-hint.visible { display: block; }
+
+  /* Grade matrix */
+  .grade-matrix-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .grade-matrix-cell {
+    background: var(--rink);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 4px;
+    text-align: center;
+  }
+  .grade-matrix-cell-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+  }
+  .grade-matrix-cell-val {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .grade-matrix-cell-val.pending {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    font-weight: 400;
+  }
+  .grade-matrix-tabs {
+    display: flex;
+    gap: 3px;
+    background: var(--rink);
+    border-radius: 7px;
+    padding: 3px;
+    margin-bottom: 10px;
+  }
+  .grade-matrix-tab {
+    flex: 1;
+    padding: 4px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    text-align: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .grade-matrix-tab.active {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  .grade-matrix-tab.has-grade { color: var(--text-primary); }
+  .grade-matrix-tab.coming-soon { color: var(--text-muted); font-style: italic; }
+  .grade-matrix-tab:hover:not(.active) { color: var(--ice-dark); }
+  .grade-set-btn {
+    width: 100%;
+    margin-top: 5px;
+    padding: 7px;
+    border-radius: 7px;
+    border: 1px solid rgba(39,174,96,0.4);
+    background: rgba(39,174,96,0.08);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .grade-set-btn:hover { background: rgba(39,174,96,0.15); }
+  .grade-regrade-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 7px;
+    border-radius: 7px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .grade-regrade-btn:hover { background: var(--rink-light); color: var(--text-primary); }
+  .grade-regrade-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -2318,7 +2411,36 @@ function openCardDetail(id){
   const c=collection.find(x=>x.id===id);if(!c)return;
   const _front=c.imageUrl||c.imageData||null;
   const _back=c.imageUrlBack||c.imageDataBack||null;
-  const gradeHtml=c.grade?`<div class="grade-box" style="margin-top:16px;"><div class="grade-header"><span class="grade-title">${c.aiGraded?'AI Condition Estimate':'Official Grade'}</span><span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span></div>${c.aiGraded?`<div style="font-size:11px;color:#E74C3C;margin-bottom:8px;padding:6px 8px;background:rgba(192,57,43,0.08);border-radius:6px;">⚠ AI estimate only. Not an official grade.</div>`:''}<div class="grade-breakdown"><div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div><div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div><div class="grade-row"><span>Edges</span><span>${c.grade.edges}</span></div><div class="grade-row"><span>Surface</span><span>${c.grade.surface}</span></div></div><div class="grade-rationale" style="margin-top:8px;">${c.grade.rationale||''}</div></div>`:'';
+  // Build grade matrix — shows all AI sources, tabs per source
+  const grades = c.grades || {};
+  const claudeGrade = grades.claude || (c.aiGraded && c.grade ? c.grade : null);
+  const gpt4oGrade = grades.gpt4o || null;
+  const geminiGrade = grades.gemini || null;
+  const ximilarGrade = grades.ximilar || null;
+  const hasAnyGrade = claudeGrade || gpt4oGrade || geminiGrade || ximilarGrade;
+  const cardId = c.id;
+
+  function gradeMatrixCellHtml(label, g) {
+    return `<div class="grade-matrix-cell"><div class="grade-matrix-cell-label">${label}</div><div class="grade-matrix-cell-val${g?'':' pending'}">${g?g.overall:'—'}</div></div>`;
+  }
+
+  const gradeHtml = `<div class="grade-box" style="margin-top:10px;" id="gradeMatrix_${cardId}">
+    <div class="grade-matrix-summary">
+      ${gradeMatrixCellHtml('Claude', claudeGrade)}
+      ${gradeMatrixCellHtml('GPT-4o', gpt4oGrade)}
+      ${gradeMatrixCellHtml('Gemini', geminiGrade)}
+      ${gradeMatrixCellHtml('Ximilar', ximilarGrade)}
+    </div>
+    <div class="grade-matrix-tabs">
+      <button class="grade-matrix-tab${claudeGrade?' has-grade':''} active" onclick="switchGradeTab(${cardId},'claude',this)">Claude</button>
+      <button class="grade-matrix-tab${gpt4oGrade?' has-grade':' coming-soon'}" onclick="switchGradeTab(${cardId},'gpt4o',this)">GPT-4o</button>
+      <button class="grade-matrix-tab${geminiGrade?' has-grade':' coming-soon'}" onclick="switchGradeTab(${cardId},'gemini',this)">Gemini</button>
+      <button class="grade-matrix-tab${ximilarGrade?' has-grade':' coming-soon'}" onclick="switchGradeTab(${cardId},'ximilar',this)">Ximilar</button>
+    </div>
+    <div id="gradeTabContent_${cardId}">
+      ${renderGradeTabContent(cardId, 'claude', claudeGrade)}
+    </div>
+  </div>`;
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const sharePriceHtml = buildSharePriceHtml(c);
     const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
@@ -2343,6 +2465,161 @@ function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)retu
 function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
 function listOnEbayFromModal(id){closeModal('cardModal');selectedCardForEbay=collection.find(c=>c.id===id);switchView('ebay');populateEbayForm(selectedCardForEbay);}
 function deleteCard(id){if(!confirm('Delete this card?'))return;collection=collection.filter(c=>c.id!==id);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)deleteCardFromCloud(id);closeModal('cardModal');renderCollection();showToast('Card deleted','success');}
+
+function renderGradeTabContent(cardId, source, grade) {
+  const sourceLabels = { claude: 'Claude', gpt4o: 'GPT-4o', gemini: 'Gemini', ximilar: 'Ximilar' };
+  const comingSoon = ['gpt4o', 'gemini', 'ximilar'];
+  const label = sourceLabels[source] || source;
+  const costHint = source === 'ximilar' ? '~$0.01' : '~$0.01–0.02';
+
+  if (!grade) {
+    const isComing = comingSoon.includes(source);
+    return `
+      <div style="font-size:11px;color:#E74C3C;background:rgba(192,57,43,0.08);border-radius:6px;padding:6px 8px;margin-bottom:8px;">⚠ AI estimate only. Not an official grade.</div>
+      <div style="text-align:center;padding:12px 0;color:var(--text-muted);font-size:13px;">No ${label} grade yet</div>
+      <button class="grade-regrade-btn" ${isComing?'disabled title="Coming soon"':''} onclick="${isComing?'':(`regradeCard(${cardId},'${source}')`)}">${isComing?`${label} — coming soon`:`↺ Grade with ${label} (${costHint})`}</button>`;
+  }
+
+  const overall = parseFloat(grade.overall);
+  const badgeClass = overall >= 9 ? 'grade-9' : overall >= 7 ? 'grade-7' : overall >= 5 ? 'grade-5' : 'grade-low';
+  return `
+    <div style="font-size:11px;color:#E74C3C;background:rgba(192,57,43,0.08);border-radius:6px;padding:6px 8px;margin-bottom:8px;">⚠ AI estimate only. Not an official grade.</div>
+    <div class="grade-header">
+      <span class="grade-title" style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">${label} — AI Est.</span>
+      <span class="grade-badge ${badgeClass}">AI Est. ${grade.overall}</span>
+    </div>
+    <div class="grade-breakdown">
+      <div class="grade-row"><span>Centering</span><span>${grade.centering}</span></div>
+      <div class="grade-row"><span>Corners</span><span>${grade.corners}</span></div>
+      <div class="grade-row"><span>Edges</span><span>${grade.edges}</span></div>
+      <div class="grade-row"><span>Surface</span><span>${grade.surface}</span></div>
+    </div>
+    <div class="grade-rationale" style="margin-top:6px;">${grade.rationale||''}</div>
+    <button class="grade-regrade-btn" onclick="regradeCard(${cardId},'${source}')">↺ Re-grade with ${label} (${costHint})</button>
+    <button class="grade-set-btn" onclick="setCardGrade(${cardId},'${source}')">✓ Set as card grade</button>`;
+}
+
+function switchGradeTab(cardId, source, tabEl) {
+  const matrix = document.getElementById('gradeMatrix_' + cardId);
+  if (!matrix) return;
+  matrix.querySelectorAll('.grade-matrix-tab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+  const c = collection.find(x => x.id === cardId);
+  if (!c) return;
+  const grades = c.grades || {};
+  const claudeGrade = grades.claude || (c.aiGraded && c.grade ? c.grade : null);
+  const sourceGrade = source === 'claude' ? claudeGrade : (grades[source] || null);
+  const contentEl = document.getElementById('gradeTabContent_' + cardId);
+  if (contentEl) contentEl.innerHTML = renderGradeTabContent(cardId, source, sourceGrade);
+}
+
+async function regradeCard(cardId, source) {
+  const c = collection.find(x => x.id === cardId);
+  if (!c) return;
+  const hasExisting = source === 'claude'
+    ? (c.grades?.claude || (c.aiGraded && c.grade))
+    : c.grades?.[source];
+
+  if (hasExisting) {
+    if (!confirm('This will overwrite the existing ' + source + ' grade. Continue?')) return;
+  }
+
+  if (!c.imageUrl) { showToast('No card image found — re-grade requires images stored in cloud', 'error'); return; }
+  const keys = getKeys();
+  if (!keys.anthropic) { showToast('Set your Anthropic API key first (⚙ API Keys)', 'error'); return; }
+
+  // Update button state
+  const contentEl = document.getElementById('gradeTabContent_' + cardId);
+  const btn = contentEl ? contentEl.querySelector('.grade-regrade-btn') : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> &nbsp; Grading...'; }
+
+  try {
+    const imgs = [];
+    // Fetch front image as base64
+    const frontRes = await fetch(c.imageUrl);
+    const frontBlob = await frontRes.blob();
+    const frontB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(frontBlob); });
+    const frontMime = frontBlob.type || 'image/jpeg';
+    imgs.push({ type: 'image', source: { type: 'base64', media_type: frontMime, data: frontB64 } });
+
+    // Fetch back image if available
+    if (c.imageUrlBack) {
+      const backRes = await fetch(c.imageUrlBack);
+      const backBlob = await backRes.blob();
+      const backB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(backBlob); });
+      const backMime = backBlob.type || 'image/jpeg';
+      imgs.push({ type: 'image', source: { type: 'base64', media_type: backMime, data: backB64 } });
+    }
+
+    const hasBack = imgs.length > 1;
+    const prompt = `You are an expert hockey card grader. ${hasBack ? 'First image is the FRONT, second is the BACK.' : 'Front image only.'}
+Grade this card condition and respond ONLY with JSON:
+{
+  "overall":"1-10",
+  "centering":"1-10",
+  "corners":"1-10",
+  "edges":"1-10",
+  "surface":"1-10",
+  "rationale":"2-3 sentences on condition"
+}`;
+
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    const grade = JSON.parse(raw);
+    grade.gradedAt = new Date().toISOString();
+    grade.source = source;
+
+    // Save grade to card
+    if (!c.grades) c.grades = {};
+    c.grades[source] = grade;
+    localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+    if (currentUser) syncCardToCloud(c);
+
+    // Update matrix summary cell
+    const matrix = document.getElementById('gradeMatrix_' + cardId);
+    if (matrix) {
+      const cells = matrix.querySelectorAll('.grade-matrix-cell');
+      const sourceIdx = { claude: 0, gpt4o: 1, gemini: 2, ximilar: 3 }[source];
+      if (cells[sourceIdx]) {
+        const valEl = cells[sourceIdx].querySelector('.grade-matrix-cell-val');
+        if (valEl) { valEl.textContent = grade.overall; valEl.classList.remove('pending'); }
+      }
+      // Update tab to has-grade
+      const tabs = matrix.querySelectorAll('.grade-matrix-tab');
+      if (tabs[sourceIdx]) { tabs[sourceIdx].classList.remove('coming-soon'); tabs[sourceIdx].classList.add('has-grade'); }
+    }
+
+    // Re-render tab content
+    if (contentEl) contentEl.innerHTML = renderGradeTabContent(cardId, source, grade);
+    showToast('Re-graded with ' + source + ': ' + grade.overall, 'success');
+  } catch (err) {
+    showToast('Re-grade failed: ' + err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '↺ Re-grade with ' + source; }
+  }
+}
+
+function setCardGrade(cardId, source) {
+  const c = collection.find(x => x.id === cardId);
+  if (!c) return;
+  const grades = c.grades || {};
+  const claudeGrade = grades.claude || (c.aiGraded && c.grade ? c.grade : null);
+  const grade = source === 'claude' ? claudeGrade : grades[source];
+  if (!grade) { showToast('No grade from this source yet', 'error'); return; }
+  const sourceLabels = { claude: 'Claude', gpt4o: 'GPT-4o', gemini: 'Gemini', ximilar: 'Ximilar' };
+  if (c.grade && !confirm('Replace current card grade (' + (c.grade.overall) + ') with ' + sourceLabels[source] + ' grade (' + grade.overall + ')?')) return;
+  c.grade = grade;
+  c.aiGraded = true;
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCardToCloud(c);
+  showToast('Card grade set to ' + sourceLabels[source] + ' ' + grade.overall, 'success');
+  renderCollection();
+}
 
 function editCardField(id, field, el) {
   const c = collection.find(x => x.id === id);
