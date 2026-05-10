@@ -134,7 +134,7 @@ icevault-worker\            # NOT a git repo
 | — | Bulk PUT /collection wrapped in D1 batch transaction — atomic, no partial writes | ✅ Done |
 | 9 | Email verification | ✅ Done |
 | 10 | Sentry error monitoring | ⚪ If public — wrangler tail + F12 dev tools sufficient for personal use |
-| 11 | eBay REST API migration | ⬜ Low |
+| 11 | eBay REST API migration | ⚪ If needed — legacy XML SOAP still functional, migrate only if it breaks |
 | 12 | D1 schema + Google OAuth | ⚪ If public |
 
 ### Feature Backlog
