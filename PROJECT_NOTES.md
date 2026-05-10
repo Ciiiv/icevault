@@ -131,6 +131,7 @@ icevault-worker\            # NOT a git repo
 | # | Item | Status |
 |---|------|--------|
 | 1-8 | Hashing, rate limiting, R2, validation, per-card sync, session cleanup, pagination | ✅ Done |
+| — | Bulk PUT /collection wrapped in D1 batch transaction — atomic, no partial writes | ✅ Done |
 | 9 | Email verification | ✅ Done |
 | 10 | Sentry error monitoring | ⬜ Next — do before mark as sold |
 | 11 | eBay REST API migration | ⬜ Low |
@@ -196,6 +197,36 @@ Notes:
 - Existing accounts have `verified = 1` (set via UPDATE users SET verified = 1)
 
 ---
+
+## 💻 Developer Workflow
+
+Two PowerShell terminals open side by side in Windows Terminal:
+
+**Left terminal — `C:\Users\civ2g\icevault\` (repo)**
+- Run fix.py patches: `python C:\Users\civ2g\icevault-worker\fix.py`
+- Git commands run from VSCode (source control panel or terminal)
+- Edit `docs/index.html`, `README.md`, `PROJECT_NOTES.md` in VSCode
+
+**Right terminal — `C:\Users\civ2g\icevault-worker\` (worker)**
+- Deploy worker: `wrangler deploy`
+- Watch live logs: `wrangler tail`
+- Run D1 queries: `wrangler d1 execute icevault --remote --command "..."`
+- If OAuth fails: `$env:CLOUDFLARE_API_TOKEN='your-token'` then `wrangler deploy`
+
+**Syncing worker reference copy:**
+- Open `src/index.js` in VSCode → Ctrl+A, Ctrl+C
+- Open `icevault_worker.js` in VSCode → Ctrl+A, Delete, Ctrl+V, Save
+
+**Deploying frontend:**
+- Edit `docs/index.html` locally, test with VSCode Live Server (http://127.0.0.1:5500)
+- Git commit + push from VSCode → GitHub Pages auto-deploys in ~30 seconds
+
+**fix.py pattern:**
+- Each fix.py is a targeted patch script — finds exact strings and replaces them
+- Always run from left terminal with full path: `python C:\Users\civ2g\icevault-worker\fix.py`
+- fix.py lives in `C:\Users\civ2g\icevault-worker\` — never committed to repo
+- After worker changes: run fix.py → wrangler deploy → sync reference copy → git push
+- After frontend changes: run fix.py → test with Live Server → git push
 
 ## 🛠 Wrangler Quick Reference
 
