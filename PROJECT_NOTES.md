@@ -313,6 +313,73 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 
 ---
 
+## 🔐 Security & Architecture Notes
+
+### /share/ Route Conflict Risk — Do Not Change generateToken Without Reading This
+
+**Current implementation:**
+```javascript
+function generateToken(length) {
+  const array = new Uint8Array(length || 32);
+  crypto.getRandomValues(array);
+  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+```
+Share tokens are generated with `generateToken(32)` — producing 64 hex characters using only `0-9` and `a-f`.
+
+**The routing pattern in the worker:**
+```javascript
+// Named routes checked first (explicit match)
+if (path === '/share/generate' && request.method === 'POST') { ... }
+if (path === '/share/revoke' && request.method === 'DELETE') { ... }
+if (path === '/share/status' && request.method === 'GET') { ... }
+
+// Catch-all — anything not matched above is treated as a public token lookup
+if (path.startsWith('/share/') && request.method === 'GET' && path !== '/share/status') {
+  const token = path.split('/')[2];
+  // treat as public share token lookup
+}
+```
+
+**The risk:**
+The catch-all pattern on Route 3 means any token that matches a named route word (e.g. `status`, `generate`, `revoke`) would be intercepted by the named handler instead of reaching the public lookup — making that collection unreachable via its token.
+
+**Why it is currently safe:**
+`generateToken(32)` produces only hex characters (`0-9`, `a-f`). Named routes like `status`, `generate`, `revoke` contain characters outside the hex alphabet (`s`, `t`, `u`, `v` is valid hex but the full words are not). It is mathematically impossible for a hex token to equal any current named route word.
+
+**When this becomes a risk:**
+- If `generateToken` is replaced with alphanumeric (e.g. nanoid, UUID, base64) — character set expands to include `s`, `t`, `u`, `g`, `r`, `v`, `e` etc., making collisions theoretically possible
+- If new named routes are added under `/share/` that happen to be valid hex strings (unlikely but possible — e.g. a route named `/share/feed` — `f`, `e`, `e`, `d` are all valid hex)
+
+**If you ever change token generation, do one of the following first:**
+
+Option A — Keep tokens hex-only (safest, no routing changes needed):
+```javascript
+// Safe — stick with hex output from generateToken
+generateToken(32) // 64 hex chars, 0-9 a-f only
+```
+
+Option B — Add explicit token format validation to the catch-all:
+```javascript
+// Before treating as a token, validate it looks like a token
+if (path.startsWith('/share/') && request.method === 'GET' && path !== '/share/status') {
+  const token = path.split('/')[2];
+  // Reject if token doesn't match expected format — prevents named route collisions
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return err('Invalid token', 400, cors);
+  // ... proceed with lookup
+}
+```
+
+Option C — Switch catch-all to explicit length check:
+```javascript
+// Tokens are always 64 chars — named routes are never 64 chars
+if (path.startsWith('/share/') && token.length === 64) { ... }
+```
+
+**Recommendation:** Do not change `generateToken` without implementing Option B or C first. Option B is preferred — it validates both format and length, and future-proofs the routing against any token format changes.
+
+---
+
 ## ⚠️ Known Issues & Limitations
 
 - **Maileroo shared domain:** Emails (verification, reset) may land in spam on Gmail/Yahoo. Warn users to check spam
