@@ -99,6 +99,9 @@ icevault-worker\            # NOT a git repo
 - **Change password** — 8+ chars, letter+number+symbol, rate limited, same-pw check server-side
 - **Public collection sharing** — 64-char token, per-card price controls (AI est or owner price), owner display name shown next to price. Rate limited
 - **Mark as sold** — button in card detail modal, requires sale price (required) and captures sale date automatically, moves card to Sold collection bucket, hidden from default collection view, shows in grid with sold price badge. Undo Sale option restores card to Personal Collection and clears sale data. Sold cards preserved in D1 for historical tracking and future value tracking feature
+- **Manual field editing** — inline click-to-edit on all card fields in detail modal (Player, Year, Brand, Team, Card #, Parallel, Serial #, Est. Value). Click field to edit, Enter or click away to save, Escape to cancel. Save hint shown while editing. Updates modal header instantly. Syncs to D1 via per-card upsert
+- **AI grade matrix** — replaces single grade box in card detail modal with 4-source matrix (Claude, GPT-4o, Gemini, Ximilar). Summary row shows all grades at a glance. Tabs switch detail view per source. Re-grade with Claude fetches existing R2 images (front + back), runs grade-only prompt, confirms before overwrite. Set as card grade copies selected source grade to main card grade. GPT-4o, Gemini, Ximilar tabs show coming soon. Grades stored per-source in card.grades object. Existing c.grade migrated to Claude slot automatically
+- **R2 CORS policy** — configured on icevault-images bucket to allow all app origins (GitHub Pages + Live Server). Required for browser fetch of R2 images during re-grade
 - 6-theme system — Hybrid default
 - Session cleanup — per-user on login + 5% probabilistic global purge
 - Favicon + PWA meta tags fixed
@@ -145,7 +148,9 @@ icevault-worker\            # NOT a git repo
 | 1 | Public collection sharing | ✅ Done |
 | 2 | Optional AI grade + serial number | ✅ Done |
 | 3 | Mark as sold | ✅ Done |
-| 3b | Re-scan / re-grade from existing card images in collection | ⬜ Next |
+| 3b | Re-grade from existing card images — grade matrix with AI source tabs | ✅ Done |
+| 3c | Manual field editing in card detail modal — inline click-to-edit per field | ✅ Done |
+| 3d | Re-scan full card (update all fields from existing images) | ⬜ Next |
 | 4 | Value tracking + charts | ⬜ Med |
 | 5 | Multi-AI (GPT-4o, Gemini, Ollama) | ⬜ Med |
 | 6 | eBay Partner Network affiliate links | ⬜ Low |
@@ -304,6 +309,9 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | Per-card sync + smart meta check | Full resync was N writes per save. Meta check skips pull if nothing changed |
 | Server-side pagination | All search/filter/sort hit D1. 100/page. Scales to 50k+ cards |
 | Sold cards never deleted | Marked sold cards stay in D1 with sold:true flag — filtered out of default view via JSON string match in D1 query. Preserved for historical data and future value tracking |
+| R2 CORS policy | Browser fetch of R2 images (for re-grade) requires CORS headers on the bucket. Configured directly in R2 dashboard — worker ALLOWED_ORIGINS does not cover R2 direct fetches. Policy allows GET from all app origins |
+| Grade matrix data structure | Grades stored per-source in card.grades.{claude,gpt4o,gemini,ximilar}. Main card.grade = the "set" grade shown in grid and eBay title. Existing aiGraded cards auto-migrated to claude slot in modal render |
+| Re-grade fetches R2 directly | Browser fetches R2 image URLs as base64 for re-grade API call. No worker proxy needed — R2 CORS policy handles cross-origin access cleanly without extra latency or worker CPU |
 | D1 batch for bulk sync | PUT /collection uses db.batch() — atomic all-or-nothing, no partial writes on import or guest migration |
 | PBKDF2 | Built-in Web Crypto API — no library. 100k = CF Workers hard limit |
 | Maileroo | 3,000/mo free, sends to any email without custom domain |
@@ -390,6 +398,8 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 - **eBay Trading API:** Legacy XML SOAP — deprecated but functional
 - **R2 public bucket:** URLs not guessable (userId + cardId) but not private
 - **Wrangler OAuth expiry:** Use `$env:CLOUDFLARE_API_TOKEN` if deploy fails
+- **R2 CORS:** Re-grade fetches R2 images directly from browser. If CORS policy is removed or origins change, re-grade will fail with "Failed to fetch". Fix: update CORS policy in Cloudflare R2 dashboard → icevault-images → Settings → CORS Policy
+- **Re-grade requires R2 images:** Cards with only local base64 imageData (guest mode, old imports) cannot be re-graded — no imageUrl to fetch. Re-grade button is suppressed for these cards
 
 ---
 
