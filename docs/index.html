@@ -504,6 +504,7 @@
   }
   .card-status { font-size: 11px; color: var(--text-muted); }
   .card-status.listed { color: var(--green); }
+  .card-status.sold { color: var(--gold); }
   .ebay-indicator {
     position: absolute;
     top: 8px;
@@ -1480,7 +1481,7 @@
           <div class="result-field"><div class="result-label">Parallel / Variation</div><input type="text" class="result-input" id="fieldParallel" placeholder="Base" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Estimated Value ($)</div><input type="text" class="result-input" id="fieldValue" placeholder="—" autocomplete="off" data-lpignore="true" data-form-type="other"></div>
           <div class="result-field"><div class="result-label">Collection Tags</div><div class="tag-input-row" id="tagRow"><div class="tag-add" onclick="addTag()">+ Add Tag</div></div></div>
-          <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="fieldCollection"><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Graded">Graded Cards</option><option value="Wishlist">Wishlist</option></select></div>
+          <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="fieldCollection"><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Graded">Graded Cards</option><option value="Wishlist">Wishlist</option><option value="Sold">Sold</option></select></div>
         </div>
         <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
           <h3>AI Condition Estimate</h3>
@@ -1617,7 +1618,7 @@
   <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;padding:6px 10px;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;">⚠ Cards showing <strong style="color:#E74C3C;">AI Est.</strong> grades are AI estimates only. Ice Vault is not responsible for any losses.</div>
   <div class="collection-toolbar">
     <input type="text" class="search-input" placeholder="🔍  Search player, year, brand..." oninput="filterCards()" id="searchInput">
-    <select class="filter-select" onchange="filterCards()" id="collectionFilter"><option value="">All Collections</option><option value="Personal">Personal</option><option value="For Sale">For Sale</option><option value="Trade">Trade</option><option value="Graded">Graded</option></select>
+    <select class="filter-select" onchange="filterCards()" id="collectionFilter"><option value="">All Collections</option><option value="Personal">Personal</option><option value="For Sale">For Sale</option><option value="Trade">Trade</option><option value="Graded">Graded</option><option value="Sold">Sold</option></select>
     <select class="filter-select" onchange="filterCards()" id="statusFilter"><option value="">All Status</option><option value="unlisted">Not Listed</option><option value="listed">Listed on eBay</option></select>
     <select class="filter-select" onchange="filterCards()" id="sortSelect"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="player-asc">Player A–Z</option><option value="player-desc">Player Z–A</option><option value="value-desc">Value High–Low</option><option value="value-asc">Value Low–High</option><option value="grade-desc">Grade High–Low</option><option value="grade-asc">Grade Low–High</option></select>
     <button class="export-btn" onclick="exportJSON()" title="Download full collection as JSON — lossless backup including images">⬇ JSON</button>
@@ -2115,7 +2116,7 @@ function renderGridFromCollection(){
         ${c.tags&&c.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${c.tags.map(t=>`<span style="padding:1px 6px;background:rgba(74,156,201,0.12);border:1px solid rgba(74,156,201,0.25);border-radius:10px;font-size:10px;color:var(--ice-dark);">${t}</span>`).join('')}</div>`:''}
         <div class="card-bottom">
           ${c.grade?`<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span>`:'<span></span>'}
-          <span class="card-status ${c.listedOnEbay?'listed':''}">${c.listedOnEbay?'● Listed':c.estimatedValue?'$'+c.estimatedValue:''}</span>
+          <span class="card-status ${c.sold?'sold':c.listedOnEbay?'listed':''}">${c.sold?'● Sold $'+c.soldPrice:c.listedOnEbay?'● Listed':c.estimatedValue?'$'+c.estimatedValue:''}</span>
         </div>
       </div>
     </div>`).join('');
@@ -2203,9 +2204,11 @@ function _renderFilteredLocal(){
   let filtered=collection.filter(c=>{
     const ms=!search||c.player.toLowerCase().includes(search)||(c.brand||'').toLowerCase().includes(search)||(c.year||'').includes(search)||(c.team||'').toLowerCase().includes(search)||(c.tags||[]).some(t=>t.toLowerCase().includes(search));
     const mc=!col||c.collection===col;
+    // Hide sold cards by default unless explicitly filtering for Sold
+    const mSold=col==='Sold'?c.sold===true:!c.sold;
     const mst=!status||(status==='listed'?c.listedOnEbay:!c.listedOnEbay);
     const mt=!activeTagFilter||(c.tags||[]).includes(activeTagFilter);
-    return ms&&mc&&mst&&mt;
+    return ms&&mc&&mSold&&mst&&mt;
   });
   filtered.sort((a,b)=>{
     switch(sort){
@@ -2231,7 +2234,7 @@ function _renderFilteredLocal(){
         ${c.tags&&c.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${c.tags.map(t=>`<span style="padding:1px 6px;background:rgba(74,156,201,0.12);border:1px solid rgba(74,156,201,0.25);border-radius:10px;font-size:10px;color:var(--ice-dark);">${t}</span>`).join('')}</div>`:''}
         <div class="card-bottom">
           ${c.grade?`<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span>`:'<span></span>'}
-          <span class="card-status ${c.listedOnEbay?'listed':''}">${c.listedOnEbay?'● Listed':c.estimatedValue?'$'+c.estimatedValue:''}</span>
+          <span class="card-status ${c.sold?'sold':c.listedOnEbay?'listed':''}">${c.sold?'● Sold $'+c.soldPrice:c.listedOnEbay?'● Listed':c.estimatedValue?'$'+c.estimatedValue:''}</span>
         </div>
       </div>
     </div>`).join('');
@@ -2278,8 +2281,8 @@ function openCardDetail(id){
   const gradeHtml=c.grade?`<div class="grade-box" style="margin-top:16px;"><div class="grade-header"><span class="grade-title">${c.aiGraded?'AI Condition Estimate':'Official Grade'}</span><span class="grade-badge grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span></div>${c.aiGraded?`<div style="font-size:11px;color:#E74C3C;margin-bottom:8px;padding:6px 8px;background:rgba(192,57,43,0.08);border-radius:6px;">⚠ AI estimate only. Not an official grade.</div>`:''}<div class="grade-breakdown"><div class="grade-row"><span>Centering</span><span>${c.grade.centering}</span></div><div class="grade-row"><span>Corners</span><span>${c.grade.corners}</span></div><div class="grade-row"><span>Edges</span><span>${c.grade.edges}</span></div><div class="grade-row"><span>Surface</span><span>${c.grade.surface}</span></div></div><div class="grade-rationale" style="margin-top:8px;">${c.grade.rationale||''}</div></div>`:'';
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const sharePriceHtml = buildSharePriceHtml(c);
-    const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option></select></div>`;
-  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" data-cap="${c.player}" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" data-cap="${c.player} Back" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div>${c.serialNumber?`<div class="detail-row"><span class="detail-key">Serial #</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.serialNumber}</span></div>`:''}<div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button><button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
+    const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
+  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" data-cap="${c.player}" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" data-cap="${c.player} Back" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div>${c.serialNumber?`<div class="detail-row"><span class="detail-key">Serial #</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.serialNumber}</span></div>`:''}<div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
   document.getElementById('cardModal').classList.add('open');
 }
 
@@ -2288,6 +2291,43 @@ function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)retu
 function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
 function listOnEbayFromModal(id){closeModal('cardModal');selectedCardForEbay=collection.find(c=>c.id===id);switchView('ebay');populateEbayForm(selectedCardForEbay);}
 function deleteCard(id){if(!confirm('Delete this card?'))return;collection=collection.filter(c=>c.id!==id);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)deleteCardFromCloud(id);closeModal('cardModal');renderCollection();showToast('Card deleted','success');}
+
+function markAsSold(id) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  const price = prompt('Sale price ($) — required:');
+  if (price === null) return; // user cancelled
+  const trimmed = price.trim();
+  if (!trimmed || isNaN(parseFloat(trimmed)) || parseFloat(trimmed) < 0) {
+    showToast('Please enter a valid sale price', 'error');
+    return;
+  }
+  c.sold = true;
+  c.soldPrice = parseFloat(trimmed).toFixed(2);
+  c.soldAt = new Date().toISOString();
+  c.collection = 'Sold';
+  c.listedOnEbay = false;
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCardToCloud(c);
+  closeModal('cardModal');
+  renderCollection();
+  showToast(`Marked as sold for $${c.soldPrice}`, 'success');
+}
+
+function undoSold(id) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm('Undo this sale? The card will be moved back to Personal Collection and sale data cleared.')) return;
+  c.sold = false;
+  c.soldPrice = null;
+  c.soldAt = null;
+  c.collection = 'Personal';
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCardToCloud(c);
+  closeModal('cardModal');
+  renderCollection();
+  showToast('Sale undone — card moved back to Personal Collection', 'success');
+}
 
 function renderEbayCardSelect(){
   const ctr=document.getElementById('ebayCardSelect');
