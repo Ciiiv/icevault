@@ -1451,6 +1451,106 @@
     transition: all 0.15s;
   }
   .grade-set-btn:hover { background: rgba(39,174,96,0.15); }
+
+  /* Re-scan section */
+  .rescan-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .rescan-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .rescan-trigger-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-bright);
+    background: var(--rink);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .rescan-trigger-btn:hover { background: var(--rink-light); color: var(--text-primary); }
+  .rescan-trigger-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .rescan-grade-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .rescan-cost { font-size: 10px; color: var(--text-muted); margin-left: auto; }
+
+  /* Re-scan review panel */
+  .rescan-review {
+    margin-top: 12px;
+    background: var(--rink);
+    border: 1px solid var(--border-bright);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .rescan-review-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .rescan-review-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .rescan-review-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .rescan-review-row {
+    display: flex;
+    flex-direction: column;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rescan-review-row.full { grid-column: 1/-1; border-right: none !important; padding-right: 0 !important; }
+  .rescan-review-row:nth-child(odd):not(.full) { padding-right: 12px; border-right: 1px solid var(--border); }
+  .rescan-review-row:nth-child(even):not(.full) { padding-left: 12px; }
+  .rescan-review-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .rescan-review-vals { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .rescan-old { font-size: 12px; color: var(--text-muted); text-decoration: line-through; }
+  .rescan-arrow { font-size: 10px; color: var(--text-muted); }
+  .rescan-new { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+  .rescan-new.changed { color: var(--ice-dark); font-weight: 600; }
+  .rescan-new.same { color: var(--text-muted); font-weight: 400; }
+  .rescan-changed-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ice-dark); flex-shrink: 0; }
+  .rescan-summary { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+  .rescan-summary span { color: var(--ice-dark); }
+  .rescan-review-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .rescan-confirm-btn {
+    flex: 1; padding: 9px; border-radius: 8px; border: none;
+    background: var(--ice-dark); color: white;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  }
+  .rescan-confirm-btn:hover { background: var(--ice-mid); color: var(--rink); }
+  .rescan-cancel-btn {
+    padding: 9px 16px; border-radius: 8px;
+    border: 1px solid var(--border-bright); background: transparent;
+    color: var(--text-muted); font-size: 13px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  }
+  .rescan-cancel-btn:hover { background: var(--rink-light); }
   .grade-regrade-btn {
     width: 100%;
     margin-top: 8px;
@@ -2456,7 +2556,30 @@ function openCardDetail(id){
   <div id="editSaveHint_${c.id}" class="edit-save-hint">↵ Enter or click away to save &nbsp;·&nbsp; Esc to cancel</div>
   <div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div>
   <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
-  ${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
+  ${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
+  ${c.imageUrl?`<div class="rescan-section">
+    <div class="rescan-controls">
+      <button class="rescan-trigger-btn" id="rescanBtn_${c.id}" onclick="triggerRescan(${c.id})">↺ Re-scan card with AI</button>
+      <label class="rescan-grade-label">
+        <input type="checkbox" id="rescanIncludeGrade_${c.id}" checked style="width:14px;height:14px;cursor:pointer;">
+        Include updated grade
+      </label>
+      <span class="rescan-cost" id="rescanCost_${c.id}">⚠ ~$0.02–0.04</span>
+    </div>
+    <div id="rescanReview_${c.id}" style="display:none;"></div>
+  </div><div style="height:10px;"></div>`:''}
+  <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
+
+  // Wire up grade checkbox cost hint after modal renders
+  setTimeout(() => {
+    const gradeChk = document.getElementById('rescanIncludeGrade_' + c.id);
+    const costEl = document.getElementById('rescanCost_' + c.id);
+    if (gradeChk && costEl) {
+      gradeChk.addEventListener('change', () => {
+        costEl.textContent = gradeChk.checked ? '⚠ ~$0.02–0.04' : '⚠ ~$0.01–0.02';
+      });
+    }
+  }, 50);
   document.getElementById('cardModal').classList.add('open');
 }
 
@@ -2619,6 +2742,160 @@ function setCardGrade(cardId, source) {
   if (currentUser) syncCardToCloud(c);
   showToast('Card grade set to ' + sourceLabels[source] + ' ' + grade.overall, 'success');
   renderCollection();
+}
+
+async function triggerRescan(cardId) {
+  const c = collection.find(x => x.id === cardId);
+  if (!c || !c.imageUrl) return;
+  const keys = getKeys();
+  if (!keys.anthropic) { showToast('Set your Anthropic API key first (⚙ API Keys)', 'error'); return; }
+
+  const includeGrade = document.getElementById('rescanIncludeGrade_' + cardId)?.checked !== false;
+  const btn = document.getElementById('rescanBtn_' + cardId);
+  const reviewEl = document.getElementById('rescanReview_' + cardId);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> &nbsp; Scanning...'; }
+  if (reviewEl) reviewEl.style.display = 'none';
+
+  try {
+    // Fetch front image
+    const frontRes = await fetch(c.imageUrl);
+    const frontBlob = await frontRes.blob();
+    const frontB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(frontBlob); });
+    const frontMime = frontBlob.type || 'image/jpeg';
+    const imgs = [{ type: 'image', source: { type: 'base64', media_type: frontMime, data: frontB64 } }];
+
+    // Fetch back image if available
+    if (c.imageUrlBack) {
+      const backRes = await fetch(c.imageUrlBack);
+      const backBlob = await backRes.blob();
+      const backB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(backBlob); });
+      const backMime = backBlob.type || 'image/jpeg';
+      imgs.push({ type: 'image', source: { type: 'base64', media_type: backMime, data: backB64 } });
+    }
+
+    const hasBack = imgs.length > 1;
+    const gradeField = includeGrade ? `,
+  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}` : '';
+    const prompt = `You are an expert hockey card analyst. ${hasBack ? 'First image is FRONT, second is BACK — use back for card number, parallel, serial number.' : 'Front image only.'}
+Analyze this hockey card and respond ONLY with JSON:
+{
+  "player":"Full player name",
+  "year":"Card year",
+  "brand":"Brand and set name",
+  "cardNumber":"Card number if visible",
+  "team":"Player team",
+  "parallel":"Parallel or Base",
+  "serialNumber":"Serial number if present e.g. 47/99 or null",
+  "estimatedValue":"Market value USD as number string"${gradeField}
+}`;
+
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: includeGrade ? 1200 : 600, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    const result = JSON.parse(raw);
+
+    // Build diff and show review panel
+    const fields = [
+      { key: 'player', label: 'Player', newVal: result.player },
+      { key: 'year', label: 'Year', newVal: result.year },
+      { key: 'brand', label: 'Brand / Set', newVal: result.brand },
+      { key: 'team', label: 'Team', newVal: result.team },
+      { key: 'cardNumber', label: 'Card #', newVal: result.cardNumber },
+      { key: 'parallel', label: 'Parallel', newVal: result.parallel },
+      { key: 'serialNumber', label: 'Serial #', newVal: result.serialNumber },
+      { key: 'estimatedValue', label: 'Est. Value', newVal: result.estimatedValue, prefix: '$' },
+    ];
+
+    let changedCount = 0;
+    let rowsHtml = fields.map(f => {
+      const oldVal = c[f.key] || '—';
+      const newVal = f.newVal || '—';
+      const changed = String(oldVal) !== String(newVal) && newVal !== '—';
+      if (changed) changedCount++;
+      const oldDisplay = f.prefix && oldVal !== '—' ? f.prefix + oldVal : oldVal;
+      const newDisplay = f.prefix && newVal !== '—' ? f.prefix + newVal : newVal;
+      return `<div class="rescan-review-row">
+        <div class="rescan-review-label">${f.label}</div>
+        <div class="rescan-review-vals">
+          ${changed ? `<span class="rescan-old">${oldDisplay}</span><span class="rescan-arrow">→</span><div class="rescan-changed-dot"></div><span class="rescan-new changed">${newDisplay}</span>` : `<span class="rescan-new same">${newDisplay}</span>`}
+        </div>
+      </div>`;
+    }).join('');
+
+    // Add grade row if included
+    let gradeRowHtml = '';
+    if (includeGrade && result.grade) {
+      const oldGrade = c.grade?.overall || '—';
+      const newGrade = result.grade.overall;
+      const gradeChanged = String(oldGrade) !== String(newGrade);
+      if (gradeChanged) changedCount++;
+      gradeRowHtml = `<div class="rescan-review-row full">
+        <div class="rescan-review-label">AI Grade</div>
+        <div class="rescan-review-vals">
+          ${gradeChanged ? `<span class="rescan-old">${oldGrade}</span><span class="rescan-arrow">→</span><div class="rescan-changed-dot"></div><span class="rescan-new changed">${newGrade}</span>` : `<span class="rescan-new same">${newGrade}</span>`}
+          <span style="font-size:10px;color:var(--text-muted);">centering ${result.grade.centering} · corners ${result.grade.corners} · edges ${result.grade.edges} · surface ${result.grade.surface}</span>
+        </div>
+      </div>`;
+    }
+
+    const unchangedCount = fields.length + (includeGrade && result.grade ? 1 : 0) - changedCount;
+
+    if (reviewEl) {
+      reviewEl.innerHTML = `<div class="rescan-review">
+        <div class="rescan-review-header">
+          <span class="rescan-review-title">Review before saving</span>
+          <span class="grade-badge grade-7" style="font-size:10px;padding:2px 8px;">Claude</span>
+        </div>
+        <div class="rescan-review-grid">${rowsHtml}${gradeRowHtml}</div>
+        <div class="rescan-summary"><span>●</span> ${changedCount} field${changedCount !== 1 ? 's' : ''} changed · ${unchangedCount} unchanged</div>
+        <div class="rescan-review-actions">
+          <button class="rescan-cancel-btn" onclick="cancelRescan(${cardId})">Cancel</button>
+          <button class="rescan-confirm-btn" onclick="confirmRescan(${cardId}, ${JSON.stringify(result).replace(/"/g, '&quot;')}, ${includeGrade})">✓ Save changes</button>
+        </div>
+      </div>`;
+      reviewEl.style.display = 'block';
+    }
+    showToast('Re-scan complete — review changes below', 'success');
+  } catch (err) {
+    showToast('Re-scan failed: ' + err.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '↺ Re-scan card with AI'; }
+}
+
+function cancelRescan(cardId) {
+  const reviewEl = document.getElementById('rescanReview_' + cardId);
+  if (reviewEl) reviewEl.style.display = 'none';
+}
+
+function confirmRescan(cardId, result, includeGrade) {
+  const c = collection.find(x => x.id === cardId);
+  if (!c) return;
+  if (result.player) c.player = result.player;
+  if (result.year) c.year = result.year;
+  if (result.brand) c.brand = result.brand;
+  if (result.cardNumber) c.cardNumber = result.cardNumber;
+  if (result.team) c.team = result.team;
+  if (result.parallel) c.parallel = result.parallel;
+  c.serialNumber = result.serialNumber || null;
+  if (result.estimatedValue) c.estimatedValue = result.estimatedValue;
+  if (includeGrade && result.grade) {
+    result.grade.gradedAt = new Date().toISOString();
+    result.grade.source = 'claude';
+    if (!c.grades) c.grades = {};
+    c.grades.claude = result.grade;
+    c.grade = result.grade;
+    c.aiGraded = true;
+  }
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCardToCloud(c);
+  closeModal('cardModal');
+  renderCollection();
+  showToast('Card updated from re-scan', 'success');
 }
 
 function editCardField(id, field, el) {
