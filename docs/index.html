@@ -2205,7 +2205,7 @@ function _renderFilteredLocal(){
     const ms=!search||c.player.toLowerCase().includes(search)||(c.brand||'').toLowerCase().includes(search)||(c.year||'').includes(search)||(c.team||'').toLowerCase().includes(search)||(c.tags||[]).some(t=>t.toLowerCase().includes(search));
     const mc=!col||c.collection===col;
     // Hide sold cards by default unless explicitly filtering for Sold
-    const mSold=col==='Sold'?c.sold===true:!c.sold;
+    const mSold=col==='Sold'?c.sold===true:(c.sold?false:true);
     const mst=!status||(status==='listed'?c.listedOnEbay:!c.listedOnEbay);
     const mt=!activeTagFilter||(c.tags||[]).includes(activeTagFilter);
     return ms&&mc&&mSold&&mst&&mt;
