@@ -133,7 +133,7 @@ icevault-worker\            # NOT a git repo
 | 1-8 | Hashing, rate limiting, R2, validation, per-card sync, session cleanup, pagination | ✅ Done |
 | — | Bulk PUT /collection wrapped in D1 batch transaction — atomic, no partial writes | ✅ Done |
 | 9 | Email verification | ✅ Done |
-| 10 | Sentry error monitoring | ⬜ Next — do before mark as sold |
+| 10 | Sentry error monitoring | ⚪ If public — wrangler tail + F12 dev tools sufficient for personal use |
 | 11 | eBay REST API migration | ⬜ Low |
 | 12 | D1 schema + Google OAuth | ⚪ If public |
 
