@@ -1333,6 +1333,46 @@
   .page-btn.active { background: var(--ice-dark); border-color: var(--ice-dark); color: white; font-weight: 600; }
   .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   .page-ellipsis { color: var(--text-muted); font-size: 13px; padding: 0 4px; }
+
+  /* Inline editable fields in card modal */
+  .editable-val {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 1px 4px;
+    margin: -1px -4px;
+    transition: background 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .editable-val:hover { background: var(--rink-light); }
+  .editable-val .edit-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .editable-val:hover .edit-hint { opacity: 1; }
+  .editable-inline {
+    background: var(--input-bg);
+    border: 1px solid var(--ice-dark);
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+    width: 100%;
+    max-width: 240px;
+  }
+  .edit-save-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    display: none;
+  }
+  .edit-save-hint.visible { display: block; }
 </style>
 </head>
 <body>
@@ -2282,7 +2322,19 @@ function openCardDetail(id){
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const sharePriceHtml = buildSharePriceHtml(c);
     const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
-  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" data-cap="${c.player}" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" data-cap="${c.player} Back" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div><div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val">${c.cardNumber||'—'}</span></div><div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val">${c.parallel||'Base'}</span></div>${c.serialNumber?`<div class="detail-row"><span class="detail-key">Serial #</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.serialNumber}</span></div>`:''}<div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val">${c.estimatedValue?'$'+c.estimatedValue:'—'}</span></div><div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div><div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
+  document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" data-cap="${c.player}" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" data-cap="${c.player} Back" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div>
+  <div class="detail-row"><span class="detail-key">Player</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'player',this)">${c.player||'—'}<span class="edit-hint">✎</span></span></div>
+  <div class="detail-row"><span class="detail-key">Year</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'year',this)">${c.year||'—'}<span class="edit-hint">✎</span></span></div>
+  <div class="detail-row"><span class="detail-key">Brand / Set</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'brand',this)">${c.brand||'—'}<span class="edit-hint">✎</span></span></div>
+  <div class="detail-row"><span class="detail-key">Team</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'team',this)">${c.team||'—'}<span class="edit-hint">✎</span></span></div>
+  <div class="detail-row"><span class="detail-key">Card #</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'cardNumber',this)">${c.cardNumber||'—'}<span class="edit-hint">✎</span></span></div>
+  <div class="detail-row"><span class="detail-key">Parallel</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'parallel',this)">${c.parallel||'Base'}<span class="edit-hint">✎</span></span></div>
+  <div class="detail-row"><span class="detail-key">Serial #</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'serialNumber',this)" ${c.serialNumber?'style="color:var(--gold);font-weight:600;"':''}>${c.serialNumber||'—'}<span class="edit-hint">✎</span></span></div>
+  <div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'estimatedValue',this)">${c.estimatedValue?'$'+c.estimatedValue:'—'}<span class="edit-hint">✎</span></span></div>
+  <div id="editSaveHint_${c.id}" class="edit-save-hint">↵ Enter or click away to save &nbsp;·&nbsp; Esc to cancel</div>
+  <div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div>
+  <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
+  ${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
   document.getElementById('cardModal').classList.add('open');
 }
 
@@ -2291,6 +2343,95 @@ function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)retu
 function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
 function listOnEbayFromModal(id){closeModal('cardModal');selectedCardForEbay=collection.find(c=>c.id===id);switchView('ebay');populateEbayForm(selectedCardForEbay);}
 function deleteCard(id){if(!confirm('Delete this card?'))return;collection=collection.filter(c=>c.id!==id);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)deleteCardFromCloud(id);closeModal('cardModal');renderCollection();showToast('Card deleted','success');}
+
+function editCardField(id, field, el) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  if (el.querySelector('input')) return;
+
+  // Show save hint
+  const hintEl = document.getElementById('editSaveHint_' + id);
+  if (hintEl) hintEl.classList.add('visible');
+
+  // Remove hint span and text node
+  const hint = el.querySelector('.edit-hint');
+  if (hint) hint.remove();
+  const textNode = el.childNodes[0];
+  if (textNode) el.removeChild(textNode);
+
+  const input = document.createElement('input');
+  input.type = field === 'estimatedValue' ? 'number' : 'text';
+  input.className = 'editable-inline';
+  input.value = c[field] || '';
+  if (field === 'estimatedValue') { input.step = '0.01'; input.min = '0'; }
+  el.insertBefore(input, el.firstChild);
+  input.focus();
+  input.select();
+
+  function restore(val) {
+    if (el.querySelector('input')) el.removeChild(input);
+    const hintSpan = document.createElement('span');
+    hintSpan.className = 'edit-hint';
+    hintSpan.textContent = '✎';
+    el.insertBefore(document.createTextNode(val), el.firstChild);
+    el.appendChild(hintSpan);
+    if (hintEl) hintEl.classList.remove('visible');
+  }
+
+  function save() {
+    const newVal = input.value.trim();
+    const oldDisplay = field === 'estimatedValue'
+      ? (c[field] ? '$' + c[field] : '—')
+      : (c[field] || '—');
+
+    if (newVal === String(c[field] || '') || (!newVal && !c[field])) {
+      restore(oldDisplay);
+      return;
+    }
+
+    if (field === 'estimatedValue') {
+      c[field] = newVal ? parseFloat(newVal).toFixed(2) : '';
+      restore(c[field] ? '$' + c[field] : '—');
+    } else if (field === 'serialNumber') {
+      c[field] = newVal || null;
+      restore(c[field] || '—');
+      if (c[field]) { el.style.color = 'var(--gold)'; el.style.fontWeight = '600'; }
+      else { el.style.color = ''; el.style.fontWeight = ''; }
+    } else {
+      c[field] = newVal;
+      restore(c[field] || '—');
+    }
+
+    // Update modal header if player/year/brand/team changed
+    if (['player','year','brand','team'].includes(field)) {
+      const playerEl = document.querySelector('#modalContent .modal-player');
+      const metaEl = document.querySelector('#modalContent .modal-meta');
+      if (playerEl) playerEl.textContent = c.player || '';
+      if (metaEl) metaEl.textContent = `${c.year||''} · ${c.brand||''} · ${c.team||''}`;
+    }
+
+    localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+    if (currentUser) syncCardToCloud(c);
+    showToast('Card updated', 'success');
+  }
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') {
+      const oldDisplay = field === 'estimatedValue'
+        ? (c[field] ? '$' + c[field] : '—')
+        : (c[field] || '—');
+      if (el.querySelector('input')) el.removeChild(input);
+      const hintSpan = document.createElement('span');
+      hintSpan.className = 'edit-hint';
+      hintSpan.textContent = '✎';
+      el.insertBefore(document.createTextNode(oldDisplay), el.firstChild);
+      el.appendChild(hintSpan);
+      if (hintEl) hintEl.classList.remove('visible');
+    }
+  });
+}
 
 function markAsSold(id) {
   const c = collection.find(x => x.id === id);
