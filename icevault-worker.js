@@ -817,13 +817,17 @@ export default {
         validCards.push(card);
       }
 
-      await db.prepare('DELETE FROM cards WHERE user_id = ?').bind(user.id).run();
-      for (const card of validCards) {
-        const now = new Date().toISOString();
-        await db.prepare(
-          'INSERT INTO cards (id, user_id, card_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
-        ).bind(card.id.toString(), user.id, JSON.stringify(card), card.addedAt || now, now).run();
-      }
+      // Build all statements for atomic batch execution — all-or-nothing, no partial writes
+      const now = new Date().toISOString();
+      const statements = [
+        db.prepare('DELETE FROM cards WHERE user_id = ?').bind(user.id),
+        ...validCards.map(card =>
+          db.prepare(
+            'INSERT INTO cards (id, user_id, card_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+          ).bind(card.id.toString(), user.id, JSON.stringify(card), card.addedAt || now, now)
+        )
+      ];
+      await db.batch(statements);
       return json({ ok: true, count: collection.length }, 200, cors);
     }
 
