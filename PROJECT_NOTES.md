@@ -98,6 +98,7 @@ icevault-worker\            # NOT a git repo
 - Password reset via Maileroo
 - **Change password** — 8+ chars, letter+number+symbol, rate limited, same-pw check server-side
 - **Public collection sharing** — 64-char token, per-card price controls (AI est or owner price), owner display name shown next to price. Rate limited
+- **Mark as sold** — button in card detail modal, requires sale price (required) and captures sale date automatically, moves card to Sold collection bucket, hidden from default collection view, shows in grid with sold price badge. Undo Sale option restores card to Personal Collection and clears sale data. Sold cards preserved in D1 for historical tracking and future value tracking feature
 - 6-theme system — Hybrid default
 - Session cleanup — per-user on login + 5% probabilistic global purge
 - Favicon + PWA meta tags fixed
@@ -143,7 +144,8 @@ icevault-worker\            # NOT a git repo
 |---|---------|--------|
 | 1 | Public collection sharing | ✅ Done |
 | 2 | Optional AI grade + serial number | ✅ Done |
-| 3 | Mark as sold | ⬜ Med |
+| 3 | Mark as sold | ✅ Done |
+| 3b | Re-scan / re-grade from existing card images in collection | ⬜ Next |
 | 4 | Value tracking + charts | ⬜ Med |
 | 5 | Multi-AI (GPT-4o, Gemini, Ollama) | ⬜ Med |
 | 6 | eBay Partner Network affiliate links | ⬜ Low |
@@ -301,6 +303,8 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | R2 for images, D1 for metadata | D1 1MB row limit. R2 = zero egress, 10GB free, CDN cached |
 | Per-card sync + smart meta check | Full resync was N writes per save. Meta check skips pull if nothing changed |
 | Server-side pagination | All search/filter/sort hit D1. 100/page. Scales to 50k+ cards |
+| Sold cards never deleted | Marked sold cards stay in D1 with sold:true flag — filtered out of default view via JSON string match in D1 query. Preserved for historical data and future value tracking |
+| D1 batch for bulk sync | PUT /collection uses db.batch() — atomic all-or-nothing, no partial writes on import or guest migration |
 | PBKDF2 | Built-in Web Crypto API — no library. 100k = CF Workers hard limit |
 | Maileroo | 3,000/mo free, sends to any email without custom domain |
 | Display name separate from email | Email never exposed publicly on shared collections |

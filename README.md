@@ -62,6 +62,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Export JSON** — full lossless backup including images, reimportable
 - **Export CSV** — flat spreadsheet (22 columns), opens in Excel/Google Sheets
 - **Import JSON** — restore from backup, merges with existing collection, skips duplicates
+- **Mark as sold** — record sale price and date on any card, moves to Sold bucket, hidden from default view. Undo option available. Sold cards kept for historical data
 
 ### 🛒 List on eBay
 - Select any card to create a listing
