@@ -115,11 +115,12 @@ icevault-worker\            # NOT a git repo
 
 ### Security Completed
 - ✅ PBKDF2-HMAC-SHA256 — 100k iterations, no library
-- ✅ Rate limiting — KV sliding window on 11 endpoints:
+- ✅ Rate limiting — KV sliding window on 12 endpoints:
   - `/auth/login` 10/15min, `/auth/signup` 5/hr, `/auth/forgot` 5/hr
   - `/auth/reset` 10/hr, `/auth/change-password` 5/hr, `/auth/display-name` 10/hr
   - `/share/generate` 5/hr, `/share/view` 60/hr
   - `/collection/:id PUT` 200/hr, `/collection` bulk PUT 10/hr, `/proxy` 100/hr
+  - `/upload` 50/hr
 - ✅ Rate limit alert emails — KV deduped, fire-and-forget
 - ✅ Input validation on all endpoints
 - ✅ Display name cannot match email username — frontend + backend
