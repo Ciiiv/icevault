@@ -14,6 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <!-- THEME INIT — runs before render to prevent flash of wrong theme -->
 <script>
@@ -1590,6 +1591,7 @@
   <button class="nav-btn active" onclick="switchView('scan')" id="nav-scan"><span class="nav-icon">📷</span> Scan Card</button>
   <button class="nav-btn" onclick="switchView('collection')" id="nav-collection"><span class="nav-icon">🗂</span> Collection</button>
   <button class="nav-btn" onclick="switchView('ebay')" id="nav-ebay"><span class="nav-icon">🛒</span> List on eBay</button>
+  <button class="nav-btn" onclick="switchView('stats')" id="nav-stats"><span class="nav-icon">📊</span> Stats</button>
 </nav>
 
 <div class="sidebar-shell" id="sidebarShell">
@@ -1611,6 +1613,9 @@
       <button class="sidebar-item" id="sb-ebay" onclick="switchView('ebay')">
         <span class="sidebar-icon">🛒</span> List on eBay
       </button>
+      <button class="sidebar-item" id="sb-stats" onclick="switchView('stats')">
+        <span class="sidebar-icon">📊</span> Stats
+      </button>
       <div class="sidebar-divider"></div>
       <button class="sidebar-item" id="sb-settings" onclick="openApiModal()">
         <span class="sidebar-icon">⚙</span> Settings & Keys
@@ -1627,12 +1632,12 @@
     </div>
   </div>
   <div class="main-content">
-    <div class="sidebar-topbar">
+    <div class="sidebar-topbar" style="position:relative;">
       <div style="display:flex;align-items:center;gap:10px;">
         <button class="sidebar-hamburger" id="hamburgerBtn" onclick="toggleDrawer()">☰</button>
         <div class="topbar-title" id="topbarTitle">Scan Card</div>
       </div>
-      <div class="topbar-right">
+      <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;">
         <div class="topbar-stat-group">
           <div class="topbar-stat">
             <div class="topbar-stat-val" id="sbStatTotal">0</div>
@@ -1642,7 +1647,17 @@
             <div class="topbar-stat-val" id="sbStatValue">$0</div>
             <div class="topbar-stat-lbl">Est. Value</div>
           </div>
+          <div class="topbar-stat">
+            <div class="topbar-stat-val" id="sbStatSold" style="color:var(--green);">$0</div>
+            <div class="topbar-stat-lbl">Sold</div>
+          </div>
+          <div class="topbar-stat">
+            <div class="topbar-stat-val" id="sbStatVsEst" style="color:var(--gold);">—</div>
+            <div class="topbar-stat-lbl">Vs Est.</div>
+          </div>
         </div>
+      </div>
+      <div class="topbar-right">
         <button class="topbar-api-btn" onclick="openApiModal()">⚙ Keys</button>
         <button class="topbar-account-btn" id="sbAccountBtn" onclick="openAuthModal()">👤 Sign In</button>
       </div>
@@ -1863,6 +1878,67 @@
   <div id="tagFilterRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Filter by tag:</span></div>
   <div class="cards-grid" id="cardsGrid"><div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards yet!<br>Scan your first card to get started.</div></div></div>
   <div class="pagination" id="paginationBar" style="display:none;"></div>
+</div>
+
+<!-- STATS VIEW -->
+<div class="view" id="view-stats">
+  <div class="section-title">Stats & Value Tracking</div>
+  <div class="section-sub">Collection insights based on your card data</div>
+
+  <!-- Summary metric cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Collection Value</div>
+      <div style="font-size:22px;font-weight:600;color:var(--text-primary);" id="statsCollectionValue">$0</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;" id="statsActiveCards">0 active cards</div>
+    </div>
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Total Sold</div>
+      <div style="font-size:22px;font-weight:600;color:var(--green);" id="statsTotalSold">$0</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;" id="statsSoldCount">0 cards sold</div>
+    </div>
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Avg vs Estimate</div>
+      <div style="font-size:22px;font-weight:600;color:var(--gold);" id="statsVsEst">—</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">sold vs AI estimate</div>
+    </div>
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Best Flip</div>
+      <div style="font-size:22px;font-weight:600;color:var(--ice-dark);" id="statsBestFlip">—</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;" id="statsBestFlipCard">no sales yet</div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Collection value over time</div>
+      <div style="position:relative;height:160px;"><canvas id="statsValueChart"></canvas></div>
+    </div>
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Sold price vs AI estimate</div>
+      <div style="position:relative;height:160px;"><canvas id="statsSoldChart"></canvas></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Collection by bucket</div>
+      <div id="statsBucketBars" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Grade distribution</div>
+      <div style="position:relative;height:140px;"><canvas id="statsGradeChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Recent sales table -->
+  <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;">
+    <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Recent sales</div>
+    <div id="statsRecentSales">
+      <div style="color:var(--text-muted);font-size:13px;">No sales recorded yet — mark cards as sold to see them here.</div>
+    </div>
+  </div>
 </div>
 
 <!-- EBAY VIEW -->
@@ -2153,11 +2229,12 @@ function switchView(name) {
   if(view) view.classList.add('active');
   const nb=document.getElementById('nav-'+name); if(nb) nb.classList.add('active');
   const sb=document.getElementById('sb-'+name); if(sb) sb.classList.add('active');
-  const titles={scan:'Scan Card',collection:'My Collection',ebay:'List on eBay'};
+  const titles={scan:'Scan Card',collection:'My Collection',ebay:'List on eBay',stats:'Stats & Value Tracking'};
   const te=document.getElementById('topbarTitle'); if(te) te.textContent=titles[name]||name;
   document.getElementById('sidebarShell')?.classList.remove('drawer-open');
   if(name==='collection') renderCollection();
   if(name==='ebay') renderEbayCardSelect();
+  if(name==='stats') renderStats();
 }
 
 let currentBackImageData=null;
@@ -3112,15 +3189,197 @@ function simulateListing(){
 
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
+let _statsCharts = {};
+
+function renderStats() {
+  const activeCards = collection.filter(c => !c.sold);
+  const soldCards = collection.filter(c => c.sold);
+
+  // ── Summary metrics ──
+  const totalVal = activeCards.reduce((s,c) => s+(parseFloat(c.estimatedValue)||0), 0);
+  const totalSold = soldCards.reduce((s,c) => s+(parseFloat(c.soldPrice)||0), 0);
+  const soldWithBoth = soldCards.filter(c => c.soldPrice && c.estimatedValue);
+  const avgVsEst = soldWithBoth.length > 0
+    ? soldWithBoth.reduce((s,c) => s+((parseFloat(c.soldPrice)-parseFloat(c.estimatedValue))/parseFloat(c.estimatedValue)*100), 0) / soldWithBoth.length
+    : null;
+
+  document.getElementById('statsCollectionValue').textContent = '$'+totalVal.toFixed(0);
+  document.getElementById('statsActiveCards').textContent = activeCards.length + ' active card' + (activeCards.length !== 1 ? 's' : '');
+  document.getElementById('statsTotalSold').textContent = '$'+totalSold.toFixed(0);
+  document.getElementById('statsSoldCount').textContent = soldCards.length + ' card' + (soldCards.length !== 1 ? 's' : '') + ' sold';
+  document.getElementById('statsVsEst').textContent = avgVsEst !== null ? (avgVsEst >= 0 ? '+' : '') + avgVsEst.toFixed(0) + '%' : '—';
+  if(avgVsEst !== null) document.getElementById('statsVsEst').style.color = avgVsEst >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Best flip
+  let bestFlip = null, bestFlipCard = null;
+  soldWithBoth.forEach(c => {
+    const gain = parseFloat(c.soldPrice) - parseFloat(c.estimatedValue);
+    if(bestFlip === null || gain > bestFlip) { bestFlip = gain; bestFlipCard = c; }
+  });
+  document.getElementById('statsBestFlip').textContent = bestFlip !== null ? (bestFlip >= 0 ? '+' : '') + '$' + Math.abs(bestFlip).toFixed(0) : '—';
+  document.getElementById('statsBestFlipCard').textContent = bestFlipCard ? bestFlipCard.player : 'no sales yet';
+
+  // ── Collection value over time ──
+  // Build timeline from all valueHistory entries across active cards
+  const allEntries = [];
+  activeCards.forEach(c => {
+    (c.valueHistory || []).forEach(e => allEntries.push({ date: e.date, value: parseFloat(e.value)||0, cardId: c.id }));
+  });
+  allEntries.sort((a,b) => new Date(a.date)-new Date(b.date));
+
+  // Group by month, sum latest value per card per month
+  const monthMap = {};
+  const cardLatest = {};
+  allEntries.forEach(e => {
+    const month = e.date.slice(0,7); // YYYY-MM
+    cardLatest[e.cardId] = e.value;
+    monthMap[month] = Object.values(cardLatest).reduce((s,v) => s+v, 0);
+  });
+  const months = Object.keys(monthMap).sort();
+  const monthLabels = months.map(m => { const [y,mo] = m.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+' '+y.slice(2); });
+  const monthValues = months.map(m => parseFloat(monthMap[m].toFixed(2)));
+
+  const teal = getComputedStyle(document.documentElement).getPropertyValue('--ice-dark').trim() || '#0a8a9a';
+  const border = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || 'rgba(74,156,201,0.2)';
+  const textMuted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#4A6A8A';
+
+  if(_statsCharts.value) { _statsCharts.value.destroy(); }
+  const vCtx = document.getElementById('statsValueChart');
+  if(vCtx) {
+    _statsCharts.value = new Chart(vCtx, {
+      type: 'line',
+      data: {
+        labels: monthLabels.length ? monthLabels : ['No data'],
+        datasets: [{ data: monthValues.length ? monthValues : [0], borderColor: teal, backgroundColor: teal+'22', fill: true, tension: 0.4, pointBackgroundColor: teal, pointRadius: 3, borderWidth: 2 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales: { x:{grid:{display:false},ticks:{color:textMuted,font:{size:10}}}, y:{ticks:{color:textMuted,font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:border}} } }
+    });
+  }
+
+  // ── Sold vs estimate bar chart ──
+  if(_statsCharts.sold) { _statsCharts.sold.destroy(); }
+  const sCtx = document.getElementById('statsSoldChart');
+  if(sCtx) {
+    const soldLabels = soldCards.slice(-8).map(c => c.player.split(' ').pop());
+    const soldEst = soldCards.slice(-8).map(c => parseFloat(c.estimatedValue)||0);
+    const soldPrices = soldCards.slice(-8).map(c => parseFloat(c.soldPrice)||0);
+    _statsCharts.sold = new Chart(sCtx, {
+      type: 'bar',
+      data: {
+        labels: soldLabels.length ? soldLabels : ['No sales'],
+        datasets: [
+          { label:'AI Est.', data:soldEst.length?soldEst:[0], backgroundColor: border, borderWidth:0 },
+          { label:'Sold', data:soldPrices.length?soldPrices:[0], backgroundColor: teal, borderWidth:0 }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true,labels:{color:textMuted,font:{size:10},boxWidth:12}}},
+        scales: { x:{grid:{display:false},ticks:{color:textMuted,font:{size:10}}}, y:{ticks:{color:textMuted,font:{size:10},callback:v=>'$'+v},grid:{color:border}} } }
+    });
+  }
+
+  // ── Grade distribution ──
+  if(_statsCharts.grade) { _statsCharts.grade.destroy(); }
+  const gCtx = document.getElementById('statsGradeChart');
+  if(gCtx) {
+    const gradeBuckets = {'9-10':0,'8-8.9':0,'7-7.9':0,'<7':0,'Ungraded':0};
+    activeCards.forEach(c => {
+      if(!c.grade) { gradeBuckets['Ungraded']++; return; }
+      const g = parseFloat(c.grade.overall);
+      if(g>=9) gradeBuckets['9-10']++;
+      else if(g>=8) gradeBuckets['8-8.9']++;
+      else if(g>=7) gradeBuckets['7-7.9']++;
+      else gradeBuckets['<7']++;
+    });
+    _statsCharts.grade = new Chart(gCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(gradeBuckets),
+        datasets: [{ data: Object.values(gradeBuckets), backgroundColor: [teal, teal+'bb', teal+'88', teal+'55', border], borderWidth:0, borderRadius:4 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales: { x:{grid:{display:false},ticks:{color:textMuted,font:{size:10}}}, y:{ticks:{color:textMuted,font:{size:10},stepSize:1},grid:{color:border}} } }
+    });
+  }
+
+  // ── Collection by bucket bars ──
+  const buckets = {};
+  collection.forEach(c => { const b = c.collection||'Personal'; buckets[b] = (buckets[b]||0)+1; });
+  const maxB = Math.max(...Object.values(buckets), 1);
+  const barsEl = document.getElementById('statsBucketBars');
+  if(barsEl) {
+    barsEl.innerHTML = Object.entries(buckets).sort((a,b)=>b[1]-a[1]).map(([name,count]) => `
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span style="width:80px;color:var(--text-secondary);flex-shrink:0;">${name}</span>
+        <div style="flex:1;height:8px;background:var(--rink);border-radius:4px;overflow:hidden;">
+          <div style="width:${Math.round((count/maxB)*100)}%;height:100%;background:var(--ice-dark);border-radius:4px;"></div>
+        </div>
+        <span style="width:24px;text-align:right;color:var(--text-primary);font-weight:500;">${count}</span>
+      </div>`).join('');
+  }
+
+  // ── Recent sales table ──
+  const salesEl = document.getElementById('statsRecentSales');
+  if(salesEl) {
+    if(soldCards.length === 0) {
+      salesEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No sales recorded yet — mark cards as sold to see them here.</div>';
+    } else {
+      const sorted = [...soldCards].sort((a,b) => new Date(b.soldAt)-new Date(a.soldAt));
+      salesEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:6px 0;font-size:10px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;">Card</th>
+          <th style="text-align:right;padding:6px 0;font-size:10px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;">AI Est.</th>
+          <th style="text-align:right;padding:6px 0;font-size:10px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;">Sold For</th>
+          <th style="text-align:right;padding:6px 0;font-size:10px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;">+/−</th>
+          <th style="text-align:right;padding:6px 0;font-size:10px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;">Date</th>
+        </tr></thead>
+        <tbody>${sorted.map(c => {
+          const est = parseFloat(c.estimatedValue)||0;
+          const sold = parseFloat(c.soldPrice)||0;
+          const diff = est > 0 ? sold - est : null;
+          const diffStr = diff !== null ? (diff >= 0 ? '+' : '') + '$' + Math.abs(diff).toFixed(0) : '—';
+          const diffColor = diff === null ? 'var(--text-muted)' : diff >= 0 ? 'var(--green)' : 'var(--red)';
+          return `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:7px 0;color:var(--text-primary);">${c.player}<span style="color:var(--text-muted);font-size:11px;"> · ${c.year||''} ${c.brand||''}</span></td>
+            <td style="text-align:right;color:var(--text-secondary);">${est > 0 ? '$'+est.toFixed(0) : '—'}</td>
+            <td style="text-align:right;color:var(--green);font-weight:500;">$${sold.toFixed(0)}</td>
+            <td style="text-align:right;color:${diffColor};font-weight:500;">${diffStr}</td>
+            <td style="text-align:right;color:var(--text-muted);font-size:11px;">${c.soldAt ? new Date(c.soldAt).toLocaleDateString() : '—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    }
+  }
+}
+
 function updateHeaderStats(){
-  document.getElementById('statTotal').textContent=isServerPaginated?totalCards:collection.length;
+  const activeCards = collection.filter(c=>!c.sold);
+  const soldCards = collection.filter(c=>c.sold);
+  document.getElementById('statTotal').textContent=isServerPaginated?totalCards:activeCards.length;
   document.getElementById('statListed').textContent=collection.filter(c=>c.listedOnEbay).length;
-  const val=collection.reduce((s,c)=>s+(parseFloat(c.estimatedValue)||0),0);
+  const val=activeCards.reduce((s,c)=>s+(parseFloat(c.estimatedValue)||0),0);
   document.getElementById('statValue').textContent='$'+val.toFixed(0);
   const s=document.getElementById('sbStatTotal'),sv=document.getElementById('sbStatValue'),badge=document.getElementById('sbBadgeCollection');
-  if(s)s.textContent=isServerPaginated?totalCards:collection.length;
+  if(s)s.textContent=isServerPaginated?totalCards:activeCards.length;
   if(sv)sv.textContent='$'+val.toFixed(0);
-  if(badge){badge.textContent=collection.length;badge.style.display=collection.length>0?'inline':'none';}
+  if(badge){badge.textContent=activeCards.length;badge.style.display=activeCards.length>0?'inline':'none';}
+  // Sold + vs est topbar stats
+  const totalSoldRev = soldCards.reduce((s,c)=>s+(parseFloat(c.soldPrice)||0),0);
+  const sbSold = document.getElementById('sbStatSold');
+  const sbVsEst = document.getElementById('sbStatVsEst');
+  if(sbSold) sbSold.textContent = '$'+totalSoldRev.toFixed(0);
+  if(sbVsEst && soldCards.length > 0) {
+    const soldWithBoth = soldCards.filter(c=>c.soldPrice&&c.estimatedValue);
+    if(soldWithBoth.length > 0) {
+      const avgPct = soldWithBoth.reduce((s,c)=>{
+        const diff = ((parseFloat(c.soldPrice)-parseFloat(c.estimatedValue))/parseFloat(c.estimatedValue))*100;
+        return s+diff;
+      },0) / soldWithBoth.length;
+      const sign = avgPct >= 0 ? '+' : '';
+      sbVsEst.textContent = sign + avgPct.toFixed(0) + '%';
+      sbVsEst.style.color = avgPct >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+  } else if(sbVsEst) { sbVsEst.textContent = '—'; }
 }
 
 function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(()=>t.className='toast',3000);}
@@ -3977,7 +4236,7 @@ function updateNavActive(viewName){
   document.querySelectorAll('.sidebar-item[id^="sb-"]').forEach(b=>b.classList.remove('active'));
   const nb=document.getElementById('nav-'+viewName);if(nb)nb.classList.add('active');
   const sb=document.getElementById('sb-'+viewName);if(sb)sb.classList.add('active');
-  const titles={scan:'Scan Card',collection:'My Collection',ebay:'List on eBay'};
+  const titles={scan:'Scan Card',collection:'My Collection',ebay:'List on eBay',stats:'Stats & Value Tracking'};
   const te=document.getElementById('topbarTitle');if(te)te.textContent=titles[viewName]||viewName;
   closeDrawer();
 }
