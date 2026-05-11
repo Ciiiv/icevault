@@ -309,6 +309,22 @@ CREATE TABLE IF NOT EXISTS share_tokens (token TEXT PRIMARY KEY, user_id TEXT NO
 1. Cloudflare dashboard → **R2 Object Storage → Create bucket** → name it `icevault-images`
 2. After creation → **Settings → Public Access → Enable** (type `allow` to confirm)
 3. Note the public URL: `https://pub-xxxxxxxx.r2.dev`
+4. Go to **Settings** tab of the bucket -> **CORS Policy** -> Add this policy:
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://YOUR-USERNAME.github.io",
+      "http://127.0.0.1:5500",
+      "http://localhost:5500"
+    ],
+    "AllowedMethods": ["GET"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+> Required for browser re-grade and PDF export to fetch card images directly from R2. Without it those features fail with a CORS error.
 
 ---
 
