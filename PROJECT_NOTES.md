@@ -103,6 +103,11 @@ icevault-worker\            # NOT a git repo
 - **AI grade matrix** — replaces single grade box in card detail modal with 4-source matrix (Claude, GPT-4o, Gemini, Ximilar). Summary row shows all grades at a glance. Tabs switch detail view per source. Re-grade with Claude fetches existing R2 images (front + back), runs grade-only prompt, confirms before overwrite. Set as card grade copies selected source grade to main card grade. GPT-4o, Gemini, Ximilar tabs show coming soon. Grades stored per-source in card.grades object. Existing c.grade migrated to Claude slot automatically
 - **R2 CORS policy** — configured on icevault-images bucket to allow all app origins (GitHub Pages + Live Server). Required for browser fetch of R2 images during re-grade
 - **Re-scan card** — full card re-scan from existing R2 images. Checkbox to include updated grade (affects cost ~$0.01-0.02 without grade, ~$0.02-0.04 with). Shows diff review panel before saving — changed fields highlighted teal with old→new, unchanged shown muted. Cancel hides panel, Save applies all changes and syncs to D1. Only available on cards with R2 imageUrl. Re-scan and re-grade are independent — re-scan optionally includes grade, re-grade is grade-only
+- **Value history tracking** — every card has a valueHistory array. First entry created at scan time. Appends on manual Est. Value edit (source: manual), re-scan (source: rescan). Existing cards migrated on init and after cloud sync. Cert cards also get valueHistory at save
+- **Stats tab** — new Stats sidebar nav item. Dashboard with 4 metric cards (collection value, total sold, avg vs estimate, best flip), collection value over time line chart, sold vs estimate bar chart, grade distribution bar chart, collection by bucket bars, recent sales table. All calculated client-side from collection array. Charts use Chart.js stored in _statsCharts and destroyed before re-render
+- **Topbar quick stats** — Cards, Est. Value, Sold, Vs Est. always visible on all tabs. Centered via absolute positioning. Keys and account button right-aligned independently
+- **Stats PDF export** — jsPDF. Page 1: teal header, 4 metric boxes, 4 charts captured from canvas, bucket bars, recent sales table (always shown with empty state). Page 2+: 3x3 card grid with R2 thumbnail, player/year/brand, stats (truncated to prevent overflow), value history mini bar chart, sold badge
+- **Stats CSV export** — one row per value history entry per card. Columns: Player, Year, Brand, Parallel, Serial #, Collection, Grade, AI Graded, Est. Value, Value Date, Value Source, Sold, Sold Price, Sold Date. Separate from collection backup CSV
 - 6-theme system — Hybrid default
 - Session cleanup — per-user on login + 5% probabilistic global purge
 - Favicon + PWA meta tags fixed
@@ -152,7 +157,7 @@ icevault-worker\            # NOT a git repo
 | 3b | Re-grade from existing card images — grade matrix with AI source tabs | ✅ Done |
 | 3c | Manual field editing in card detail modal — inline click-to-edit per field | ✅ Done |
 | 3d | Re-scan full card — field diff review panel, include grade option | ✅ Done |
-| 4 | Value tracking + charts | ⬜ Med |
+| 4 | Value tracking + charts — stats tab, topbar quick stats, value history tracking, PDF + CSV export | ✅ Done |
 | 5 | Multi-AI (GPT-4o, Gemini, Ollama) | ⬜ Med |
 | 6 | eBay Partner Network affiliate links | ⬜ Low |
 | 7 | Ximilar card grading API | ⬜ Low |
@@ -236,6 +241,14 @@ Two PowerShell terminals open side by side in Windows Terminal:
 - After worker changes: run fix.py → wrangler deploy → sync reference copy → git push
 - After frontend changes: run fix.py → test with Live Server → git push
 
+**fix.py known gotchas:**
+- `\n` in JS strings: Python may write a literal newline instead of escaped `\n` inside JS string literals. Use `String.fromCharCode(10)` in JS instead, or build patches with Python string concatenation rather than raw multiline strings
+- Non-ASCII chars: em-dashes, box-drawing chars, unicode minus may corrupt. Use only ASCII in JS patches -- replace with `--`, `-` etc.
+- Aggressive regex: never use `re.sub` with broad patterns on the full file -- it can collapse everything. Use `str.replace()` with exact strings only
+- Always verify line count after saving: `(Get-Content "path").Count` -- if it drops dramatically, run `git checkout docs/index.html` immediately
+- Syntax errors after patching: check F12 console for line number, then `Get-Content "path" | Select-Object -Index (N-3..N+3)` to inspect
+- `textContent` vs `innerHTML`: setting button text via `textContent` won't render HTML entities -- use `innerHTML` instead
+
 ## 🛠 Wrangler Quick Reference
 
 ```powershell
@@ -313,6 +326,10 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | R2 CORS policy | Browser fetch of R2 images (for re-grade) requires CORS headers on the bucket. Configured directly in R2 dashboard — worker ALLOWED_ORIGINS does not cover R2 direct fetches. Policy allows GET from all app origins |
 | Grade matrix data structure | Grades stored per-source in card.grades.{claude,gpt4o,gemini,ximilar}. Main card.grade = the "set" grade shown in grid and eBay title. Existing aiGraded cards auto-migrated to claude slot in modal render |
 | Re-grade fetches R2 directly | Browser fetches R2 image URLs as base64 for re-grade API call. No worker proxy needed — R2 CORS policy handles cross-origin access cleanly without extra latency or worker CPU |
+| Chart.js for stats charts | CDN loaded, stored in _statsCharts object, destroyed before re-render to prevent canvas reuse errors. 4 chart types: line, bar, doughnut, bar |
+| jsPDF for PDF export | CDN loaded via window.jspdf. Charts captured as PNG via canvas.toDataURL() and embedded. R2 images loaded via loadImageAsBase64() helper using crossOrigin=anonymous (requires R2 CORS). Text truncated in card grid to prevent overflow — clip preferred over wrap in small fixed-height cells |
+| Value history as card array | valueHistory: [{value, date, source}] stored in card JSON in D1. Sources: scan, manual, rescan. Migration runs on init and after cloud sync — idempotent. No schema changes needed |
+| Stats exports separate from collection backup | PDF/CSV exports on Stats tab are stats/value data only. Collection JSON/CSV exports on Collection tab are full card data backups for D1 disaster recovery |
 | D1 batch for bulk sync | PUT /collection uses db.batch() — atomic all-or-nothing, no partial writes on import or guest migration |
 | PBKDF2 | Built-in Web Crypto API — no library. 100k = CF Workers hard limit |
 | Maileroo | 3,000/mo free, sends to any email without custom domain |

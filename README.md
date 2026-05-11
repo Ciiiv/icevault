@@ -66,6 +66,10 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Export CSV** — flat spreadsheet (22 columns), opens in Excel/Google Sheets
 - **Import JSON** — restore from backup, merges with existing collection, skips duplicates
 - **Mark as sold** — record sale price and date on any card, moves to Sold bucket, hidden from default view. Undo option available. Sold cards kept for historical data
+- **Value history tracking** — estimated value changes tracked over time on every card. Updated on scan, manual edit, and re-scan
+- **Stats & Value Tracking tab** — collection value, total sold, avg vs AI estimate, best flip. Charts: collection value over time, sold vs estimate, grade distribution, collection by bucket. Recent sales table
+- **Stats PDF export** — full report: summary metrics, all charts, per-card pages with thumbnail and value history mini chart
+- **Stats CSV export** — value history and sales data per card, one row per value entry
 
 ### 🛒 List on eBay
 - Select any card to create a listing
