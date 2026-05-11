@@ -447,7 +447,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > Use only ASCII in patches. Use str.replace() not re.sub() on full file.
 > Always verify line count after save. Use innerHTML not textContent for HTML entities.
 >
-> **Completed features:** PBKDF2-100k hashing, KV rate limiting (11 endpoints), rate limit alert emails,
+> **Completed features:** PBKDF2-100k hashing, KV rate limiting (12 endpoints), rate limit alert emails,
 > Maileroo email, 6-theme system, JSON/CSV/JSON import+export (collection backup),
 > sign out clears localStorage, R2 image storage (front + back, guest migration),
 > R2 CORS policy configured, input validation, change password,
