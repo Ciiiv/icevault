@@ -2322,7 +2322,10 @@ async function saveCard(){
   // Upload front and back images to R2 if signed in, otherwise keep base64 for guest mode
   const imageUrl=await uploadImageToR2(currentImageData,cardId);
   const imageUrlBack=currentBackImageData?await uploadImageToR2(currentBackImageData,cardId+'_back'):null;
-  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:document.getElementById('fieldValue').value,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
+  const estimatedValueAtScan = document.getElementById('fieldValue').value;
+  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:estimatedValueAtScan,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
+    valueHistory: estimatedValueAtScan ? [{ value: estimatedValueAtScan, date: new Date().toISOString(), source: 'scan' }] : []
+  };
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
   if(currentUser)syncCardToCloud(card);
   updateHeaderStats();showToast(`"${player}" saved to collection!`,'success');
@@ -2882,7 +2885,14 @@ function confirmRescan(cardId, result, includeGrade) {
   if (result.team) c.team = result.team;
   if (result.parallel) c.parallel = result.parallel;
   c.serialNumber = result.serialNumber || null;
-  if (result.estimatedValue) c.estimatedValue = result.estimatedValue;
+  if (result.estimatedValue) {
+    const oldEv = c.estimatedValue;
+    c.estimatedValue = result.estimatedValue;
+    if (c.estimatedValue !== oldEv) {
+      if (!c.valueHistory) c.valueHistory = [];
+      c.valueHistory.push({ value: c.estimatedValue, date: new Date().toISOString(), source: 'rescan' });
+    }
+  }
   if (includeGrade && result.grade) {
     result.grade.gradedAt = new Date().toISOString();
     result.grade.source = 'claude';
@@ -2944,7 +2954,13 @@ function editCardField(id, field, el) {
     }
 
     if (field === 'estimatedValue') {
+      const oldEv = c[field];
       c[field] = newVal ? parseFloat(newVal).toFixed(2) : '';
+      // Append to value history if value actually changed
+      if (c[field] && c[field] !== oldEv) {
+        if (!c.valueHistory) c.valueHistory = [];
+        c.valueHistory.push({ value: c[field], date: new Date().toISOString(), source: 'manual' });
+      }
       restore(c[field] ? '$' + c[field] : '—');
     } else if (field === 'serialNumber') {
       c[field] = newVal || null;
@@ -3472,6 +3488,7 @@ async function syncCollectionFromCloud(page, params){
     totalPages=d.pages||1;
     totalCards=d.total||collection.length;
     isServerPaginated=true;
+    migrateValueHistory();
     localStorage.setItem('iceVault_cards',JSON.stringify(collection));
     localStorage.setItem('iceVault_lastSync', new Date().toISOString());
     updateHeaderStats();
@@ -3593,7 +3610,10 @@ function saveCertCard(){
   const cn=document.getElementById('certNumEditInput')?.value.trim()||document.getElementById('certNum').textContent;
   if(!player){showToast('Enter the player name first','error');return;}
   const gl=currentGrader==='AUT'?'Authority':currentGrader;
-  const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,team:'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:document.getElementById('certValue').value,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString()};
+  const certEstVal = document.getElementById('certValue').value;
+  const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,team:'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:certEstVal,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
+    valueHistory: certEstVal ? [{ value: certEstVal, date: new Date().toISOString(), source: 'scan' }] : []
+  };
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(card);updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
   document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certSlabImageData=null;certTags=[];
 }
@@ -3971,8 +3991,28 @@ function renderThemePicker(){
   return`<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;"><div class="result-label" style="margin-bottom:6px;">App Theme</div><div class="theme-picker-row">${themes.map(t=>`<button class="theme-pick-btn${cur===t.id?' active':''}" data-theme="${t.id}" onclick="setTheme('${t.id}')">${t.label}</button>`).join('')}</div></div>`;
 }
 
+// ─── VALUE HISTORY MIGRATION ─────────────────────────────────────────────
+// Migrates existing cards that have estimatedValue but no valueHistory array
+// Runs once on init — idempotent, safe to run multiple times
+function migrateValueHistory() {
+  let migrated = 0;
+  collection.forEach(c => {
+    if (!c.valueHistory) {
+      c.valueHistory = c.estimatedValue
+        ? [{ value: c.estimatedValue, date: c.addedAt || new Date().toISOString(), source: 'scan' }]
+        : [];
+      migrated++;
+    }
+  });
+  if (migrated > 0) {
+    localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+    console.log('[MIGRATE] Added valueHistory to ' + migrated + ' existing cards');
+  }
+}
+
 // INIT
 updateHeaderStats();
+migrateValueHistory();
 setTimeout(updateGraderInfo,100);
 verifySession();
 checkResetToken();
