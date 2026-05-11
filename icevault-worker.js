@@ -34,6 +34,7 @@ const RATE_LIMITS = {
   '/collection/put':  { limit: 200, window: 60 * 60, message: 'Too many card saves — please wait 1 hour' },
   '/collection/bulk':     { limit: 10,  window: 60 * 60, message: 'Too many bulk syncs — please wait 1 hour' },
   '/auth/display-name':  { limit: 10,  window: 60 * 60, message: 'Too many display name changes — please wait 1 hour' },
+  '/upload':             { limit: 50,  window: 60 * 60, message: 'Too many image uploads — please wait 1 hour' },
 };
 
 // ─── INPUT LIMITS ──────────────────────────────────────────────────────────
@@ -346,6 +347,82 @@ export default {
     // Probabilistic 7-day log purge — runs ~2% of requests
     maybePurgeLogs(db);
 
+    // ─── OPENAI PROXY ─────────────────────────────────────────────────────
+    if (path === '/proxy/openai' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/proxy', ip);
+      if (rl.limited) {
+        await writeLog(db, { ip, path: '/proxy/openai', status: 429, event: 'RATE_LIMITED', detail: 'OpenAI proxy rate limit exceeded' });
+        alertRateLimit(env, kv, ip, '/proxy');
+        return rateLimited(rl.message, rl.retryAfter, cors);
+      }
+      try {
+        const body = await request.text();
+        const apiKey = request.headers.get('x-openai-key');
+        if (!apiKey) return err('Missing x-openai-key', 401, cors);
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+          body,
+        });
+        const data = await response.text();
+        return new Response(data, { status: response.status, headers: { 'Content-Type': 'application/json', ...cors } });
+      } catch (e) {
+        await writeLog(db, { ip, path: '/proxy/openai', status: 500, event: 'ERROR', detail: e.message });
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── GEMINI PROXY ─────────────────────────────────────────────────────
+    if (path === '/proxy/gemini' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/proxy', ip);
+      if (rl.limited) {
+        await writeLog(db, { ip, path: '/proxy/gemini', status: 429, event: 'RATE_LIMITED', detail: 'Gemini proxy rate limit exceeded' });
+        alertRateLimit(env, kv, ip, '/proxy');
+        return rateLimited(rl.message, rl.retryAfter, cors);
+      }
+      try {
+        const body = await request.json();
+        const apiKey = request.headers.get('x-gemini-key');
+        if (!apiKey) return err('Missing x-gemini-key', 401, cors);
+        const model = body.model || 'gemini-2.5-flash';
+        delete body.model;
+        const response = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        );
+        const data = await response.text();
+        return new Response(data, { status: response.status, headers: { 'Content-Type': 'application/json', ...cors } });
+      } catch (e) {
+        await writeLog(db, { ip, path: '/proxy/gemini', status: 500, event: 'ERROR', detail: e.message });
+        return err(e.message, 500, cors);
+      }
+    }
+
+    // ─── XIMILAR PROXY ────────────────────────────────────────────────────
+    if (path === '/proxy/ximilar' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/proxy', ip);
+      if (rl.limited) {
+        await writeLog(db, { ip, path: '/proxy/ximilar', status: 429, event: 'RATE_LIMITED', detail: 'Ximilar proxy rate limit exceeded' });
+        alertRateLimit(env, kv, ip, '/proxy');
+        return rateLimited(rl.message, rl.retryAfter, cors);
+      }
+      try {
+        const body = await request.text();
+        const apiKey = request.headers.get('x-ximilar-key');
+        if (!apiKey) return err('Missing x-ximilar-key', 401, cors);
+        const response = await fetch('https://api.ximilar.com/card-grader/v2/grade', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Token ' + apiKey },
+          body,
+        });
+        const data = await response.text();
+        return new Response(data, { status: response.status, headers: { 'Content-Type': 'application/json', ...cors } });
+      } catch (e) {
+        await writeLog(db, { ip, path: '/proxy/ximilar', status: 500, event: 'ERROR', detail: e.message });
+        return err(e.message, 500, cors);
+      }
+    }
+
     // ─── ANTHROPIC PROXY ─────────────────────────────────────────────────
     if (path === '/' || path === '') {
       const rl = await checkRateLimit(kv, '/proxy', ip);
@@ -622,6 +699,13 @@ export default {
     // Returns: { url } — public R2 URL to store in card data instead of base64
     // Key format: cards/{userId}/{cardId}.{ext}
     if (path === '/upload' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/upload', ip);
+      if (rl.limited) {
+        console.log(`[RATE LIMITED] ${ip} (${ipVersion}) on /upload`);
+        await writeLog(db, { ip, path: '/upload', status: 429, event: 'RATE_LIMITED', detail: 'Upload rate limit exceeded' });
+        alertRateLimit(env, kv, ip, '/upload');
+        return rateLimited(rl.message, rl.retryAfter, cors);
+      }
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
       try {
@@ -766,6 +850,19 @@ export default {
         if (colFilter) {
           where += ' AND LOWER(card_data) LIKE ?';
           binds.push('%"collection":"' + colFilter.toLowerCase() + '"%');
+          // When explicitly filtering for Sold, only show sold cards
+          // When filtering for anything else, exclude sold cards
+          if (colFilter.toLowerCase() === 'sold') {
+            where += ' AND LOWER(card_data) LIKE ?';
+            binds.push('%"sold":true%');
+          } else {
+            where += ' AND (LOWER(card_data) NOT LIKE ? OR LOWER(card_data) LIKE ?)';
+            binds.push('%"sold":true%', '%"sold":false%');
+          }
+        } else {
+          // Default — hide sold cards unless explicitly requested
+          where += ' AND (LOWER(card_data) NOT LIKE ? OR LOWER(card_data) LIKE ?)';
+          binds.push('%"sold":true%', '%"sold":false%');
         }
 
         // Sort order
