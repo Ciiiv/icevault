@@ -15,6 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
 <!-- THEME INIT — runs before render to prevent flash of wrong theme -->
 <script>
@@ -1883,7 +1884,13 @@
 <!-- STATS VIEW -->
 <div class="view" id="view-stats">
   <div class="section-title">Stats & Value Tracking</div>
-  <div class="section-sub">Collection insights based on your card data</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="section-sub" style="margin-bottom:0;">Collection insights based on your card data</div>
+    <div style="display:flex;gap:8px;">
+      <button class="export-btn" onclick="exportStatsCSV()" title="Export value history and sales data as CSV">&#x2B07; CSV</button>
+      <button class="export-btn" onclick="exportStatsPDF()" title="Export full stats report as PDF" id="exportPDFBtn">&#x2B07; PDF</button>
+    </div>
+  </div>
 
   <!-- Summary metric cards -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
@@ -3188,6 +3195,239 @@ function simulateListing(){
 }
 
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// -- STATS EXPORT: CSV --
+function exportStatsCSV() {
+  const allCards = collection;
+  if (allCards.length === 0) { showToast('No cards to export', 'error'); return; }
+  const headers = ['Player','Year','Brand','Parallel','Serial #','Collection','Grade','AI Graded','Est. Value','Value Date','Value Source','Sold','Sold Price','Sold Date'];
+  const esc = v => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g,'""'  ) + '"';
+    return s;
+  };
+  const rows = [];
+  allCards.forEach(c => {
+    const baseRow = [c.player,c.year,c.brand,c.parallel||'Base',c.serialNumber||'',c.collection||'',c.grade?.overall||'',c.aiGraded?'Yes':'No'];
+    const history = c.valueHistory || (c.estimatedValue ? [{ value: c.estimatedValue, date: c.addedAt||'', source: 'scan' }] : []);
+    if (history.length === 0) {
+      rows.push([...baseRow,'','','',c.sold?'Yes':'No',c.soldPrice||'',c.soldAt?new Date(c.soldAt).toLocaleDateString():''].map(esc).join(','));
+    } else {
+      history.forEach((h, i) => {
+        rows.push([...baseRow,h.value,h.date?new Date(h.date).toLocaleDateString():'',h.source||'',
+          i===history.length-1&&c.sold?'Yes':'No',
+          i===history.length-1&&c.sold?(c.soldPrice||''):'',
+          i===history.length-1&&c.sold?(c.soldAt?new Date(c.soldAt).toLocaleDateString():''):''
+        ].map(esc).join(','));
+      });
+    }
+  });
+  const newline = String.fromCharCode(10);
+  const csv = [headers.join(','), ...rows].join(newline);
+  const date = new Date().toISOString().split('T')[0];
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'icevault-stats-' + date + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Stats CSV exported', 'success');
+}
+
+// -- STATS EXPORT: PDF --
+async function exportStatsPDF() {
+  const btn = document.getElementById('exportPDFBtn');
+  if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297, margin = 14;
+    const teal = [10,138,154], navy = [10,26,94], muted = [136,153,204];
+    const light = [240,246,255], green = [26,140,80], red = [192,57,43];
+
+    // Header
+    doc.setFillColor(...teal);
+    doc.rect(0, 0, W, 18, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(255,255,255);
+    doc.text('Ice Vault -- Collection Stats Report', margin, 12);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Generated ' + new Date().toLocaleDateString() + ' - ' + collection.filter(c=>!c.sold).length + ' active cards', W-margin, 12, {align:'right'});
+
+    // Metrics
+    const activeCards = collection.filter(c=>!c.sold);
+    const soldCards = collection.filter(c=>c.sold);
+    const totalVal = activeCards.reduce((s,c)=>s+(parseFloat(c.estimatedValue)||0),0);
+    const totalSold = soldCards.reduce((s,c)=>s+(parseFloat(c.soldPrice)||0),0);
+    const soldWithBoth = soldCards.filter(c=>c.soldPrice&&c.estimatedValue);
+    const avgVsEst = soldWithBoth.length>0 ? soldWithBoth.reduce((s,c)=>s+((parseFloat(c.soldPrice)-parseFloat(c.estimatedValue))/parseFloat(c.estimatedValue)*100),0)/soldWithBoth.length : null;
+    let bestFlip=null,bestFlipCard=null;
+    soldWithBoth.forEach(c=>{const g=parseFloat(c.soldPrice)-parseFloat(c.estimatedValue);if(bestFlip===null||g>bestFlip){bestFlip=g;bestFlipCard=c;}});
+    const metrics = [
+      {label:'Collection Value',val:'$'+totalVal.toFixed(0),sub:activeCards.length+' active cards'},
+      {label:'Total Sold',val:'$'+totalSold.toFixed(0),sub:soldCards.length+' cards sold'},
+      {label:'Avg vs Estimate',val:avgVsEst!==null?(avgVsEst>=0?'+':'')+avgVsEst.toFixed(0)+'%':'--',sub:'sold vs AI est.'},
+      {label:'Best Flip',val:bestFlip!==null?(bestFlip>=0?'+':'')+'$'+Math.abs(bestFlip).toFixed(0):'--',sub:bestFlipCard?bestFlipCard.player:'no sales yet'},
+    ];
+    const boxW=(W-margin*2-9)/4;
+    metrics.forEach((m,i)=>{
+      const x=margin+i*(boxW+3),y=22;
+      doc.setFillColor(...light); doc.roundedRect(x,y,boxW,22,2,2,'F');
+      doc.setFontSize(7); doc.setTextColor(...muted); doc.text(m.label.toUpperCase(),x+4,y+6);
+      doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(...navy); doc.text(m.val,x+4,y+14);
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...muted); doc.text(m.sub,x+4,y+19);
+    });
+
+    // Charts
+    const chartIds=['statsValueChart','statsSoldChart','statsGradeChart'];
+    const chartTitles=['Collection value over time','Sold price vs AI estimate','Grade distribution'];
+    const chartY=[48,48,126],chartX=[margin,W/2+2,margin];
+    const chartW=[(W/2)-margin-2,(W/2)-margin-2,(W/2)-margin-2],chartH=[62,62,44];
+    for(let i=0;i<chartIds.length;i++){
+      const canvas=document.getElementById(chartIds[i]); if(!canvas)continue;
+      doc.setFillColor(...light); doc.roundedRect(chartX[i],chartY[i],chartW[i],chartH[i]+8,2,2,'F');
+      doc.setFontSize(7); doc.setTextColor(...muted); doc.text(chartTitles[i].toUpperCase(),chartX[i]+4,chartY[i]+5);
+      try{ const imgData=canvas.toDataURL('image/png'); doc.addImage(imgData,'PNG',chartX[i]+2,chartY[i]+7,chartW[i]-4,chartH[i]-2); }
+      catch(e){ doc.setTextColor(...muted); doc.text('Chart not available',chartX[i]+4,chartY[i]+20); }
+    }
+
+    // Bucket bars
+    const buckets={};
+    collection.forEach(c=>{const b=c.collection||'Personal';buckets[b]=(buckets[b]||0)+1;});
+    const maxB=Math.max(...Object.values(buckets),1);
+    const bY=126;
+    doc.setFillColor(...light); doc.roundedRect(W/2+2,bY,(W/2)-margin-2,60,2,2,'F');
+    doc.setFontSize(7); doc.setTextColor(...muted); doc.text('COLLECTION BY BUCKET',W/2+6,bY+5);
+    let bRowY=bY+11;
+    Object.entries(buckets).sort((a,b)=>b[1]-a[1]).forEach(([name,count])=>{
+      doc.setFontSize(7); doc.setTextColor(...navy); doc.text(name,W/2+6,bRowY);
+      const barX=W/2+36,barW=(W/2)-margin-42;
+      doc.setFillColor(220,228,240); doc.rect(barX,bRowY-3.5,barW,4,'F');
+      doc.setFillColor(...teal); doc.rect(barX,bRowY-3.5,Math.round((count/maxB)*barW),4,'F');
+      doc.setTextColor(...muted); doc.text(String(count),W/2+6+barW+32,bRowY);
+      bRowY+=8;
+    });
+
+    // Recent sales table -- always shown
+    const tY=190;
+    doc.setFontSize(7); doc.setTextColor(...muted); doc.text('RECENT SALES',margin,tY);
+    doc.setDrawColor(...light); doc.line(margin,tY+2,W-margin,tY+2);
+    if(soldCards.length===0){
+      doc.setFontSize(7); doc.setTextColor(...muted);
+      doc.text('No sales recorded yet -- mark cards as sold to see them here.',margin,tY+10);
+    } else {
+      const hdrs=['Card','AI Est.','Sold For','+/-','Date'];
+      const colX=[margin,margin+90,margin+110,margin+130,margin+152];
+      doc.setFontSize(7); doc.setTextColor(...muted);
+      hdrs.forEach((h,i)=>doc.text(h,colX[i],tY+7));
+      const sorted=[...soldCards].sort((a,b)=>new Date(b.soldAt)-new Date(a.soldAt)).slice(0,8);
+      sorted.forEach((c,ri)=>{
+        const ry=tY+13+(ri*7);
+        const est=parseFloat(c.estimatedValue)||0,sold=parseFloat(c.soldPrice)||0;
+        const diff=est>0?sold-est:null;
+        doc.setFontSize(7); doc.setTextColor(...navy);
+        doc.text((c.player+' '+c.year).substring(0,38),colX[0],ry);
+        doc.setTextColor(...muted); doc.text(est>0?'$'+est.toFixed(0):'--',colX[1],ry);
+        doc.setTextColor(...green); doc.text('$'+sold.toFixed(0),colX[2],ry);
+        if(diff!==null){doc.setTextColor(...(diff>=0?green:red));doc.text((diff>=0?'+':'')+diff.toFixed(0),colX[3],ry);}
+        doc.setTextColor(...muted); doc.text(c.soldAt?new Date(c.soldAt).toLocaleDateString():'--',colX[4],ry);
+        if(ri<sorted.length-1){doc.setDrawColor(220,228,240);doc.line(margin,ry+2,W-margin,ry+2);}
+      });
+    }
+
+    // Footer p1
+    doc.setFontSize(7); doc.setTextColor(...muted);
+    doc.text('Ice Vault - AI estimates only, not official grades',margin,H-6);
+    doc.text('Page 1',W-margin,H-6,{align:'right'});
+
+    // Per-card pages
+    const cols=3,cardW=(W-margin*2-8)/3,cardH=68;
+    const startX=margin,startY=22,cardsPerPage=9;
+    for(let ci=0;ci<collection.length;ci++){
+      if(ci%cardsPerPage===0){
+        doc.addPage();
+        doc.setFillColor(...teal); doc.rect(0,0,W,14,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+        doc.text('Ice Vault -- Card Collection',margin,9);
+        doc.setFont('helvetica','normal'); doc.setFontSize(7);
+        doc.text('Page '+(Math.floor(ci/cardsPerPage)+2),W-margin,9,{align:'right'});
+      }
+      const c=collection[ci];
+      const col=ci%cols,row=Math.floor((ci%cardsPerPage)/cols);
+      const x=startX+col*(cardW+4),y=startY+row*(cardH+4);
+      doc.setFillColor(...light); doc.roundedRect(x,y,cardW,cardH,2,2,'F');
+      const thumbW=22,thumbH=28;
+      doc.setFillColor(220,228,240); doc.roundedRect(x+3,y+3,thumbW,thumbH,1,1,'F');
+      if(c.imageUrl){
+        try{
+          const img=await loadImageAsBase64(c.imageUrl);
+          doc.addImage(img,'JPEG',x+3,y+3,thumbW,thumbH);
+        }catch(e){}
+      }
+      const tx=x+thumbW+6;
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...navy);
+      doc.text(c.player.substring(0,22),tx,y+7);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...muted);
+      doc.text(((c.year||'')+' '+(c.brand||'')).substring(0,24).trim(),tx,y+11);
+      const colHalf=(cardW-thumbW-12)/2;
+      const stats=[['Est. Value',c.estimatedValue?'$'+c.estimatedValue:'--'],['Grade',c.grade?(c.aiGraded?'AI ':'')+c.grade.overall:'--'],['Parallel',(c.parallel||'Base').substring(0,10)],['Serial #',(c.serialNumber||'--').substring(0,8)]];
+      stats.forEach(([label,val],si)=>{
+        const sx=tx+(si%2)*colHalf,sy=y+16+(Math.floor(si/2)*8);
+        doc.setFontSize(6); doc.setTextColor(...muted); doc.text(label,sx,sy);
+        doc.setFontSize(6.5); doc.setTextColor(...navy); doc.setFont('helvetica','bold');
+        doc.text(val,sx,sy+4,{maxWidth:colHalf-2});
+        doc.setFont('helvetica','normal');
+      });
+      if(c.sold){
+        doc.setFillColor(...green); doc.roundedRect(tx,y+33,cardW-thumbW-12,5,1,1,'F');
+        doc.setFontSize(5.5); doc.setTextColor(255,255,255);
+        doc.text('Sold $'+c.soldPrice+' - '+(c.soldAt?new Date(c.soldAt).toLocaleDateString():'--'),tx+2,y+36.5);
+      }
+      const history=c.valueHistory||(c.estimatedValue?[{value:c.estimatedValue}]:[]);
+      if(history.length>0){
+        const barAreaX=x+3,barAreaY=y+34,barAreaW=cardW-6,barAreaH=12;
+        doc.setFontSize(5.5); doc.setTextColor(...muted); doc.text('VALUE HISTORY',barAreaX,barAreaY);
+        const maxV=Math.max(...history.map(h=>parseFloat(h.value)||0),1);
+        const barW2=Math.min(8,(barAreaW-4)/history.length);
+        history.forEach((h,hi)=>{
+          const bh=Math.max(1,((parseFloat(h.value)||0)/maxV)*(barAreaH-4));
+          const bx=barAreaX+2+hi*(barW2+1),by=barAreaY+barAreaH-bh;
+          const isSold=c.sold&&hi===history.length-1;
+          doc.setFillColor(...(isSold?green:teal)); doc.rect(bx,by,Math.max(1.5,barW2-0.5),bh,'F');
+        });
+        doc.setFontSize(5); doc.setTextColor(...muted);
+        doc.text('$'+history[0].value,barAreaX+2,barAreaY+barAreaH+3);
+        if(history.length>1) doc.text('$'+history[history.length-1].value,barAreaX+barAreaW-8,barAreaY+barAreaH+3);
+      }
+    }
+    doc.setFontSize(7); doc.setTextColor(...muted);
+    doc.text('Ice Vault - AI estimates only, not official grades',margin,H-6);
+    const date=new Date().toISOString().split('T')[0];
+    doc.save('icevault-stats-'+date+'.pdf');
+    showToast('PDF exported!', 'success');
+  } catch(e) {
+    console.error('PDF export error:',e);
+    showToast('PDF export failed: '+e.message, 'error');
+  }
+  if(btn){btn.innerHTML='&#x2B07; PDF';btn.disabled=false;}
+}
+
+function loadImageAsBase64(url) {
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=img.width;canvas.height=img.height;
+      canvas.getContext('2d').drawImage(img,0,0);
+      resolve(canvas.toDataURL('image/jpeg',0.7));
+    };
+    img.onerror=reject;
+    img.src=url;
+  });
+}
 
 let _statsCharts = {};
 
