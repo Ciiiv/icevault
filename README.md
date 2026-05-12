@@ -41,7 +41,9 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Serial number detection** — AI reads serial number from back of card (e.g. 47/99), saved to card, shown in modal and included in eBay title and search
 - **Optional eBay description** — checkbox before scanning to generate listing copy in the same API call (~+$0.01)
 - No auto-scan — images load without triggering AI. You control when the API call happens
-- **Re-scan from collection** — re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. Optional grade included
+- **Multi-AI scan model picker** -- choose Claude, GPT-4o, or Gemini for full card scan (OCR + grade). Ximilar is grading-only and available in the grade matrix after saving
+- **AI grade matrix** -- 4-source grading: Claude, GPT-4o, Gemini, and Ximilar. Ximilar is purpose-built for card condition grading and most accurate. Claude/GPT-4o/Gemini better for card identification. Each source gets its own tab with full breakdown. Set any source as the card active grade
+- **Re-scan from collection** -- re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. Optional grade included
 - **Re-grade from collection** — re-run condition grading only on any card using stored images, without touching other card data
 - **Manual field editing** — click any field in the card detail view to edit inline. Enter or click away to save, Escape to cancel
 - ✕ Clear button to rescan instantly
@@ -130,6 +132,7 @@ All AI features use your own Anthropic API key — you pay only for what you use
 | eBay sold listings link | 0 | Free |
 | 130point link | 0 | Free |
 | Account sync | 0 | Free (Cloudflare D1 + R2) |
+| Ximilar card grade (front + back) | 2 images | 100 tokens (~10 free, then ~$0.11 per grade) |
 | Password reset email | 0 | Free (Maileroo) |
 | Share collection link | 0 | Free (Cloudflare D1) |
 
@@ -142,6 +145,8 @@ All AI features use your own Anthropic API key — you pay only for what you use
 | 100 cards | $2.00 | $4.00 | $5.00 |
 | 200 cards | $4.00 | $8.00 | $10.00 |
 | 250 cards | $5.00 | $10.00 | $12.50 |
+
+> **Free tier options:** Gemini 2.5 Flash offers ~20 free API requests/day via Google AI Studio (front+back scan = 1 request). Good for light use. Ximilar includes 1,000 free tokens (~10 front+back grades). After free tiers, Gemini paid is very cheap -- a card scan costs fractions of a cent at $0.30/million input tokens.
 
 > **Break-even vs CollX Pro:** Ice Vault is cheaper for collectors scanning under ~200 cards/month with front+back. Most casual collectors scan 20–50 new cards/month, making Ice Vault cost **$0.40–$2.00/month** vs CollX Pro's flat $10/month.
 
@@ -159,6 +164,9 @@ Visit and click **⚙ API Keys** to enter your keys. Click **👤 Sign In** to c
 | Key | Where to get it | Used for |
 |-----|----------------|---------|
 | Anthropic `sk-ant-...` | [console.anthropic.com](https://console.anthropic.com) | Card scanning, slab reading, eBay descriptions |
+| OpenAI `sk-...` | [platform.openai.com](https://platform.openai.com) | Card scanning + grading with GPT-4o (optional) |
+| Google AI `AIza...` | [aistudio.google.com](https://aistudio.google.com) | Card scanning + grading with Gemini -- ~20 free requests/day (optional) |
+| Ximilar token | [app.ximilar.com](https://app.ximilar.com) | Card grading only -- 1k free tokens (~10 front+back grades), then $11/10k tokens (optional) |
 | eBay App ID | [developer.ebay.com](https://developer.ebay.com) | eBay listing (optional) |
 | eBay OAuth Token | eBay OAuth flow with `sell.item` scope | eBay listing (optional) |
 

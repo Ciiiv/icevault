@@ -102,6 +102,8 @@ icevault-worker\            # NOT a git repo
 - **Manual field editing** — inline click-to-edit on all card fields in detail modal (Player, Year, Brand, Team, Card #, Parallel, Serial #, Est. Value). Click field to edit, Enter or click away to save, Escape to cancel. Save hint shown while editing. Updates modal header instantly. Syncs to D1 via per-card upsert
 - **AI grade matrix** — replaces single grade box in card detail modal with 4-source matrix (Claude, GPT-4o, Gemini, Ximilar). Summary row shows all grades at a glance. Tabs switch detail view per source. Re-grade with Claude fetches existing R2 images (front + back), runs grade-only prompt, confirms before overwrite. Set as card grade copies selected source grade to main card grade. GPT-4o, Gemini, Ximilar tabs show coming soon. Grades stored per-source in card.grades object. Existing c.grade migrated to Claude slot automatically
 - **R2 CORS policy** — configured on icevault-images bucket to allow all app origins (GitHub Pages + Live Server). Required for browser fetch of R2 images during re-grade
+- **Multi-AI scan model picker** — Claude, GPT-4o, or Gemini selectable on scan tab. Ximilar is grading-only, not available for full OCR scan. Model-aware key check and error messages
+- **AI grade matrix (all 4 sources live)** — Claude, GPT-4o, Gemini, Ximilar all wired up. No more coming-soon tabs. Per-source key check shows "Add [X] key to enable" if key missing. Ximilar maps grades.{final,centering,corners,edges,surface,condition} to standard grade object. Ximilar purpose-built for card grading -- most accurate for condition. Claude/GPT-4o/Gemini better for card identification/OCR
 - **Re-scan card** — full card re-scan from existing R2 images. Checkbox to include updated grade (affects cost ~$0.01-0.02 without grade, ~$0.02-0.04 with). Shows diff review panel before saving — changed fields highlighted teal with old→new, unchanged shown muted. Cancel hides panel, Save applies all changes and syncs to D1. Only available on cards with R2 imageUrl. Re-scan and re-grade are independent — re-scan optionally includes grade, re-grade is grade-only
 - **Value history tracking** — every card has a valueHistory array. First entry created at scan time. Appends on manual Est. Value edit (source: manual), re-scan (source: rescan). Existing cards migrated on init and after cloud sync. Cert cards also get valueHistory at save
 - **Stats tab** — new Stats sidebar nav item. Dashboard with 4 metric cards (collection value, total sold, avg vs estimate, best flip), collection value over time line chart, sold vs estimate bar chart, grade distribution bar chart, collection by bucket bars, recent sales table. All calculated client-side from collection array. Charts use Chart.js stored in _statsCharts and destroyed before re-render
@@ -159,9 +161,9 @@ icevault-worker\            # NOT a git repo
 | 3c | Manual field editing in card detail modal — inline click-to-edit per field | ✅ Done |
 | 3d | Re-scan full card — field diff review panel, include grade option | ✅ Done |
 | 4 | Value tracking + charts — stats tab, topbar quick stats, value history tracking, PDF + CSV export | ✅ Done |
-| 5 | Multi-AI (GPT-4o, Gemini, Ollama) | ⬜ Med |
+| 5 | Multi-AI (GPT-4o, Gemini) -- scan model picker, all 4 grade matrix sources live (Claude/GPT-4o/Gemini/Ximilar), CORS headers updated, per-source key check | ✅ Done |
 | 6 | eBay Partner Network affiliate links | ⬜ Low |
-| 7 | Ximilar card grading API | ⬜ Low |
+| 7 | Ximilar card grading API -- grading-only, not OCR. Free tier: 1k tokens (front+back = 100 tokens = ~10 grades). Booster: $11/10k tokens (~$0.11/grade front+back) | ✅ Done |
 | 8 | Bulk eBay listing | ⬜ Low |
 | 9 | Photography tips popup | ⬜ Low |
 | 10 | Account deletion + Legal + OAuth | ⚪ If public |
@@ -331,6 +333,9 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | jsPDF for PDF export | CDN loaded via window.jspdf. Charts captured as PNG via canvas.toDataURL() and embedded. R2 images loaded via loadImageAsBase64() helper using crossOrigin=anonymous (requires R2 CORS). Text truncated in card grid to prevent overflow — clip preferred over wrap in small fixed-height cells |
 | Value history as card array | valueHistory: [{value, date, source}] stored in card JSON in D1. Sources: scan, manual, rescan. Migration runs on init and after cloud sync — idempotent. No schema changes needed |
 | Stats exports separate from collection backup | PDF/CSV exports on Stats tab are stats/value data only. Collection JSON/CSV exports on Collection tab are full card data backups for D1 disaster recovery |
+| Ximilar token cost | Free tier: 1,000 tokens. Front+back grade = 100 tokens = ~10 grades free. Booster pack: $11/10k tokens (~$0.11 per front+back grade). Grading only -- cannot OCR card data |
+| Gemini free tier reality | As of Dec 2025 Google cut Gemini 2.5 Flash free tier to ~20 requests/day (was 250+). Front+back scan = 1 request. Good for light use. Paid tier is very cheap: $0.30/million input tokens -- a card scan costs fractions of a cent |
+| Multi-AI CORS | Added x-openai-key, x-gemini-key, x-ximilar-key to worker CORS Access-Control-Allow-Headers. Required for preflight to pass on custom API key headers |
 | D1 batch for bulk sync | PUT /collection uses db.batch() — atomic all-or-nothing, no partial writes on import or guest migration |
 | PBKDF2 | Built-in Web Crypto API — no library. 100k = CF Workers hard limit |
 | Maileroo | 3,000/mo free, sends to any email without custom domain |
@@ -470,7 +475,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** Multi-AI (GPT-4o, Gemini) — tabs already stubbed in grade matrix.
+> **Next priorities:** Re-scan model picker (Claude/GPT-4o/Gemini), cost estimate labels per selected model, Ximilar note in scan tab disclaimer.
 > Ximilar grading API. eBay affiliate links, bulk listing, photography tips (all low).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
