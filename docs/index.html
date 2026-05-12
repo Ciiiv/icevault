@@ -1673,6 +1673,13 @@
   </div>
   <div id="modeScanPanel">
     <div class="section-sub">Upload or capture front and back photos — AI will read and grade the card using both images for better accuracy.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--text-muted);">AI Model:</span>
+      <button class="grader-btn active" id="scanModelClaude" onclick="setScanModel('claude')">Claude</button>
+      <button class="grader-btn" id="scanModelGpt4o" onclick="setScanModel('gpt4o')">GPT-4o</button>
+      <button class="grader-btn" id="scanModelGemini" onclick="setScanModel('gemini')">Gemini</button>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">&#9432; Ximilar is grading-only — use Claude, GPT-4o, or Gemini for full card scan</span>
+    </div>
     <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.25);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);">⚠ &nbsp;<strong>API cost:</strong> &nbsp;Each scan uses your Anthropic API key (~$0.02–0.05 with front+back)</div>
     <div class="scan-grid">
       <div>
@@ -2065,11 +2072,17 @@
         <div style="font-size:13px;color:#27AE60;font-weight:500;margin-bottom:4px;">🔒 Your keys are private and secure</div>
         <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">API keys are stored <strong style="color:var(--text-primary);">only in your browser's local storage on this device</strong>. They are never sent to any server. Keys go directly from your browser to the respective API (Anthropic / eBay).<br><br>You will need to re-enter your keys if you clear your browser cache, use incognito, or switch devices.</div>
       </div>
-      <label class="form-label">Anthropic API Key</label>
+      <label class="form-label">Anthropic API Key <span style="font-size:10px;color:var(--text-muted);">(Claude — card scan, grading, eBay desc)</span></label>
       <input type="password" class="api-key-input result-input" id="anthropicKeyInput" placeholder="sk-ant-...">
       <div style="background:rgba(74,156,201,0.07);border:1px solid rgba(74,156,201,0.2);border-radius:8px;padding:9px 13px;margin-top:10px;margin-bottom:4px;">
         <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">💡 <strong style="color:var(--text-primary);">Security tip:</strong> Set a monthly spend limit and turn off auto-reload in your Anthropic console.<br><a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--ice-dark);font-size:11px;">console.anthropic.com → Settings → Limits</a></div>
       </div>
+      <label class="form-label" style="margin-top:12px;">OpenAI API Key <span style="font-size:10px;color:var(--text-muted);">(GPT-4o — card scan, grading)</span></label>
+      <input type="password" class="api-key-input result-input" id="openaiKeyInput" placeholder="sk-...">
+      <label class="form-label" style="margin-top:12px;">Google AI API Key <span style="font-size:10px;color:var(--text-muted);">(Gemini — card scan, grading)</span></label>
+      <input type="password" class="api-key-input result-input" id="geminiKeyInput" placeholder="AIza...">
+      <label class="form-label" style="margin-top:12px;">Ximilar API Key <span style="font-size:10px;color:var(--text-muted);">(grading only — not for card scan)</span></label>
+      <input type="password" class="api-key-input result-input" id="ximilarKeyInput" placeholder="ximilar-...">
       <label class="form-label" style="margin-top:12px;">eBay App ID</label>
       <input type="text" class="api-key-input result-input" id="ebayAppIdModal" placeholder="YourApp-...">
       <label class="form-label" style="margin-top:12px;">eBay OAuth Token</label>
@@ -2198,6 +2211,9 @@ let currentTags = [], selectedCardForEbay = null, cameraStream = null;
 function getKeys() {
   return {
     anthropic: localStorage.getItem('iceVault_anthropicKey') || '',
+    openai: localStorage.getItem('iceVault_openaiKey') || '',
+    gemini: localStorage.getItem('iceVault_geminiKey') || '',
+    ximilar: localStorage.getItem('iceVault_ximilarKey') || '',
     ebayApp: localStorage.getItem('iceVault_ebayApp') || '',
     ebayToken: localStorage.getItem('iceVault_ebayToken') || ''
   };
@@ -2205,9 +2221,15 @@ function getKeys() {
 
 function saveApiKeys() {
   const k=document.getElementById('anthropicKeyInput').value.trim();
+  const ok=document.getElementById('openaiKeyInput').value.trim();
+  const gk=document.getElementById('geminiKeyInput').value.trim();
+  const xk=document.getElementById('ximilarKeyInput').value.trim();
   const ea=document.getElementById('ebayAppIdModal').value.trim();
   const et=document.getElementById('ebayTokenModal').value.trim();
   if(k) localStorage.setItem('iceVault_anthropicKey',k);
+  if(ok) localStorage.setItem('iceVault_openaiKey',ok);
+  if(gk) localStorage.setItem('iceVault_geminiKey',gk);
+  if(xk) localStorage.setItem('iceVault_ximilarKey',xk);
   if(ea) localStorage.setItem('iceVault_ebayApp',ea);
   if(et) localStorage.setItem('iceVault_ebayToken',et);
   document.getElementById('apiStatus').textContent='✓ Saved!';
@@ -2218,6 +2240,9 @@ function saveApiKeys() {
 function openApiModal() {
   const keys=getKeys();
   document.getElementById('anthropicKeyInput').value=keys.anthropic?'••••••••••••':'';
+  document.getElementById('openaiKeyInput').value=keys.openai?'••••••••••••':'';
+  document.getElementById('geminiKeyInput').value=keys.gemini?'••••••••••••':'';
+  document.getElementById('ximilarKeyInput').value=keys.ximilar?'••••••••••••':'';
   document.getElementById('ebayAppIdModal').value=keys.ebayApp||'';
   document.getElementById('ebayTokenModal').value=keys.ebayToken?'••••••••••••':'';
   document.getElementById('apiModal').classList.add('open');
@@ -2310,9 +2335,19 @@ function capturePhoto(){
   closeCamera();
 }
 
+let _scanModel = 'claude';
+function setScanModel(model) {
+  _scanModel = model;
+  ['claude','gpt4o','gemini'].forEach(m => {
+    const btn = document.getElementById('scanModel' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (btn) btn.className = 'grader-btn' + (m === model ? ' active' : '');
+  });
+}
+
 async function analyzeCard(){
   const keys=getKeys();
-  if(!keys.anthropic){showToast('Set your Anthropic API key first (⚙ API Keys)','error');return;}
+  const _needKey = _scanModel === 'gpt4o' ? keys.openai : _scanModel === 'gemini' ? keys.gemini : keys.anthropic;
+  if(!_needKey){showToast('Set your ' + (_scanModel === 'gpt4o' ? 'OpenAI' : _scanModel === 'gemini' ? 'Google AI' : 'Anthropic') + ' API key first (⚙ API Keys)','error');return;}
   const btn=document.getElementById('analyzeBtn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> &nbsp; Analyzing...';
   const includeEbay=document.getElementById('includeEbayDesc').checked;
@@ -2327,10 +2362,28 @@ async function analyzeCard(){
     const gradeF=includeGrade?`,\n  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}`:'';
     const backN=hasBack?'Second image is the BACK — use it for card number, parallel, serial number, back condition.':'Only front provided.';
     const prompt=`You are an expert hockey card analyst. ${backN}\nAnalyze this hockey card and respond ONLY with JSON:\n{\n  "player":"Full player name",\n  "year":"Card year",\n  "brand":"Brand and set name",\n  "cardNumber":"Card number if visible",\n  "team":"Player team",\n  "parallel":"Parallel or Base",\n  "serialNumber":"Serial number if present e.g. 47/99 or null",\n  "estimatedValue":"Market value USD as number string"${gradeF}${ebayF}\n}`;
-    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':keys.anthropic,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:includeEbay?2000:1200,messages:[{role:'user',content:[...imgs,{type:'text',text:prompt}]}]})});
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
-    let raw=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    let res, data, raw;
+    if (_scanModel === 'gpt4o') {
+      if (!keys.openai) { showToast('Set your OpenAI API key first (\u2699 API Keys)', 'error'); btn.disabled=false; btn.innerHTML='\u2726 &nbsp; Analyze with AI'; return; }
+      const gptImgs = imgs.map(img => ({ type: 'image_url', image_url: { url: 'data:' + img.source.media_type + ';base64,' + img.source.data } }));
+      res = await fetch(WORKER_URL + '/proxy/openai', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-openai-key': keys.openai }, body: JSON.stringify({ model: 'gpt-4o', max_tokens: includeEbay ? 2000 : 1200, messages: [{ role: 'user', content: [...gptImgs, { type: 'text', text: prompt }] }] }) });
+      data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      raw = data.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
+    } else if (_scanModel === 'gemini') {
+      if (!keys.gemini) { showToast('Set your Google AI API key first (\u2699 API Keys)', 'error'); btn.disabled=false; btn.innerHTML='\u2726 &nbsp; Analyze with AI'; return; }
+      const gemParts = imgs.map(img => ({ inline_data: { mime_type: img.source.media_type, data: img.source.data } }));
+      res = await fetch(WORKER_URL + '/proxy/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-gemini-key': keys.gemini }, body: JSON.stringify({ model: 'gemini-2.5-flash', contents: [{ parts: [...gemParts, { text: prompt }] }] }) });
+      data = await res.json();
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      raw = data.candidates[0].content.parts[0].text.trim().replace(/```json|```/g, '').trim();
+    } else {
+      if (!keys.anthropic) { showToast('Set your Anthropic API key first (\u2699 API Keys)', 'error'); btn.disabled=false; btn.innerHTML='\u2726 &nbsp; Analyze with AI'; return; }
+      res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: includeEbay ? 2000 : 1200, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
+      data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    }
     const r=JSON.parse(raw);
     if(r.player)document.getElementById('fieldPlayer').value=r.player;
     if(r.year)document.getElementById('fieldYear').value=r.year;
@@ -2678,16 +2731,20 @@ function deleteCard(id){if(!confirm('Delete this card?'))return;collection=colle
 
 function renderGradeTabContent(cardId, source, grade) {
   const sourceLabels = { claude: 'Claude', gpt4o: 'GPT-4o', gemini: 'Gemini', ximilar: 'Ximilar' };
-  const comingSoon = ['gpt4o', 'gemini', 'ximilar'];
   const label = sourceLabels[source] || source;
-  const costHint = source === 'ximilar' ? '~$0.01' : '~$0.01–0.02';
+  const costHints = { claude: '~$0.01-0.02', gpt4o: '~$0.01-0.02', gemini: '~$0.001-0.01', ximilar: '~$0.01' };
+  const costHint = costHints[source] || '~$0.01';
+  const keys = getKeys();
+  const hasKey = source === 'claude' ? !!keys.anthropic : source === 'gpt4o' ? !!keys.openai : source === 'gemini' ? !!keys.gemini : !!keys.ximilar;
+  const keyLabel = source === 'claude' ? 'Anthropic' : source === 'gpt4o' ? 'OpenAI' : source === 'gemini' ? 'Google AI' : 'Ximilar';
 
   if (!grade) {
-    const isComing = comingSoon.includes(source);
+    const noKeyMsg = !hasKey ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Add your ${keyLabel} API key in ⚙ Settings to enable</div>` : '';
     return `
       <div style="font-size:11px;color:#E74C3C;background:rgba(192,57,43,0.08);border-radius:6px;padding:6px 8px;margin-bottom:8px;">⚠ AI estimate only. Not an official grade.</div>
+      ${noKeyMsg}
       <div style="text-align:center;padding:12px 0;color:var(--text-muted);font-size:13px;">No ${label} grade yet</div>
-      <button class="grade-regrade-btn" ${isComing?'disabled title="Coming soon"':''} onclick="${isComing?'':(`regradeCard(${cardId},'${source}')`)}">${isComing?`${label} — coming soon`:`↺ Grade with ${label} (${costHint})`}</button>`;
+      <button class="grade-regrade-btn" ${!hasKey ? 'disabled' : ''} onclick="${hasKey ? `regradeCard(${cardId},'${source}')` : ''}">${!hasKey ? `Add ${keyLabel} key to enable` : `↺ Grade with ${label} (${costHint})`}</button>`;
   }
 
   const overall = parseFloat(grade.overall);
@@ -2736,7 +2793,8 @@ async function regradeCard(cardId, source) {
 
   if (!c.imageUrl) { showToast('No card image found — re-grade requires images stored in cloud', 'error'); return; }
   const keys = getKeys();
-  if (!keys.anthropic) { showToast('Set your Anthropic API key first (⚙ API Keys)', 'error'); return; }
+  const _regradeKey = source === 'gpt4o' ? keys.openai : source === 'gemini' ? keys.gemini : source === 'ximilar' ? keys.ximilar : keys.anthropic;
+  if (!_regradeKey) { showToast('Add your ' + (source === 'gpt4o' ? 'OpenAI' : source === 'gemini' ? 'Google AI' : source === 'ximilar' ? 'Ximilar' : 'Anthropic') + ' API key in ⚙ Settings', 'error'); return; }
 
   // Update button state
   const contentEl = document.getElementById('gradeTabContent_' + cardId);
@@ -2751,6 +2809,7 @@ async function regradeCard(cardId, source) {
     const frontB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(frontBlob); });
     const frontMime = frontBlob.type || 'image/jpeg';
     imgs.push({ type: 'image', source: { type: 'base64', media_type: frontMime, data: frontB64 } });
+    // frontMime and frontB64 kept in scope for Ximilar branch below
 
     // Fetch back image if available
     if (c.imageUrlBack) {
@@ -2773,15 +2832,50 @@ Grade this card condition and respond ONLY with JSON:
   "rationale":"2-3 sentences on condition"
 }`;
 
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
-    const grade = JSON.parse(raw);
+    let res, data, raw, grade;
+    if (source === 'ximilar') {
+      if (!keys.ximilar) throw new Error('Add your Ximilar API key in \u2699 Settings');
+      // Ximilar expects records array with _base64 and Side fields
+      const records = [{ _base64: 'data:' + frontMime + ';base64,' + frontB64, Side: 'Front' }];
+      if (hasBack) records.push({ _base64: 'data:image/jpeg;base64,' + imgs[1].source.data, Side: 'Back' });
+      res = await fetch(WORKER_URL + '/proxy/ximilar', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-ximilar-key': keys.ximilar }, body: JSON.stringify({ records }) });
+      data = await res.json();
+      if (data.status && data.status.code !== 200) throw new Error(data.status.text || 'Ximilar error');
+      // Map Ximilar response to our grade format
+      const xg = data.records?.[0]?.grades || {};
+      grade = {
+        overall: String(xg.final ?? '?'),
+        centering: String(xg.centering ?? '?'),
+        corners: String(xg.corners ?? '?'),
+        edges: String(xg.edges ?? '?'),
+        surface: String(xg.surface ?? '?'),
+        rationale: 'Ximilar AI grade. Condition: ' + (xg.condition || '?') + '. Final grade ' + (xg.final ?? '?') + '/10 using geometric mean of centering, corners, edges, surface.'
+      };
+    } else if (source === 'gpt4o') {
+      if (!keys.openai) throw new Error('Add your OpenAI API key in \u2699 Settings');
+      const gptImgs = imgs.map(img => ({ type: 'image_url', image_url: { url: 'data:' + img.source.media_type + ';base64,' + img.source.data } }));
+      res = await fetch(WORKER_URL + '/proxy/openai', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-openai-key': keys.openai }, body: JSON.stringify({ model: 'gpt-4o', max_tokens: 400, messages: [{ role: 'user', content: [...gptImgs, { type: 'text', text: prompt }] }] }) });
+      data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      raw = data.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
+      grade = JSON.parse(raw);
+    } else if (source === 'gemini') {
+      if (!keys.gemini) throw new Error('Add your Google AI API key in \u2699 Settings');
+      const gemParts = imgs.map(img => ({ inline_data: { mime_type: img.source.media_type, data: img.source.data } }));
+      res = await fetch(WORKER_URL + '/proxy/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-gemini-key': keys.gemini }, body: JSON.stringify({ model: 'gemini-2.5-flash', contents: [{ parts: [...gemParts, { text: prompt }] }] }) });
+      data = await res.json();
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      raw = data.candidates[0].content.parts[0].text.trim().replace(/```json|```/g, '').trim();
+      grade = JSON.parse(raw);
+    } else {
+      // Claude
+      if (!keys.anthropic) throw new Error('Add your Anthropic API key in \u2699 Settings');
+      res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
+      data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+      grade = JSON.parse(raw);
+    }
     grade.gradedAt = new Date().toISOString();
     grade.source = source;
 

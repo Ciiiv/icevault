@@ -161,7 +161,7 @@ function getCORS(origin) {
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, x-api-key, anthropic-version, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, x-api-key, anthropic-version, Authorization, x-openai-key, x-gemini-key, x-ximilar-key',
     'Vary': 'Origin',
   };
 }
