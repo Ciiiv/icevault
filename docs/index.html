@@ -2220,12 +2220,14 @@ function getKeys() {
 }
 
 function saveApiKeys() {
-  const k=document.getElementById('anthropicKeyInput').value.trim();
-  const ok=document.getElementById('openaiKeyInput').value.trim();
-  const gk=document.getElementById('geminiKeyInput').value.trim();
-  const xk=document.getElementById('ximilarKeyInput').value.trim();
-  const ea=document.getElementById('ebayAppIdModal').value.trim();
-  const et=document.getElementById('ebayTokenModal').value.trim();
+  // Strip non-ASCII chars (e.g. bullet mask chars) before saving
+  const sanitize = v => v.replace(/[^\x20-\x7E]/g, '').trim();
+  const k=sanitize(document.getElementById('anthropicKeyInput').value);
+  const ok=sanitize(document.getElementById('openaiKeyInput').value);
+  const gk=sanitize(document.getElementById('geminiKeyInput').value);
+  const xk=sanitize(document.getElementById('ximilarKeyInput').value);
+  const ea=sanitize(document.getElementById('ebayAppIdModal').value);
+  const et=sanitize(document.getElementById('ebayTokenModal').value);
   if(k) localStorage.setItem('iceVault_anthropicKey',k);
   if(ok) localStorage.setItem('iceVault_openaiKey',ok);
   if(gk) localStorage.setItem('iceVault_geminiKey',gk);
