@@ -1,8 +1,9 @@
 // Ice Vault Service Worker
-const CACHE_NAME = 'icevault-v2';
+const CACHE_NAME = 'icevault-v3';
 const OFFLINE_URLS = [
   '/icevault/',
   '/icevault/index.html',
+  '/icevault/js/app.js',
   '/icevault/manifest.json',
 ];
 
