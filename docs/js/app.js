@@ -801,7 +801,7 @@ Analyze this hockey card and respond ONLY with JSON:
       rescanRaw = rescanData.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
     } else if (rescanModel === 'gemini') {
       const gemParts = imgs.map(img => ({ inline_data: { mime_type: img.source.media_type, data: img.source.data } }));
-      rescanRes = await fetch(WORKER_URL + '/proxy/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-gemini-key': keys.gemini }, body: JSON.stringify({ model: 'gemini-2.5-flash', contents: [{ parts: [...gemParts, { type: 'text', text: prompt }] }] }) });
+      rescanRes = await fetch(WORKER_URL + '/proxy/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-gemini-key': keys.gemini }, body: JSON.stringify({ model: 'gemini-2.5-flash', contents: [{ parts: [...gemParts, { text: prompt }] }] }) });
       rescanData = await rescanRes.json();
       if (rescanData.error) throw new Error(rescanData.error.message || JSON.stringify(rescanData.error));
       rescanRaw = rescanData.candidates[0].content.parts[0].text.trim().replace(/```json|```/g, '').trim();
