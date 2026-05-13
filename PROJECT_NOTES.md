@@ -169,7 +169,8 @@ icevault-worker\            # NOT a git repo
 | 3d | Re-scan full card — field diff review panel, OCR-only (no grade). Model picker: Claude/GPT-4o/Gemini. Grade updates handled via grade matrix tabs per source | ✅ Done |
 | 4 | Value tracking + charts — stats tab, topbar quick stats, value history tracking, PDF + CSV export | ✅ Done |
 | 5 | Multi-AI (GPT-4o, Gemini) -- scan model picker, all 4 grade matrix sources live (Claude/GPT-4o/Gemini/Ximilar), CORS headers updated, per-source key check | ✅ Done |
-| 6 | eBay Partner Network affiliate links | ⬜ Low |
+| 6 | Private Collection bucket -- add "Private" as a collection type. Cards in Private are excluded from shared collection URL. Note shown in collection dropdown: "Hidden from shared collection view". Worker /share endpoint filters out private cards server-side | ⏯ Med |
+| 7 | eBay Partner Network affiliate links | ⏯ Low |
 | 7 | Ximilar card grading API -- grading-only, not OCR. Free tier: 1k tokens (front+back = 100 tokens = ~10 grades). Booster: $11/10k tokens (~$0.11/grade front+back) | ✅ Done |
 | 8 | Bulk eBay listing | ⬜ Low |
 | 9 | Photography tips popup | ⬜ Low |
