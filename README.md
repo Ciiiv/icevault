@@ -41,7 +41,9 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Serial number detection** — AI reads serial number from back of card (e.g. 47/99), saved to card, shown in modal and included in eBay title and search
 - **Optional eBay description** — checkbox before scanning to generate listing copy in the same API call (~+$0.01)
 - No auto-scan — images load without triggering AI. You control when the API call happens
-- **Multi-AI scan model picker** -- choose Claude, GPT-4o, or Gemini for full card scan (OCR + grade). Ximilar is grading-only and available in the grade matrix after saving
+- **Multi-AI scan model picker** -- choose Claude, GPT-4o, or Gemini for card scan (OCR + grade). Cost notes update dynamically per model. Ximilar is grading-only -- not for card scan
+- **Slab scan model picker** -- Claude, GPT-4o, or Gemini selectable for AI Slab Scan (Option A on Graded Cert tab)
+- **Re-scan model picker** -- choose Claude, GPT-4o, or Gemini when re-scanning a card from the collection. Re-scan is OCR field update only -- use the grade matrix for grading
 - **AI grade matrix** -- 4-source grading: Claude, GPT-4o, Gemini, and Ximilar. Ximilar is purpose-built for card condition grading and most accurate. Claude/GPT-4o/Gemini better for card identification. Each source gets its own tab with full breakdown. Set any source as the card active grade
 - **Re-scan from collection** -- re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. Optional grade included
 - **Re-grade from collection** — re-run condition grading only on any card using stored images, without touching other card data

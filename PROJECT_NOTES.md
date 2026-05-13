@@ -102,7 +102,12 @@ icevault-worker\            # NOT a git repo
 - **Manual field editing** — inline click-to-edit on all card fields in detail modal (Player, Year, Brand, Team, Card #, Parallel, Serial #, Est. Value). Click field to edit, Enter or click away to save, Escape to cancel. Save hint shown while editing. Updates modal header instantly. Syncs to D1 via per-card upsert
 - **AI grade matrix** — replaces single grade box in card detail modal with 4-source matrix (Claude, GPT-4o, Gemini, Ximilar). Summary row shows all grades at a glance. Tabs switch detail view per source. Re-grade with Claude fetches existing R2 images (front + back), runs grade-only prompt, confirms before overwrite. Set as card grade copies selected source grade to main card grade. GPT-4o, Gemini, Ximilar tabs show coming soon. Grades stored per-source in card.grades object. Existing c.grade migrated to Claude slot automatically
 - **R2 CORS policy** — configured on icevault-images bucket to allow all app origins (GitHub Pages + Live Server). Required for browser fetch of R2 images during re-grade
-- **Multi-AI scan model picker** — Claude, GPT-4o, or Gemini selectable on scan tab. Ximilar is grading-only, not available for full OCR scan. Model-aware key check and error messages
+- **Multi-AI scan model picker** — Claude, GPT-4o, or Gemini selectable on scan tab. Ximilar is grading-only, not available for full OCR scan. Model-aware key check and error messages. Cost notes update dynamically per selected model
+- **Slab scan model picker** — Claude, GPT-4o, or Gemini selectable on Option A (AI Slab Scan). Cost note updates per model
+- **Re-scan model picker** — Claude, GPT-4o, or Gemini selectable in card modal re-scan controls. Removed "Include updated grade" checkbox -- re-scan is OCR-only, grading handled via grade matrix tabs
+- **Ximilar notes** — Added to scan tab model picker, grade disclaimer, and grade checkbox. Notes explain Claude/GPT-4o/Gemini are for card scan/identification, Ximilar is purpose-built for grading
+- **eBay toast fix** — "Select a card first" → "Please select a card" for consistency
+- **saveApiKeys() sanitize** — strips non-ASCII chars (bullet mask chars) before saving to localStorage -- prevents corrupted key headers
 - **AI grade matrix (all 4 sources live)** — Claude, GPT-4o, Gemini, Ximilar all wired up. No more coming-soon tabs. Per-source key check shows "Add [X] key to enable" if key missing. Ximilar maps grades.{final,centering,corners,edges,surface,condition} to standard grade object. Ximilar purpose-built for card grading -- most accurate for condition. Claude/GPT-4o/Gemini better for card identification/OCR
 - **Re-scan card** — full card re-scan from existing R2 images. Checkbox to include updated grade (affects cost ~$0.01-0.02 without grade, ~$0.02-0.04 with). Shows diff review panel before saving — changed fields highlighted teal with old→new, unchanged shown muted. Cancel hides panel, Save applies all changes and syncs to D1. Only available on cards with R2 imageUrl. Re-scan and re-grade are independent — re-scan optionally includes grade, re-grade is grade-only
 - **Value history tracking** — every card has a valueHistory array. First entry created at scan time. Appends on manual Est. Value edit (source: manual), re-scan (source: rescan). Existing cards migrated on init and after cloud sync. Cert cards also get valueHistory at save
@@ -336,6 +341,9 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | Ximilar token cost | Free tier: 1,000 tokens. Front+back grade = 100 tokens = ~10 grades free. Booster pack: $11/10k tokens (~$0.11 per front+back grade). Grading only -- cannot OCR card data |
 | Gemini free tier reality | As of Dec 2025 Google cut Gemini 2.5 Flash free tier to ~20 requests/day (was 250+). Front+back scan = 1 request. Good for light use. Paid tier is very cheap: $0.30/million input tokens -- a card scan costs fractions of a cent |
 | Multi-AI CORS | Added x-openai-key, x-gemini-key, x-ximilar-key to worker CORS Access-Control-Allow-Headers. Required for preflight to pass on custom API key headers |
+| Re-scan is OCR-only | Re-scan (card modal) uses Claude/GPT-4o/Gemini for OCR field update only -- no grade included. Grade updates handled separately via grade matrix tabs per source. Removed includeGrade checkbox from re-scan controls |
+| API key sanitization | saveApiKeys() strips non-ASCII chars with /[^\x20-\x7E]/g before saving. Prevents bullet mask chars (U+2022) from being saved as key values -- causes non-ISO-8859-1 fetch header errors |
+| JS split | All JS extracted from index.html to docs/js/app.js. index.html now HTML+CSS+theme init only. sw.js bumped to v3 to cache js/app.js. fix.py default target updated to app.js |
 | D1 batch for bulk sync | PUT /collection uses db.batch() — atomic all-or-nothing, no partial writes on import or guest migration |
 | PBKDF2 | Built-in Web Crypto API — no library. 100k = CF Workers hard limit |
 | Maileroo | 3,000/mo free, sends to any email without custom domain |
@@ -475,7 +483,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** Re-scan model picker (Claude/GPT-4o/Gemini), cost estimate labels per selected model, Ximilar note in scan tab disclaimer.
+> **Next priorities:** eBay affiliate links, bulk listing, photography tips (low priority).
 > Ximilar grading API. eBay affiliate links, bulk listing, photography tips (all low).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
