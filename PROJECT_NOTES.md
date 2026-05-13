@@ -23,7 +23,7 @@
 | Image storage | Cloudflare R2 | Bucket: `icevault-images`, public URL: `https://pub-8fa31d4e964e401e8d40e2c4244f2868.r2.dev` |
 | Rate limiting | Cloudflare KV | Namespace: `RATE_LIMIT_KV`, ID: `94009b2958714bd88fc369c3a808997e` |
 | Email | Maileroo | 3,000/mo free. From: `noreply@af4c1dd0a43e50da.maileroo.org` |
-| AI | Anthropic Claude | `claude-opus-4-5` — card OCR, grading, eBay descriptions |
+| AI | Anthropic Claude (`claude-opus-4-5`), OpenAI GPT-4o, Google Gemini 2.5 Flash, Ximilar Card Grader v2 | card OCR, grading, eBay descriptions |
 | Android app | PWABuilder | TWA wrapper — sideloaded APK |
 | Worker deployment | Wrangler CLI | `C:\Users\civ2g\icevault-worker` |
 
@@ -53,9 +53,11 @@
 ```
 icevault/
 ├── docs/
-│   ├── index.html          # Entire app ~3250 lines
+│   ├── index.html          # HTML + CSS + theme init only (~2200 lines)
+│   ├── js/
+│   │   └── app.js              # All application JS (~2490 lines)
 │   ├── manifest.json
-│   ├── sw.js
+│   ├── sw.js               # v3 -- caches index.html + js/app.js
 │   ├── favicon.svg
 │   └── icons/
 ├── icevault_worker.js      # Worker reference copy (manually synced)
@@ -109,7 +111,7 @@ icevault-worker\            # NOT a git repo
 - **eBay toast fix** — "Select a card first" → "Please select a card" for consistency
 - **saveApiKeys() sanitize** — strips non-ASCII chars (bullet mask chars) before saving to localStorage -- prevents corrupted key headers
 - **AI grade matrix (all 4 sources live)** — Claude, GPT-4o, Gemini, Ximilar all wired up. No more coming-soon tabs. Per-source key check shows "Add [X] key to enable" if key missing. Ximilar maps grades.{final,centering,corners,edges,surface,condition} to standard grade object. Ximilar purpose-built for card grading -- most accurate for condition. Claude/GPT-4o/Gemini better for card identification/OCR
-- **Re-scan card** — full card re-scan from existing R2 images. Checkbox to include updated grade (affects cost ~$0.01-0.02 without grade, ~$0.02-0.04 with). Shows diff review panel before saving — changed fields highlighted teal with old→new, unchanged shown muted. Cancel hides panel, Save applies all changes and syncs to D1. Only available on cards with R2 imageUrl. Re-scan and re-grade are independent — re-scan optionally includes grade, re-grade is grade-only
+- **Re-scan card** — OCR-only re-scan from existing R2 images. Model picker: Claude/GPT-4o/Gemini. Shows diff review panel before saving — changed fields highlighted teal with old→new, unchanged shown muted. Cancel hides panel, Save applies all changes and syncs to D1. Only available on cards with R2 imageUrl. Re-scan updates card fields only — grading handled separately via grade matrix tabs per source
 - **Value history tracking** — every card has a valueHistory array. First entry created at scan time. Appends on manual Est. Value edit (source: manual), re-scan (source: rescan). Existing cards migrated on init and after cloud sync. Cert cards also get valueHistory at save
 - **Stats tab** — new Stats sidebar nav item. Dashboard with 4 metric cards (collection value, total sold, avg vs estimate, best flip), collection value over time line chart, sold vs estimate bar chart, grade distribution bar chart, collection by bucket bars, recent sales table. All calculated client-side from collection array. Charts use Chart.js stored in _statsCharts and destroyed before re-render
 - **Topbar quick stats** — Cards, Est. Value, Sold, Vs Est. always visible on all tabs. Centered via absolute positioning. Keys and account button right-aligned independently
@@ -164,14 +166,15 @@ icevault-worker\            # NOT a git repo
 | 3 | Mark as sold | ✅ Done |
 | 3b | Re-grade from existing card images — grade matrix with AI source tabs | ✅ Done |
 | 3c | Manual field editing in card detail modal — inline click-to-edit per field | ✅ Done |
-| 3d | Re-scan full card — field diff review panel, include grade option | ✅ Done |
+| 3d | Re-scan full card — field diff review panel, OCR-only (no grade). Model picker: Claude/GPT-4o/Gemini. Grade updates handled via grade matrix tabs per source | ✅ Done |
 | 4 | Value tracking + charts — stats tab, topbar quick stats, value history tracking, PDF + CSV export | ✅ Done |
 | 5 | Multi-AI (GPT-4o, Gemini) -- scan model picker, all 4 grade matrix sources live (Claude/GPT-4o/Gemini/Ximilar), CORS headers updated, per-source key check | ✅ Done |
 | 6 | eBay Partner Network affiliate links | ⬜ Low |
 | 7 | Ximilar card grading API -- grading-only, not OCR. Free tier: 1k tokens (front+back = 100 tokens = ~10 grades). Booster: $11/10k tokens (~$0.11/grade front+back) | ✅ Done |
 | 8 | Bulk eBay listing | ⬜ Low |
 | 9 | Photography tips popup | ⬜ Low |
-| 10 | Account deletion + Legal + OAuth | ⚪ If public |
+| 10 | JS split -- extracted all JS from index.html into docs/js/app.js. index.html is now HTML+CSS+theme init only. sw.js bumped to v3 to cache app.js | ✅ Done |
+| 11 | Account deletion + Legal + OAuth | ⚪ If public |
 
 ---
 
