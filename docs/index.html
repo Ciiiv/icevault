@@ -1678,9 +1678,9 @@
       <button class="grader-btn active" id="scanModelClaude" onclick="setScanModel('claude')">Claude</button>
       <button class="grader-btn" id="scanModelGpt4o" onclick="setScanModel('gpt4o')">GPT-4o</button>
       <button class="grader-btn" id="scanModelGemini" onclick="setScanModel('gemini')">Gemini</button>
-      <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">&#9432; Ximilar is grading-only — use Claude, GPT-4o, or Gemini for full card scan</span>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">&#9432; Ximilar is grading-only — use Claude, GPT-4o, or Gemini for full card scan. For best grading use Ximilar in card detail after saving</span>
     </div>
-    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.25);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);">⚠ &nbsp;<strong>API cost:</strong> &nbsp;Each scan uses your Anthropic API key (~$0.02–0.05 with front+back)</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.25);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);" id="scanCostNote">⚠ &nbsp;<strong>API cost:</strong> &nbsp;<span id="scanCostText">Each scan uses your selected AI (~$0.02–0.05 with front+back)</span></div>
     <div class="scan-grid">
       <div>
         <div class="scan-panel">
@@ -1710,7 +1710,7 @@
           <div style="margin-top:10px;padding:8px 12px;background:var(--rink);border-radius:8px;border:1px solid var(--border);">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">
               <input type="checkbox" id="includeGrade" checked style="width:16px;height:16px;cursor:pointer;">
-              <span>Include AI condition grade <span style="color:var(--text-muted);font-size:11px;">(saves tokens if unchecked)</span></span>
+              <span>Include AI condition grade <span style="color:var(--text-muted);font-size:11px;">(saves tokens if unchecked · For best grading use Ximilar in card detail after saving)</span></span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);">
               <input type="checkbox" id="includeEbayDesc" style="width:16px;height:16px;cursor:pointer;">
@@ -1721,7 +1721,7 @@
             <button class="analyze-btn" id="analyzeBtn" onclick="analyzeCard()" disabled>✦ &nbsp; Analyze with AI</button>
             <button class="clear-btn" id="clearBtn" onclick="clearCard()">✕ Clear</button>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px;">⚠ Uses Anthropic API (~$0.01–0.03 per scan)</div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px;" id="analyzeCostNote">⚠ ~$0.01–0.03 per scan (Claude/GPT-4o) or ~$0.001–0.01 (Gemini)</div>
         </div>
       </div>
       <div>
@@ -1742,7 +1742,7 @@
         <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
           <h3>AI Condition Estimate</h3>
           <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#E74C3C;line-height:1.6;">
-            <strong>⚠ Important Disclaimer</strong><br>This is an AI estimate only — not an official grade from PSA, BGS, SGC, or any grading company.<br><br>• <strong>Foil, refractor, holographic cards</strong> — glare may produce inaccurate results<br>• <strong>Surface scratches</strong> — may not be visible in photos<br>• <strong>Cards in sleeves/toploaders</strong> — plastic adds distortion<br><br><strong>Ice Vault is not responsible for any losses resulting from reliance on this AI estimate.</strong>
+            <strong>⚠ Important Disclaimer</strong><br>This is an AI estimate only — not an official grade from PSA, BGS, SGC, or any grading company.<br><br>• <strong>Foil, refractor, holographic cards</strong> — glare may produce inaccurate results<br>• <strong>Surface scratches</strong> — may not be visible in photos<br>• <strong>Cards in sleeves/toploaders</strong> — plastic adds distortion<br><br><strong>Ice Vault is not responsible for any losses resulting from reliance on this AI estimate.</strong><br><br>ℹ <strong>For best grading accuracy</strong> — Claude, GPT-4o, and Gemini are general AI models. After saving, use <strong>Ximilar</strong> in the card detail view for purpose-built card condition grading.
           </div>
           <div id="gradePlaceholder" style="color:var(--text-muted);font-size:13px;padding:10px 0;">Analyze the card above to get an AI-powered condition estimate</div>
           <div id="gradeResult" style="display:none;">
@@ -1795,7 +1795,13 @@
             <button class="analyze-btn" id="slabAnalyzeBtn" onclick="analyzeSlabPhoto()" disabled>✦ &nbsp; Read Slab with AI</button>
             <button class="clear-btn" id="slabClearBtn" onclick="clearSlabScan()" style="margin-top:0;">✕</button>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;">⚠ Uses Anthropic API (~$0.02–0.05 with front+back)</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:var(--text-muted);">AI Model:</span>
+            <button class="grader-btn active" id="slabModelClaude" onclick="setSlabModel('claude')">Claude</button>
+            <button class="grader-btn" id="slabModelGpt4o" onclick="setSlabModel('gpt4o')">GPT-4o</button>
+            <button class="grader-btn" id="slabModelGemini" onclick="setSlabModel('gemini')">Gemini</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;" id="slabCostNote">⚠ ~$0.01–0.03 per read (Claude/GPT-4o) or ~$0.001–0.01 (Gemini)</div>
           <div id="slabScanStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
         </div>
         <div class="scan-panel" style="margin-top:16px;">

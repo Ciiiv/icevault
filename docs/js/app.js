@@ -144,6 +144,13 @@ function setScanModel(model) {
     const btn = document.getElementById('scanModel' + m.charAt(0).toUpperCase() + m.slice(1));
     if (btn) btn.className = 'grader-btn' + (m === model ? ' active' : '');
   });
+  // Update cost hints
+  const label = model === 'gpt4o' ? 'GPT-4o' : model === 'gemini' ? 'Gemini' : 'Claude';
+  const cost = model === 'gemini' ? '~$0.001-0.01' : '~$0.01-0.03';
+  const costNote = document.getElementById('scanCostText');
+  if (costNote) costNote.textContent = 'Each scan uses ' + label + ' (' + cost + ' with front+back)';
+  const analyzeNote = document.getElementById('analyzeCostNote');
+  if (analyzeNote) analyzeNote.textContent = '⚠ ' + cost + ' per scan (' + label + ')';
 }
 
 async function analyzeCard(){
@@ -502,25 +509,19 @@ function openCardDetail(id){
   ${c.imageUrl?`<div class="rescan-section">
     <div class="rescan-controls">
       <button class="rescan-trigger-btn" id="rescanBtn_${c.id}" onclick="triggerRescan(${c.id})">↺ Re-scan card with AI</button>
-      <label class="rescan-grade-label">
-        <input type="checkbox" id="rescanIncludeGrade_${c.id}" checked style="width:14px;height:14px;cursor:pointer;">
-        Include updated grade
-      </label>
-      <span class="rescan-cost" id="rescanCost_${c.id}">⚠ ~$0.02–0.04</span>
+      <span style="font-size:11px;color:var(--text-muted);">Model:</span>
+      <button class="grader-btn active" id="rescanModelClaude_${c.id}" onclick="setRescanModel(${c.id},'claude',this)" style="padding:4px 10px;font-size:11px;">Claude</button>
+      <button class="grader-btn" id="rescanModelGpt4o_${c.id}" onclick="setRescanModel(${c.id},'gpt4o',this)" style="padding:4px 10px;font-size:11px;">GPT-4o</button>
+      <button class="grader-btn" id="rescanModelGemini_${c.id}" onclick="setRescanModel(${c.id},'gemini',this)" style="padding:4px 10px;font-size:11px;">Gemini</button>
+      <span class="rescan-cost" id="rescanCost_${c.id}">⚠ ~$0.01–0.03</span>
     </div>
     <div id="rescanReview_${c.id}" style="display:none;"></div>
   </div><div style="height:10px;"></div>`:''}
   <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
 
-  // Wire up grade checkbox cost hint after modal renders
+  // Wire up rescan model picker cost hints
   setTimeout(() => {
-    const gradeChk = document.getElementById('rescanIncludeGrade_' + c.id);
-    const costEl = document.getElementById('rescanCost_' + c.id);
-    if (gradeChk && costEl) {
-      gradeChk.addEventListener('change', () => {
-        costEl.textContent = gradeChk.checked ? '⚠ ~$0.02–0.04' : '⚠ ~$0.01–0.02';
-      });
-    }
+    // cost hints already set via setRescanModel
   }, 50);
   document.getElementById('cardModal').classList.add('open');
 }
@@ -727,13 +728,32 @@ function setCardGrade(cardId, source) {
   renderCollection();
 }
 
+const _rescanModels = {}; // tracks selected model per card
+function setRescanModel(cardId, model, btn) {
+  _rescanModels[cardId] = model;
+  // Update active button
+  ['Claude','Gpt4o','Gemini'].forEach(m => {
+    const b = document.getElementById('rescanModel' + m + '_' + cardId);
+    if (b) b.className = 'grader-btn' + (m.toLowerCase() === model ? ' active' : '');
+  });
+  // Update cost hint
+  const costEl = document.getElementById('rescanCost_' + cardId);
+  if (costEl) {
+    const hints = { claude: '⚠ ~$0.01-0.03', gpt4o: '⚠ ~$0.01-0.03', gemini: '⚠ ~$0.001-0.01' };
+    costEl.textContent = hints[model] || '⚠ ~$0.01-0.03';
+  }
+}
+
 async function triggerRescan(cardId) {
   const c = collection.find(x => x.id === cardId);
   if (!c || !c.imageUrl) return;
+  const rescanModel = _rescanModels[cardId] || 'claude';
   const keys = getKeys();
-  if (!keys.anthropic) { showToast('Set your Anthropic API key first (⚙ API Keys)', 'error'); return; }
+  const rescanKey = rescanModel === 'gpt4o' ? keys.openai : rescanModel === 'gemini' ? keys.gemini : keys.anthropic;
+  const rescanKeyLabel = rescanModel === 'gpt4o' ? 'OpenAI' : rescanModel === 'gemini' ? 'Google AI' : 'Anthropic';
+  if (!rescanKey) { showToast('Add your ' + rescanKeyLabel + ' API key in ⚙ Settings', 'error'); return; }
 
-  const includeGrade = document.getElementById('rescanIncludeGrade_' + cardId)?.checked !== false;
+  const includeGrade = document.getElementById('includeGrade')?.checked !== false;
   const btn = document.getElementById('rescanBtn_' + cardId);
   const reviewEl = document.getElementById('rescanReview_' + cardId);
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> &nbsp; Scanning...'; }
@@ -772,15 +792,26 @@ Analyze this hockey card and respond ONLY with JSON:
   "estimatedValue":"Market value USD as number string"${gradeField}
 }`;
 
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: includeGrade ? 1200 : 600, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
-    const result = JSON.parse(raw);
+    let rescanRes, rescanData, rescanRaw;
+    if (rescanModel === 'gpt4o') {
+      const gptImgs = imgs.map(img => ({ type: 'image_url', image_url: { url: 'data:' + img.source.media_type + ';base64,' + img.source.data } }));
+      rescanRes = await fetch(WORKER_URL + '/proxy/openai', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-openai-key': keys.openai }, body: JSON.stringify({ model: 'gpt-4o', max_tokens: 800, messages: [{ role: 'user', content: [...gptImgs, { type: 'text', text: prompt }] }] }) });
+      rescanData = await rescanRes.json();
+      if (rescanData.error) throw new Error(rescanData.error.message);
+      rescanRaw = rescanData.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
+    } else if (rescanModel === 'gemini') {
+      const gemParts = imgs.map(img => ({ inline_data: { mime_type: img.source.media_type, data: img.source.data } }));
+      rescanRes = await fetch(WORKER_URL + '/proxy/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-gemini-key': keys.gemini }, body: JSON.stringify({ model: 'gemini-2.5-flash', contents: [{ parts: [...gemParts, { type: 'text', text: prompt }] }] }) });
+      rescanData = await rescanRes.json();
+      if (rescanData.error) throw new Error(rescanData.error.message || JSON.stringify(rescanData.error));
+      rescanRaw = rescanData.candidates[0].content.parts[0].text.trim().replace(/```json|```/g, '').trim();
+    } else {
+      rescanRes = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 800, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
+      rescanData = await rescanRes.json();
+      if (rescanData.error) throw new Error(rescanData.error.message);
+      rescanRaw = rescanData.content[0].text.trim().replace(/```json|```/g, '').trim();
+    }
+    const result = JSON.parse(rescanRaw);
 
     // Build diff and show review panel
     const fields = [
@@ -832,7 +863,7 @@ Analyze this hockey card and respond ONLY with JSON:
       reviewEl.innerHTML = `<div class="rescan-review">
         <div class="rescan-review-header">
           <span class="rescan-review-title">Review before saving</span>
-          <span class="grade-badge grade-7" style="font-size:10px;padding:2px 8px;">Claude</span>
+          <span class="grade-badge grade-7" style="font-size:10px;padding:2px 8px;">${{claude:'Claude',gpt4o:'GPT-4o',gemini:'Gemini'}[rescanModel]||'Claude'}</span>
         </div>
         <div class="rescan-review-grid">${rowsHtml}${gradeRowHtml}</div>
         <div class="rescan-summary"><span>●</span> ${changedCount} field${changedCount !== 1 ? 's' : ''} changed · ${unchangedCount} unchanged</div>
@@ -1048,7 +1079,7 @@ function populateEbayForm(card){
 }
 
 async function generateListingAI(){
-  if(!selectedCardForEbay){showToast('Select a card first','error');return;}
+  if(!selectedCardForEbay){showToast('Please select a card','error');return;}
   const keys=getKeys();if(!keys.anthropic){showToast('Set your Anthropic API key first','error');return;}
   if(window._lastEbayData&&window._lastEbayData.description){document.getElementById('ebayDesc').value=window._lastEbayData.description;if(window._lastEbayData.title){const te=document.getElementById('ebayTitle');if(te&&!te.value)te.value=window._lastEbayData.title.substring(0,80);}showToast('eBay description loaded from scan!','success');window._lastEbayData=null;return;}
   const c=selectedCardForEbay;
@@ -1065,7 +1096,7 @@ async function generateListingAI(){
 }
 
 async function submitToEbay(){
-  if(!selectedCardForEbay){showToast('Select a card first','error');return;}
+  if(!selectedCardForEbay){showToast('Please select a card','error');return;}
   const token=getKeys().ebayToken||document.getElementById('ebayToken').value;
   if(!token||token==='••••'){showToast('Add your eBay OAuth token first','error');return;}
   const re=document.getElementById('ebayResult');re.innerHTML='<span class="spinner"></span> Submitting...';
@@ -1080,7 +1111,7 @@ async function submitToEbay(){
 }
 
 function simulateListing(){
-  if(!selectedCardForEbay){showToast('Select a card first','error');return;}
+  if(!selectedCardForEbay){showToast('Please select a card','error');return;}
   const t=document.getElementById('ebayTitle').value||selectedCardForEbay.player;
   const d=document.getElementById('ebayDesc').value||'No description yet.';
   document.getElementById('previewTitle').textContent=t;
@@ -1917,6 +1948,21 @@ let slabCameraTarget='front';
 function openSlabCamera(side){slabCameraTarget=side||'front';navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{cameraStream=s;document.getElementById('cameraFeed').srcObject=s;document.getElementById('cameraModal').classList.add('open');document.getElementById('cameraModal').dataset.mode='slab';}).catch(()=>showToast('Camera access denied','error'));}
 function clearSlabScan(){slabScanImageData=null;slabScanImageDataBack=null;certSlabImageData=null;document.getElementById('slabScanPreview').style.display='none';if(document.getElementById('slabScanPreviewBack'))document.getElementById('slabScanPreviewBack').style.display='none';document.getElementById('slabAnalyzeBtn').disabled=true;document.getElementById('slabClearBtn').classList.remove('visible');document.getElementById('slabScanFileInput').value='';if(document.getElementById('slabScanFileInputBack'))document.getElementById('slabScanFileInputBack').value='';document.getElementById('slabScanStatus').textContent='';}
 
+let _slabModel = 'claude';
+function setSlabModel(model) {
+  _slabModel = model;
+  ['claude','gpt4o','gemini'].forEach(m => {
+    const btn = document.getElementById('slabModel' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (btn) btn.className = 'grader-btn' + (m === model ? ' active' : '');
+  });
+  const costEl = document.getElementById('slabCostNote');
+  if (costEl) {
+    const label = model === 'gpt4o' ? 'GPT-4o' : model === 'gemini' ? 'Gemini' : 'Claude';
+    const cost = model === 'gemini' ? '~$0.001-0.01' : '~$0.01-0.03';
+    costEl.textContent = '⚠ ' + cost + ' per read (' + label + ')';
+  }
+}
+
 async function analyzeSlabPhoto(){
   const keys=getKeys();if(!keys.anthropic){showToast('Set your Anthropic API key first','error');return;}if(!slabScanImageData){showToast('Load a slab photo first','error');return;}
   const btn=document.getElementById('slabAnalyzeBtn'),st=document.getElementById('slabScanStatus');
@@ -1925,9 +1971,27 @@ async function analyzeSlabPhoto(){
     const b64=slabScanImageData.split(',')[1],mt=slabScanImageData.startsWith('data:image/png')?'image/png':'image/jpeg';
     const imgs=[{type:'image',source:{type:'base64',media_type:mt,data:b64}}];
     if(slabScanImageDataBack){const bb=slabScanImageDataBack.split(',')[1];const bm=slabScanImageDataBack.startsWith('data:image/png')?'image/png':'image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
-    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':keys.anthropic,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:1000,messages:[{role:'user',content:[...imgs,{type:'text',text:`You are an expert graded sports card authenticator. Analyze this graded card slab and respond ONLY with JSON:\n{\n  "grader":"PSA,BGS,SGC,CGC,Authority,TAG,KSA,HGA or Other",\n  "certNumber":"cert number from label",\n  "grade":"full grade text e.g. PSA 9 MINT",\n  "gradeNumeric":"numeric grade e.g. 9",\n  "player":"player name",\n  "year":"card year",\n  "brand":"brand and set",\n  "cardNumber":"card number if visible",\n  "variation":"parallel or variation",\n  "estimatedValue":"market value USD as number string"\n}`}]}]})});
-    const data=await res.json();if(data.error)throw new Error(data.error.message);
-    let raw=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const slabPromptText = 'You are an expert graded sports card authenticator. Analyze this graded card slab and respond ONLY with JSON: {"grader":"PSA,BGS,SGC,CGC,Authority,TAG,KSA,HGA or Other","certNumber":"cert number from label","grade":"full grade text e.g. PSA 9 MINT","gradeNumeric":"numeric grade e.g. 9","player":"player name","year":"card year","brand":"brand and set","cardNumber":"card number if visible","variation":"parallel or variation","estimatedValue":"market value USD as number string"}';
+    let slabRes, slabData;
+    if (_slabModel === 'gpt4o') {
+      const gptImgs = imgs.map(img => ({ type: 'image_url', image_url: { url: 'data:' + img.source.media_type + ';base64,' + img.source.data } }));
+      slabRes = await fetch(WORKER_URL + '/proxy/openai', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-openai-key': keys.openai }, body: JSON.stringify({ model: 'gpt-4o', max_tokens: 1000, messages: [{ role: 'user', content: [...gptImgs, { type: 'text', text: slabPromptText }] }] }) });
+      slabData = await slabRes.json();
+      if (slabData.error) throw new Error(slabData.error.message);
+    } else if (_slabModel === 'gemini') {
+      const gemParts = imgs.map(img => ({ inline_data: { mime_type: img.source.media_type, data: img.source.data } }));
+      slabRes = await fetch(WORKER_URL + '/proxy/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-gemini-key': keys.gemini }, body: JSON.stringify({ model: 'gemini-2.5-flash', contents: [{ parts: [...gemParts, { text: slabPromptText }] }] }) });
+      slabData = await slabRes.json();
+      if (slabData.error) throw new Error(slabData.error.message || JSON.stringify(slabData.error));
+    } else {
+      slabRes = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 1000, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: slabPromptText }] }] }) });
+      slabData = await slabRes.json();
+      if (slabData.error) throw new Error(slabData.error.message);
+    }
+    let raw;
+    if (_slabModel === 'gpt4o') raw = slabData.choices[0].message.content.trim().replace(/```json|```/g,'').trim();
+    else if (_slabModel === 'gemini') raw = slabData.candidates[0].content.parts[0].text.trim().replace(/```json|```/g,'').trim();
+    else raw = slabData.content[0].text.trim().replace(/```json|```/g,'').trim();
     const result=JSON.parse(raw);
     const gm={PSA:'PSA',BGS:'BGS',SGC:'SGC',CGC:'CGC',Authority:'AUT',TAG:'TAG',KSA:'KSA',HGA:'HGA'};
     if(result.grader&&gm[result.grader])setGrader(gm[result.grader]);
