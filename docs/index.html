@@ -1684,7 +1684,7 @@
     <div class="scan-grid">
       <div>
         <div class="scan-panel">
-          <h3>Front of Card <span style="color:var(--text-muted);font-size:11px;font-weight:400;">(required)</span></h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><h3 style="margin-bottom:0;">Front of Card <span style="color:var(--text-muted);font-size:11px;font-weight:400;">(required)</span></h3><button onclick="openPhotoTipsModal('card')" style="background:transparent;border:1px solid var(--border-bright);border-radius:6px;padding:3px 10px;color:var(--text-secondary);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;">&#128247; Photo tips</button></div>
           <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
             <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event,'front')" style="display:none;">
             <div class="drop-icon">📸</div>
@@ -1774,7 +1774,7 @@
             <span style="font-size:10px;background:rgba(201,162,39,0.15);color:var(--gold);border:1px solid rgba(201,162,39,0.3);border-radius:10px;padding:2px 8px;">⚠ API cost</span>
           </div>
           <div style="background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#E74C3C;line-height:1.6;">⚠ AI reads what is visible through the plastic — results may be inaccurate for foil/holographic slabs. Always verify at the official registry.</div>
-          <div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px;">Front of Slab <span style="color:var(--text-muted);font-weight:400;">(required)</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><div style="font-size:12px;font-weight:500;color:var(--text-secondary);">Front of Slab <span style="color:var(--text-muted);font-weight:400;">(required)</span></div><button onclick="openPhotoTipsModal('slab')" style="background:transparent;border:1px solid var(--border-bright);border-radius:6px;padding:3px 10px;color:var(--text-secondary);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;">&#128247; Slab tips</button></div>
           <div class="drop-zone" id="slabScanDropZone" style="position:relative;">
             <input type="file" id="slabScanFileInput" accept="image/*" onchange="handleSlabScanSelect(event,'front')">
             <div class="drop-icon">🏒</div>
@@ -2204,6 +2204,15 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- PHOTO TIPS MODAL -->
+<div class="modal-overlay" id="photoTipsModal">
+  <div class="modal" style="max-width:500px;">
+    <button class="modal-close" onclick="closeModal('photoTipsModal')">&#x2715;</button>
+    <div id="photoTipsContent"></div>
+  </div>
+</div>
+
 
 <script src="js/app.js"></script>
 </body>

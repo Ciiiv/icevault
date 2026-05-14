@@ -1550,6 +1550,46 @@ function updateHeaderStats(){
   } else if(sbVsEst) { sbVsEst.textContent = '—'; }
 }
 
+
+const PHOTO_TIPS_CARD = [
+  { icon: '\u2600\ufe0f', title: 'Use natural light', body: 'Near a window works best. Avoid flash \u2014 it causes glare on foil, refractor, and holographic cards and will reduce grading accuracy.' },
+  { icon: '\u2b1b', title: 'Plain background', body: 'Place the card on a plain dark or white surface. Avoid clutter \u2014 it helps the AI locate card edges accurately.' },
+  { icon: '\uD83D\uDD0D', title: 'Tap to focus, hold still', body: 'Tap the card on your screen to focus before shooting. Keep the camera steady \u2014 blurry text reduces OCR accuracy.' },
+  { icon: '\uD83D\uDDBB', title: 'Fill the frame', body: 'Get close enough that the card fills most of the photo, leaving a small border. Don\u2019t crop into the card edges.' },
+  { icon: '\u26a0\ufe0f', title: 'Remove sleeves if possible', body: 'Toploaders and penny sleeves add distortion and reflections. Remove them for best results. If you can\u2019t, note it affects grading accuracy.' },
+  { icon: '\uD83D\uDD04', title: 'Always include the back', body: 'The back contains the card number, serial number, and parallel info. Including it significantly improves scan accuracy.' },
+];
+
+const PHOTO_TIPS_SLAB = [
+  { icon: '\u2600\ufe0f', title: 'Use natural light', body: 'Near a window works best. Avoid flash \u2014 it causes glare through the plastic case.' },
+  { icon: '\u2b1b', title: 'Plain background', body: 'Place the slab on a plain dark or white surface. Clutter makes it harder for the AI to read the label.' },
+  { icon: '\uD83D\uDD0D', title: 'Tap to focus, hold still', body: 'Tap the label on your screen to focus before shooting. Keep the camera steady \u2014 blurry labels reduce read accuracy.' },
+  { icon: '\uD83D\uDDBB', title: 'Fill the frame', body: 'Get close enough that the slab fills most of the photo, leaving a small border.' },
+  { icon: '\uD83D\uDCA1', title: 'Angle to avoid case glare', body: 'Tilt the slab slightly (5\u201310\u00b0) so light doesn\u2019t reflect directly off the plastic into the lens.' },
+  { icon: '\uD83E\uddf9', title: 'Clean the case first', body: 'Wipe the plastic case with a microfibre cloth before shooting to remove fingerprints and dust.' },
+  { icon: '\uD83D\uDD04', title: 'Include the back', body: 'The slab back often has additional cert info. Include it when possible for best results.' },
+];
+
+function openPhotoTipsModal(type) {
+  const tips = type === 'slab' ? PHOTO_TIPS_SLAB : PHOTO_TIPS_CARD;
+  const title = type === 'slab' ? 'Slab photography tips' : 'Card photography tips';
+  const rows = tips.map(t => `
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+      <div style="font-size:20px;width:32px;text-align:center;flex-shrink:0;margin-top:1px;">${t.icon}</div>
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:2px;">${t.title}</div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">${t.body}</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('photoTipsContent').innerHTML = `
+    <div style="font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:1px;color:var(--ice-dark);margin-bottom:4px;">${title}</div>
+    <div style="margin-top:14px;">${rows}</div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--rink);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text-muted);line-height:1.5;">
+      AI grading accuracy depends on photo quality. Ice Vault is not responsible for inaccurate grades resulting from poor lighting, glare, or distortion.
+    </div>`;
+  document.getElementById('photoTipsModal').classList.add('open');
+}
+
 function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(()=>t.className='toast',3000);}
 function togglePasswordVisibility(id,btn){const i=document.getElementById(id);if(!i)return;if(i.type==='password'){i.type='text';btn.textContent='🙈';}else{i.type='password';btn.textContent='👁';}}
 
