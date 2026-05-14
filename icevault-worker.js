@@ -1022,9 +1022,10 @@ export default {
           'SELECT card_data FROM cards WHERE user_id = ? ORDER BY created_at DESC'
         ).bind(shareRow.user_id).all();
 
-        // Strip sensitive fields before returning
+        // Strip sensitive fields before returning -- exclude Private collection
         const publicCollection = cards.results.map(r => {
           const c = JSON.parse(r.card_data);
+          if (c.collection === 'Private') return null;
           return {
             id: c.id,
             player: c.player,
@@ -1051,7 +1052,7 @@ export default {
             ownerPrice: c.sharePrice && c.sharePriceType === 'owner' ? c.ownerPrice : null,
             // Explicitly exclude: imageData, imageDataBack, certNumber, ebayListingId, ebayListingId
           };
-        });
+        }).filter(Boolean);
 
         // Display name — first part of email
         const displayName = owner ? (owner.display_name || owner.email.split('@')[0]) : 'Unknown';
