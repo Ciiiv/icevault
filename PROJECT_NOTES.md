@@ -104,6 +104,7 @@ icevault-worker\            # NOT a git repo
 - **Manual field editing** — inline click-to-edit on all card fields in detail modal (Player, Year, Brand, Team, Card #, Parallel, Serial #, Est. Value). Click field to edit, Enter or click away to save, Escape to cancel. Save hint shown while editing. Updates modal header instantly. Syncs to D1 via per-card upsert
 - **AI grade matrix** — replaces single grade box in card detail modal with 4-source matrix (Claude, GPT-4o, Gemini, Ximilar). Summary row shows all grades at a glance. Tabs switch detail view per source. Re-grade with Claude fetches existing R2 images (front + back), runs grade-only prompt, confirms before overwrite. Set as card grade copies selected source grade to main card grade. GPT-4o, Gemini, Ximilar tabs show coming soon. Grades stored per-source in card.grades object. Existing c.grade migrated to Claude slot automatically
 - **R2 CORS policy** — configured on icevault-images bucket to allow all app origins (GitHub Pages + Live Server). Required for browser fetch of R2 images during re-grade
+- **Photography tips modal** — “Photo tips” button next to Front of Card upload zone. “Slab tips” button next to Front of Slab. Each opens a modal with 6-7 tips covering lighting, background, focus, framing, sleeves, and front+back. Slab variant adds angle/glare and case cleaning tips. Disclaimer about AI accuracy at bottom
 - **Private Collection** — new collection type. Cards visible in own grid but excluded from shared collection URL. Filter(Boolean) applied in worker /share endpoint. "Private Collection" option added to scan tab, cert save, card modal, and filter toolbar
 - **Multi-AI scan model picker** — Claude, GPT-4o, or Gemini selectable on scan tab. Ximilar is grading-only, not available for full OCR scan. Model-aware key check and error messages. Cost notes update dynamically per selected model
 - **Slab scan model picker** — Claude, GPT-4o, or Gemini selectable on Option A (AI Slab Scan). Cost note updates per model
@@ -121,7 +122,7 @@ icevault-worker\            # NOT a git repo
 - 6-theme system — Hybrid default
 - Session cleanup — per-user on login + 5% probabilistic global purge
 - Favicon + PWA meta tags fixed
-- PWA + Android APK
+- PWA + Android APK -- v1.0.0 released on GitHub Releases (github.com/Ciiiv/icevault/releases). APK download link in settings modal (⚙ API Keys). 944 KB. Enable "Install unknown apps" in Android settings to install
 
 ### Security Completed
 - ✅ PBKDF2-HMAC-SHA256 — 100k iterations, no library
@@ -174,7 +175,7 @@ icevault-worker\            # NOT a git repo
 | 7 | eBay Partner Network affiliate links | ⏯ Low |
 | 7 | Ximilar card grading API -- grading-only, not OCR. Free tier: 1k tokens (front+back = 100 tokens = ~10 grades). Booster: $11/10k tokens (~$0.11/grade front+back) | ✅ Done |
 | 8 | Bulk eBay listing | ⬜ Low |
-| 9 | Photography tips popup | ⬜ Low |
+| 9 | Photography tips popup -- card scan and slab scan variants, modal with 6-7 tips each | ✅ Done |
 | 10 | JS split -- extracted all JS from index.html into docs/js/app.js. index.html is now HTML+CSS+theme init only. sw.js bumped to v3 to cache app.js | ✅ Done |
 | 11 | Account deletion + Legal + OAuth | ⚪ If public |
 
@@ -490,7 +491,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** Gemini free tier UI notes (cost hints), OpenAI/Claude no free tier UI notes, eBay affiliate links (low).
+> **Next priorities:** eBay affiliate links (low), bulk eBay listing (low).
 > Ximilar grading API. eBay affiliate links, bulk listing, photography tips (all low).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.

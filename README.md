@@ -44,6 +44,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Multi-AI scan model picker** -- choose Claude, GPT-4o, or Gemini for card scan (OCR + grade). Cost notes update dynamically per model. Ximilar is grading-only -- not for card scan
 - **Slab scan model picker** -- Claude, GPT-4o, or Gemini selectable for AI Slab Scan (Option A on Graded Cert tab)
 - **Re-scan model picker** -- choose Claude, GPT-4o, or Gemini when re-scanning a card from the collection. Re-scan is OCR field update only -- use the grade matrix for grading
+- **Photography tips** -- tap "Photo tips" near the upload zone for lighting, background, focus, and framing guidance. Separate "Slab tips" variant for graded card scans
 - **Private Collection** -- cards in Private Collection are visible in your own grid but excluded from shared collection URLs
 - **AI grade matrix** -- 4-source grading: Claude, GPT-4o, Gemini, and Ximilar. Ximilar is purpose-built for card condition grading and most accurate. Claude/GPT-4o/Gemini better for card identification. Each source gets its own tab with full breakdown. Set any source as the card active grade
 - **Re-scan from collection** -- re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. Optional grade included
@@ -180,6 +181,8 @@ Visit and click **⚙ API Keys** to enter your keys. Click **👤 Sign In** to c
 ---
 
 ## 📱 Android App
+
+> **Quick install:** Download the APK directly from [GitHub Releases](https://github.com/Ciiiv/icevault/releases/download/v1.0.0/Ice.Vault.apk) (944 KB). The download link is also available in the app under ⚙ API Keys. Enable "Install unknown apps" in Android Settings → Security to install.
 
 The Android app is built using **PWABuilder** — a free Microsoft tool that wraps the web app into a native Android package. Since the app loads from your GitHub Pages URL, any update to `index.html` automatically updates the Android app too — no rebuild needed.
 
