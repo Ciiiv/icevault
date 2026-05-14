@@ -1737,7 +1737,7 @@
           <div class="result-field"><div class="result-label">Parallel / Variation</div><input type="text" class="result-input" id="fieldParallel" placeholder="Base" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Estimated Value ($)</div><input type="text" class="result-input" id="fieldValue" placeholder="—" autocomplete="off" data-lpignore="true" data-form-type="other"></div>
           <div class="result-field"><div class="result-label">Collection Tags</div><div class="tag-input-row" id="tagRow"><div class="tag-add" onclick="addTag()">+ Add Tag</div></div></div>
-          <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="fieldCollection"><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Graded">Graded Cards</option><option value="Wishlist">Wishlist</option><option value="Sold">Sold</option></select></div>
+          <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="fieldCollection"><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Graded">Graded Cards</option><option value="Wishlist">Wishlist</option><option value="Private">Private Collection</option><option value="Sold">Sold</option><option value="Private">Private</option></select></div>
         </div>
         <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
           <h3>AI Condition Estimate</h3>
@@ -1857,7 +1857,7 @@
             <div class="result-field"><div class="result-label">Variation</div><input type="text" class="result-input" id="certVariation" placeholder="—"></div>
             <div class="result-field"><div class="result-label">Estimated Value ($)</div><input type="text" class="result-input" id="certValue" placeholder="—"></div>
             <div class="result-field"><div class="result-label">Collection Tags</div><div class="tag-input-row" id="certTagRow"><div class="tag-add" onclick="addCertTag()">+ Add Tag</div></div></div>
-            <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="certCollection"><option value="Graded">Graded Cards</option><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option></select></div>
+            <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="certCollection"><option value="Graded">Graded Cards</option><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Private">Private Collection</option></select></div>
             <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
               <div style="display:flex;gap:8px;align-items:center;">
                 <input type="text" class="result-input" id="certNumEditInput" placeholder="Cert # to verify" style="flex:1;font-size:13px;" oninput="updateRegistryLinkFromEdit()">
@@ -1880,7 +1880,7 @@
   <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;padding:6px 10px;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;">⚠ Cards showing <strong style="color:#E74C3C;">AI Est.</strong> grades are AI estimates only. Ice Vault is not responsible for any losses.</div>
   <div class="collection-toolbar">
     <input type="text" class="search-input" placeholder="🔍  Search player, year, brand..." oninput="filterCards()" id="searchInput">
-    <select class="filter-select" onchange="filterCards()" id="collectionFilter"><option value="">All Collections</option><option value="Personal">Personal</option><option value="For Sale">For Sale</option><option value="Trade">Trade</option><option value="Graded">Graded</option><option value="Sold">Sold</option></select>
+    <select class="filter-select" onchange="filterCards()" id="collectionFilter"><option value="">All Collections</option><option value="Personal">Personal</option><option value="For Sale">For Sale</option><option value="Trade">Trade</option><option value="Graded">Graded</option><option value="Wishlist">Wishlist</option><option value="Private">Private</option><option value="Sold">Sold</option></select>
     <select class="filter-select" onchange="filterCards()" id="statusFilter"><option value="">All Status</option><option value="unlisted">Not Listed</option><option value="listed">Listed on eBay</option></select>
     <select class="filter-select" onchange="filterCards()" id="sortSelect"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="player-asc">Player A–Z</option><option value="player-desc">Player Z–A</option><option value="value-desc">Value High–Low</option><option value="value-asc">Value Low–High</option><option value="grade-desc">Grade High–Low</option><option value="grade-asc">Grade Low–High</option></select>
     <button class="export-btn" onclick="exportJSON()" title="Download full collection as JSON — lossless backup including images">⬇ JSON</button>
