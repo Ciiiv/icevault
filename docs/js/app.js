@@ -146,7 +146,7 @@ function setScanModel(model) {
   });
   // Update cost hints
   const label = model === 'gpt4o' ? 'GPT-4o' : model === 'gemini' ? 'Gemini' : 'Claude';
-  const cost = model === 'gemini' ? '~$0.001-0.01' : '~$0.01-0.03';
+  const cost = model === 'gemini' ? '~$0.001-0.01 (free tier available)' : '~$0.01-0.03 (paid balance required)';
   const costNote = document.getElementById('scanCostText');
   if (costNote) costNote.textContent = 'Each scan uses ' + label + ' (' + cost + ' with front+back)';
   const analyzeNote = document.getElementById('analyzeCostNote');
@@ -513,8 +513,9 @@ function openCardDetail(id){
       <button class="grader-btn active" id="rescanModelClaude_${c.id}" onclick="setRescanModel(${c.id},'claude',this)" style="padding:4px 10px;font-size:11px;">Claude</button>
       <button class="grader-btn" id="rescanModelGpt4o_${c.id}" onclick="setRescanModel(${c.id},'gpt4o',this)" style="padding:4px 10px;font-size:11px;">GPT-4o</button>
       <button class="grader-btn" id="rescanModelGemini_${c.id}" onclick="setRescanModel(${c.id},'gemini',this)" style="padding:4px 10px;font-size:11px;">Gemini</button>
-      <span class="rescan-cost" id="rescanCost_${c.id}">⚠ ~$0.01–0.03</span>
+      <span class="rescan-cost" id="rescanCost_${c.id}">⚠ ~$0.01–0.03 (paid) or free (Gemini)</span>
     </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">⚠ Prices are estimates. Set spend limits on your AI account. Ice Vault is not responsible for AI costs.</div>
     <div id="rescanReview_${c.id}" style="display:none;"></div>
   </div><div style="height:10px;"></div>`:''}
   <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Market Research</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="${ebaySearchUrl(c)}" target="_blank" class="modal-action-btn" style="text-decoration:none;flex:1;background:rgba(0,100,210,0.1);border-color:rgba(0,100,210,0.4);color:#4A9CC9;justify-content:center;">🔍 eBay Sold Listings</a><button onclick="open130point(collection.find(x=>x.id===${c.id}))" class="modal-action-btn" style="flex:1;background:rgba(39,174,96,0.1);border-color:rgba(39,174,96,0.4);color:#27AE60;justify-content:center;">📈 130point</button></div></div>`;
@@ -535,7 +536,7 @@ function deleteCard(id){if(!confirm('Delete this card?'))return;collection=colle
 function renderGradeTabContent(cardId, source, grade) {
   const sourceLabels = { claude: 'Claude', gpt4o: 'GPT-4o', gemini: 'Gemini', ximilar: 'Ximilar' };
   const label = sourceLabels[source] || source;
-  const costHints = { claude: '~$0.01-0.02', gpt4o: '~$0.01-0.02', gemini: '~$0.001-0.01', ximilar: '~$0.01' };
+  const costHints = { claude: '~$0.01-0.02 paid', gpt4o: '~$0.01-0.02 paid', gemini: '~$0.001-0.01 free tier', ximilar: '~$0.01' };
   const costHint = costHints[source] || '~$0.01';
   const keys = getKeys();
   const hasKey = source === 'claude' ? !!keys.anthropic : source === 'gpt4o' ? !!keys.openai : source === 'gemini' ? !!keys.gemini : !!keys.ximilar;
@@ -739,7 +740,7 @@ function setRescanModel(cardId, model, btn) {
   // Update cost hint
   const costEl = document.getElementById('rescanCost_' + cardId);
   if (costEl) {
-    const hints = { claude: '⚠ ~$0.01-0.03', gpt4o: '⚠ ~$0.01-0.03', gemini: '⚠ ~$0.001-0.01' };
+    const hints = { claude: '⚠ ~$0.01-0.03 (paid)', gpt4o: '⚠ ~$0.01-0.03 (paid)', gemini: '⚠ ~$0.001-0.01 (free tier)' };
     costEl.textContent = hints[model] || '⚠ ~$0.01-0.03';
   }
 }
@@ -1958,7 +1959,7 @@ function setSlabModel(model) {
   const costEl = document.getElementById('slabCostNote');
   if (costEl) {
     const label = model === 'gpt4o' ? 'GPT-4o' : model === 'gemini' ? 'Gemini' : 'Claude';
-    const cost = model === 'gemini' ? '~$0.001-0.01' : '~$0.01-0.03';
+    const cost = model === 'gemini' ? '~$0.001-0.01 (free tier)' : '~$0.01-0.03 (paid)';
     costEl.textContent = '⚠ ' + cost + ' per read (' + label + ')';
   }
 }

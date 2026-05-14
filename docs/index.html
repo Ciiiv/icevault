@@ -1680,7 +1680,7 @@
       <button class="grader-btn" id="scanModelGemini" onclick="setScanModel('gemini')">Gemini</button>
       <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">&#9432; Ximilar is grading-only — use Claude, GPT-4o, or Gemini for full card scan. For best grading use Ximilar in card detail after saving</span>
     </div>
-    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.25);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);" id="scanCostNote">⚠ &nbsp;<strong>API cost:</strong> &nbsp;<span id="scanCostText">Each scan uses your selected AI (~$0.02–0.05 with front+back)</span></div>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.25);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);" id="scanCostNote">⚠ &nbsp;<strong>API cost:</strong> &nbsp;<span id="scanCostText">Each scan uses your selected AI (~$0.01–0.03 Claude/GPT-4o or ~$0.001–0.01 Gemini free tier)</span></div>
     <div class="scan-grid">
       <div>
         <div class="scan-panel">
@@ -1721,7 +1721,8 @@
             <button class="analyze-btn" id="analyzeBtn" onclick="analyzeCard()" disabled>✦ &nbsp; Analyze with AI</button>
             <button class="clear-btn" id="clearBtn" onclick="clearCard()">✕ Clear</button>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px;" id="analyzeCostNote">⚠ ~$0.01–0.03 per scan (Claude/GPT-4o) or ~$0.001–0.01 (Gemini)</div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px;" id="analyzeCostNote">⚠ ~$0.01–0.03 per scan (Claude/GPT-4o) or ~$0.001–0.01 (Gemini free tier)</div>
+          <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:3px;">⚠ Prices are estimates only. Set spend limits on your AI account. Ice Vault is not responsible for AI costs. Claude and GPT-4o require a paid balance. Gemini has a free tier (~20 req/day).</div>
         </div>
       </div>
       <div>
@@ -1801,7 +1802,8 @@
             <button class="grader-btn" id="slabModelGpt4o" onclick="setSlabModel('gpt4o')">GPT-4o</button>
             <button class="grader-btn" id="slabModelGemini" onclick="setSlabModel('gemini')">Gemini</button>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;" id="slabCostNote">⚠ ~$0.01–0.03 per read (Claude/GPT-4o) or ~$0.001–0.01 (Gemini)</div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;" id="slabCostNote">⚠ ~$0.01–0.03 per read (Claude/GPT-4o) or ~$0.001–0.01 (Gemini free tier)</div>
+          <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:3px;" id="slabCostDisclaimer">⚠ Prices are estimates only. Set spend limits on your AI account. Ice Vault is not responsible for AI costs. Claude and GPT-4o require a paid balance. Gemini has a free tier (~20 req/day).</div>
           <div id="slabScanStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
         </div>
         <div class="scan-panel" style="margin-top:16px;">
@@ -1984,7 +1986,7 @@
           <div class="form-group"><label class="form-label">Shipping</label><select class="form-control" id="ebayShipping"><option>USPS First Class (PWE)</option><option>USPS First Class (Top Loader)</option><option>USPS Ground Advantage</option><option>Free Shipping</option></select></div>
         </div>
         <div class="form-group"><label class="form-label">Description (AI-generated, editable)</label><textarea class="form-control" id="ebayDesc" rows="6" placeholder="Optional — select a card and click Generate to create an AI description"></textarea></div>
-        <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:var(--gold);">⚠ Optional — API cost ~$0.01–0.02 per description</div>
+        <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:var(--gold);">⚠ Optional — ~$0.01–0.02 per description (Claude). Prices are estimates only.</div>
         <button class="camera-btn" onclick="generateListingAI()" style="margin-bottom:12px;">✦ &nbsp; Generate AI Description</button>
         <div class="listing-preview" id="listingPreview" style="display:none;"><h4>Preview</h4><div class="listing-title-preview" id="previewTitle"></div><div class="listing-desc-preview" id="previewDesc"></div></div>
       </div>
