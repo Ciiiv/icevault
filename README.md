@@ -22,7 +22,7 @@ Ice Vault scans your actual card — front and back — and stores your photo, y
 | Serial number | Hit or miss | Reads serial number from the back of YOUR card |
 | Graded cert lookup | PSA only (PSA app) | 8 grading companies — PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA |
 | Data ownership | Their servers, their database | Your Cloudflare D1 — your data |
-| Cost | $10/month subscription (CollX Pro) or per-credit | ~$0.02–0.04 per scan — pay Anthropic directly, no markup |
+| Cost | $10/month subscription (CollX Pro) or per-credit | ~$0.02–0.04 per scan — pay AI provider directly, no markup. Gemini free tier available |
 
 **The scan cost isn't a barrier — it's the price of doing it right.**
 
@@ -44,6 +44,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Multi-AI scan model picker** -- choose Claude, GPT-4o, or Gemini for card scan (OCR + grade). Cost notes update dynamically per model. Ximilar is grading-only -- not for card scan
 - **Slab scan model picker** -- Claude, GPT-4o, or Gemini selectable for AI Slab Scan (Option A on Graded Cert tab)
 - **Re-scan model picker** -- choose Claude, GPT-4o, or Gemini when re-scanning a card from the collection. Re-scan is OCR field update only -- use the grade matrix for grading
+- **Private Collection** -- cards in Private Collection are visible in your own grid but excluded from shared collection URLs
 - **AI grade matrix** -- 4-source grading: Claude, GPT-4o, Gemini, and Ximilar. Ximilar is purpose-built for card condition grading and most accurate. Claude/GPT-4o/Gemini better for card identification. Each source gets its own tab with full breakdown. Set any source as the card active grade
 - **Re-scan from collection** -- re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. Optional grade included
 - **Re-grade from collection** — re-run condition grading only on any card using stored images, without touching other card data
@@ -119,9 +120,9 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 
 ## 💰 API Cost Summary
 
-All AI features use your own Anthropic API key — you pay only for what you use, directly to Anthropic. No markup, no subscription.
+All AI features use your own API keys — you pay only for what you use, directly to each AI provider. No markup, no subscription. Claude and GPT-4o require a paid balance. Gemini offers ~20 free requests/day.
 
-### Per-scan cost (Anthropic Claude claude-opus-4-5)
+### Per-scan cost estimates (actual prices may vary -- check each provider)
 
 | Scan Type | Images Sent | Approx Cost |
 |-----------|-------------|-------------|
@@ -148,7 +149,7 @@ All AI features use your own Anthropic API key — you pay only for what you use
 | 200 cards | $4.00 | $8.00 | $10.00 |
 | 250 cards | $5.00 | $10.00 | $12.50 |
 
-> **Free tier options:** Gemini 2.5 Flash offers ~20 free API requests/day via Google AI Studio (front+back scan = 1 request). Good for light use. Ximilar includes 1,000 free tokens (~10 front+back grades). After free tiers, Gemini paid is very cheap -- a card scan costs fractions of a cent at $0.30/million input tokens.
+> **Free tier options:** Gemini 2.5 Flash offers ~20 free API requests/day via Google AI Studio (front+back scan = 1 request). Good for light use. Ximilar includes 1,000 free tokens (~10 front+back grades). Claude and GPT-4o have no free tier -- both require a paid balance. Cost estimates shown in Ice Vault are approximations only -- check real pricing at console.anthropic.com, platform.openai.com, and aistudio.google.com.
 
 > **Break-even vs CollX Pro:** Ice Vault is cheaper for collectors scanning under ~200 cards/month with front+back. Most casual collectors scan 20–50 new cards/month, making Ice Vault cost **$0.40–$2.00/month** vs CollX Pro's flat $10/month.
 
@@ -202,7 +203,7 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 | Database | Cloudflare D1 | Stores user accounts and card metadata | Free tier |
 | Image storage | Cloudflare R2 | Stores card photos — 10GB free, zero egress fees | Free tier |
 | Email | Maileroo | Welcome emails and password reset — 3,000/mo free, any recipient | Free tier |
-| AI | Anthropic Claude | Card OCR, condition grading, eBay descriptions | Pay per use |
+| AI | Anthropic Claude, OpenAI GPT-4o, Google Gemini, Ximilar | Card OCR, condition grading, eBay descriptions | Pay per use (Gemini has free tier) |
 | Android app | PWABuilder | Wraps web app as Android APK | Free |
 | Worker deployment | Wrangler CLI | Local development and deployment of Cloudflare Worker | Free |
 
