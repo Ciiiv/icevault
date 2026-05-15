@@ -44,6 +44,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Multi-AI scan model picker** -- choose Claude, GPT-4o, or Gemini for card scan (OCR + grade). Cost notes update dynamically per model. Ximilar is grading-only -- not for card scan
 - **Slab scan model picker** -- Claude, GPT-4o, or Gemini selectable for AI Slab Scan (Option A on Graded Cert tab)
 - **Re-scan model picker** -- choose Claude, GPT-4o, or Gemini when re-scanning a card from the collection. Re-scan is OCR field update only -- use the grade matrix for grading
+- **Bulk operations** -- Select mode in collection toolbar. Check multiple cards, then Move to collection, Delete, or Export selected as CSV. Select All / Clear included
 - **Card notes** -- free text notes per card (condition, purchase info, storage). Click to edit in card detail, searchable, included in CSV export
 - **Advanced filters** -- filter collection by grade range, value range, and date added. Combines with existing search, collection, and status filters
 - **Photography tips** -- tap "Photo tips" near the upload zone for lighting, background, focus, and framing guidance. Separate "Slab tips" variant for graded card scans
