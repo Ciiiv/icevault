@@ -731,7 +731,7 @@ async function regradeCard(cardId, source) {
   try {
     const imgs = [];
     // Fetch front image as base64
-    const frontRes = await fetch(c.imageUrl);
+    const frontRes = await fetch(c.imageUrl, { mode: 'cors' });
     const frontBlob = await frontRes.blob();
     const frontB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(frontBlob); });
     const frontMime = frontBlob.type || 'image/jpeg';
@@ -740,7 +740,7 @@ async function regradeCard(cardId, source) {
 
     // Fetch back image if available
     if (c.imageUrlBack) {
-      const backRes = await fetch(c.imageUrlBack);
+      const backRes = await fetch(c.imageUrlBack, { mode: 'cors' });
       const backBlob = await backRes.blob();
       const backB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(backBlob); });
       const backMime = backBlob.type || 'image/jpeg';
@@ -885,7 +885,7 @@ async function triggerRescan(cardId) {
 
   try {
     // Fetch front image
-    const frontRes = await fetch(c.imageUrl);
+    const frontRes = await fetch(c.imageUrl, { mode: 'cors' });
     const frontBlob = await frontRes.blob();
     const frontB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(frontBlob); });
     const frontMime = frontBlob.type || 'image/jpeg';
@@ -893,7 +893,7 @@ async function triggerRescan(cardId) {
 
     // Fetch back image if available
     if (c.imageUrlBack) {
-      const backRes = await fetch(c.imageUrlBack);
+      const backRes = await fetch(c.imageUrlBack, { mode: 'cors' });
       const backBlob = await backRes.blob();
       const backB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(backBlob); });
       const backMime = backBlob.type || 'image/jpeg';
