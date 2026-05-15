@@ -72,6 +72,8 @@ function switchView(name) {
 }
 
 let currentBackImageData=null;
+let bulkSelectMode = false;
+let selectedCardIds = new Set();
 
 document.getElementById('dropZone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag-over');});
 document.getElementById('dropZone').addEventListener('dragleave',e=>e.currentTarget.classList.remove('drag-over'));
@@ -289,7 +291,8 @@ function renderGridFromCollection(){
     return;
   }
   grid.innerHTML=collection.map(c=>`
-    <div class="card-item ${c.listedOnEbay?'listed':''}" onclick="openCardDetail(${c.id})">
+    <div class="card-item ${c.listedOnEbay?'listed':''}${bulkSelectMode&&selectedCardIds.has(c.id)?' selected':''}" data-id="${c.id}" onclick="${bulkSelectMode?`toggleCardSelect(${c.id},event)`:`openCardDetail(${c.id})`}" style="${bulkSelectMode&&selectedCardIds.has(c.id)?'border-color:var(--gold);':c.listedOnEbay?'':''}cursor:pointer;">
+      ${bulkSelectMode?`<input type="checkbox" id="cardCheck_${c.id}" ${selectedCardIds.has(c.id)?'checked':''} onclick="toggleCardSelect(${c.id},event)" style="position:absolute;top:8px;left:8px;width:18px;height:18px;cursor:pointer;z-index:2;accent-color:var(--gold);">`:''}
       ${c.listedOnEbay?'<div class="ebay-indicator">eBay</div>':''}
       <div class="card-thumb">${(c.imageUrl||c.imageData)?`<img src="${c.imageUrl||c.imageData}" alt="${c.player}">`:'🏒'}</div>
       <div class="card-info">
@@ -330,6 +333,102 @@ function goToPage(page){
   fetchFilteredPage(page);
   // Scroll to top of collection
   document.getElementById('view-collection').scrollIntoView({behavior:'smooth'});
+}
+
+function toggleBulkSelect() {
+  bulkSelectMode = !bulkSelectMode;
+  selectedCardIds.clear();
+  const btn = document.getElementById('bulkSelectBtn');
+  const bar = document.getElementById('bulkActionBar');
+  if (btn) btn.style.background = bulkSelectMode ? 'rgba(201,162,39,0.15)' : '';
+  if (btn) btn.style.borderColor = bulkSelectMode ? 'var(--gold)' : '';
+  if (btn) btn.style.color = bulkSelectMode ? 'var(--gold)' : '';
+  if (bar) bar.style.display = bulkSelectMode ? 'flex' : 'none';
+  updateBulkCount();
+  renderCollection();
+}
+
+function updateBulkCount() {
+  const el = document.getElementById('bulkCount');
+  if (el) el.textContent = selectedCardIds.size + ' selected';
+}
+
+function toggleCardSelect(id, e) {
+  e.stopPropagation();
+  if (selectedCardIds.has(id)) selectedCardIds.delete(id);
+  else selectedCardIds.add(id);
+  updateBulkCount();
+  // Update card appearance
+  const card = document.querySelector('.card-item[data-id="' + id + '"]');
+  if (card) card.style.borderColor = selectedCardIds.has(id) ? 'var(--gold)' : '';
+  const cb = document.getElementById('cardCheck_' + id);
+  if (cb) cb.checked = selectedCardIds.has(id);
+}
+
+function bulkSelectAll() {
+  const visibleCards = document.querySelectorAll('.card-item[data-id]');
+  visibleCards.forEach(c => selectedCardIds.add(parseInt(c.dataset.id)));
+  updateBulkCount();
+  visibleCards.forEach(c => {
+    c.style.borderColor = 'var(--gold)';
+    const cb = document.getElementById('cardCheck_' + c.dataset.id);
+    if (cb) cb.checked = true;
+  });
+}
+
+function bulkClearAll() {
+  selectedCardIds.clear();
+  updateBulkCount();
+  document.querySelectorAll('.card-item[data-id]').forEach(c => {
+    c.style.borderColor = '';
+    const cb = document.getElementById('cardCheck_' + c.dataset.id);
+    if (cb) cb.checked = false;
+  });
+}
+
+function bulkMove(col) {
+  if (!col || selectedCardIds.size === 0) return;
+  if (!confirm('Move ' + selectedCardIds.size + ' card(s) to ' + col + '?')) return;
+  selectedCardIds.forEach(id => {
+    const c = collection.find(x => x.id === id);
+    if (c) { c.collection = col; if (currentUser) syncCardToCloud(c); }
+  });
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  showToast('Moved ' + selectedCardIds.size + ' card(s) to ' + col, 'success');
+  selectedCardIds.clear();
+  updateBulkCount();
+  renderCollection();
+}
+
+function bulkDelete() {
+  if (selectedCardIds.size === 0) return;
+  if (!confirm('Delete ' + selectedCardIds.size + ' card(s)? This cannot be undone.')) return;
+  selectedCardIds.forEach(id => {
+    collection = collection.filter(c => c.id !== id);
+    if (currentUser) deleteCardFromCloud(id);
+  });
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  showToast('Deleted ' + selectedCardIds.size + ' card(s)', 'success');
+  selectedCardIds.clear();
+  updateBulkCount();
+  renderCollection();
+}
+
+function bulkExport() {
+  if (selectedCardIds.size === 0) { showToast('Select cards first', 'error'); return; }
+  const selected = collection.filter(c => selectedCardIds.has(c.id));
+  const headers = ['Player','Year','Brand','Card Number','Team','Parallel','Serial Number','Estimated Value','Collection','Tags','AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale','Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes'];
+  const esc = v => { if(v===null||v===undefined)return''; const s=String(v); if(s.includes(',')||s.includes('"')||s.includes('\n'))return'"'+s.replace(/"/g,'""')+'"'; return s; };
+  const rows = selected.map(c => [c.player,c.year,c.brand,c.cardNumber,c.team,c.parallel,c.serialNumber||'',c.estimatedValue,c.collection,(c.tags||[]).join('; '),c.aiGraded?'Yes':'No',c.grade?.overall||'',c.grade?.centering||'',c.grade?.corners||'',c.grade?.edges||'',c.grade?.surface||'',c.grade?.rationale||'',c.certNumber||'',c.certGrader||'',c.officialGrade||'',c.listedOnEbay?'Yes':'No',c.addedAt?new Date(c.addedAt).toLocaleDateString():'',c.notes||''].map(esc).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const date = new Date().toISOString().split('T')[0];
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'icevault-selected-' + date + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Exported ' + selected.length + ' cards', 'success');
 }
 
 function renderCollection(){
@@ -425,7 +524,8 @@ function _renderFilteredLocal(){
   const grid=document.getElementById('cardsGrid');
   if(filtered.length===0){grid.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards match your filters</div></div>`;return;}
   grid.innerHTML=filtered.map(c=>`
-    <div class="card-item ${c.listedOnEbay?'listed':''}" onclick="openCardDetail(${c.id})">
+    <div class="card-item ${c.listedOnEbay?'listed':''}${bulkSelectMode&&selectedCardIds.has(c.id)?' selected':''}" data-id="${c.id}" onclick="${bulkSelectMode?`toggleCardSelect(${c.id},event)`:`openCardDetail(${c.id})`}" style="${bulkSelectMode&&selectedCardIds.has(c.id)?'border-color:var(--gold);':c.listedOnEbay?'':''}cursor:pointer;">
+      ${bulkSelectMode?`<input type="checkbox" id="cardCheck_${c.id}" ${selectedCardIds.has(c.id)?'checked':''} onclick="toggleCardSelect(${c.id},event)" style="position:absolute;top:8px;left:8px;width:18px;height:18px;cursor:pointer;z-index:2;accent-color:var(--gold);">`:''}
       ${c.listedOnEbay?'<div class="ebay-indicator">eBay</div>':''}
       <div class="card-thumb">${(c.imageUrl||c.imageData)?`<img src="${c.imageUrl||c.imageData}" alt="${c.player}">`:'🏒'}</div>
       <div class="card-info">
@@ -2051,7 +2151,18 @@ async function syncCollectionFromCloud(page, params){
 
 function openLightbox(src,cap){document.getElementById('lightboxImg').src=src;document.getElementById('lightboxCaption').textContent=cap||'';document.getElementById('lightboxModal').classList.add('open');}
 function closeLightbox(){document.getElementById('lightboxModal').classList.remove('open');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.getElementById('displayNameModal').classList.contains('open'))return;closeLightbox();closeDrawer();}});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('displayNameModal').classList.contains('open'))return;
+    // Close any open modal
+    ['cardModal','apiModal','authModal','shareModal','photoTipsModal','cameraModal'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el&&el.classList.contains('open'))el.classList.remove('open');
+    });
+    closeLightbox();
+    closeDrawer();
+  }
+});
 
 let currentScanMode='card';
 function setScanMode(mode){
@@ -2090,7 +2201,11 @@ function setSlabModel(model) {
 }
 
 async function analyzeSlabPhoto(){
-  const keys=getKeys();if(!keys.anthropic){showToast('Set your Anthropic API key first','error');return;}if(!slabScanImageData){showToast('Load a slab photo first','error');return;}
+  const keys=getKeys();
+  const slabKey = _slabModel === 'gpt4o' ? keys.openai : _slabModel === 'gemini' ? keys.gemini : keys.anthropic;
+  const slabKeyLabel = _slabModel === 'gpt4o' ? 'OpenAI' : _slabModel === 'gemini' ? 'Google AI' : 'Anthropic';
+  if(!slabKey){showToast('Add your ' + slabKeyLabel + ' API key in ⚙ Settings','error');return;}
+  if(!slabScanImageData){showToast('Load a slab photo first','error');return;}
   const btn=document.getElementById('slabAnalyzeBtn'),st=document.getElementById('slabScanStatus');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> &nbsp; Reading slab...';st.textContent='AI is reading the slab...';st.style.color='var(--text-muted)';
   try{
@@ -2200,7 +2315,7 @@ function saveCertCard(){
     valueHistory: certEstVal ? [{ value: certEstVal, date: new Date().toISOString(), source: 'scan' }] : []
   };
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(card);updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
-  document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certSlabImageData=null;certTags=[];
+  document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certSlabImageData=null;certTags=[];clearSlabScan();
 }
 
 

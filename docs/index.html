@@ -1890,6 +1890,26 @@
     <button class="export-btn import" onclick="document.getElementById('importFileInput').click()" title="Restore collection from a JSON backup file">⬆ Import</button>
     <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importJSON(event)">
     <button class="export-btn" id="shareCollectionBtn" onclick="openShareModal()" title="Share your collection via a public link" style="display:none;">🔗 Share</button>
+    <button class="export-btn" id="bulkSelectBtn" onclick="toggleBulkSelect()" title="Select cards for bulk actions" style="display:flex;align-items:center;gap:5px;">&#x2611; Select</button>
+  </div>
+  <div id="bulkActionBar" style="display:none;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.25);border-radius:8px;flex-wrap:wrap;">
+    <span id="bulkCount" style="font-size:13px;font-weight:500;color:var(--gold);">0 selected</span>
+    <button onclick="bulkSelectAll()" style="padding:5px 12px;border-radius:6px;border:1px solid var(--border-bright);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Select All</button>
+    <button onclick="bulkClearAll()" style="padding:5px 12px;border-radius:6px;border:1px solid var(--border-bright);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Clear</button>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;">
+      <select id="bulkMoveSelect" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border-bright);background:var(--input-bg);color:var(--text-primary);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;" onchange="bulkMove(this.value);this.value=''">
+        <option value="">Move to...</option>
+        <option value="Personal">Personal Collection</option>
+        <option value="For Sale">For Sale</option>
+        <option value="Trade">Trade Binder</option>
+        <option value="Graded">Graded Cards</option>
+        <option value="Wishlist">Wishlist</option>
+        <option value="Private">Private Collection</option>
+        <option value="Sold">Sold</option>
+      </select>
+      <button onclick="bulkExport()" style="padding:5px 12px;border-radius:6px;border:1px solid var(--border-bright);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;">&#x2B07; Export CSV</button>
+      <button onclick="bulkDelete()" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(192,57,43,0.4);background:transparent;color:#E74C3C;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">&#x1F5D1; Delete</button>
+    </div>
   </div>
   <div id="tagFilterRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Filter by tag:</span></div>
   <div class="cards-grid" id="cardsGrid"><div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards yet!<br>Scan your first card to get started.</div></div></div>
