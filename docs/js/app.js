@@ -269,7 +269,7 @@ async function saveCard(){
   const imageUrl=await uploadImageToR2(currentImageData,cardId);
   const imageUrlBack=currentBackImageData?await uploadImageToR2(currentBackImageData,cardId+'_back'):null;
   const estimatedValueAtScan = document.getElementById('fieldValue').value;
-  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:estimatedValueAtScan,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
+  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,notes:null,notes:null,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:estimatedValueAtScan,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
     valueHistory: estimatedValueAtScan ? [{ value: estimatedValueAtScan, date: new Date().toISOString(), source: 'scan' }] : []
   };
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
@@ -384,7 +384,7 @@ function _renderFilteredLocal(){
   const status=document.getElementById('statusFilter').value;
   const sort=document.getElementById('sortSelect').value;
   let filtered=collection.filter(c=>{
-    const ms=!search||c.player.toLowerCase().includes(search)||(c.brand||'').toLowerCase().includes(search)||(c.year||'').includes(search)||(c.team||'').toLowerCase().includes(search)||(c.tags||[]).some(t=>t.toLowerCase().includes(search));
+    const ms=!search||c.player.toLowerCase().includes(search)||(c.brand||'').toLowerCase().includes(search)||(c.year||'').includes(search)||(c.team||'').toLowerCase().includes(search)||(c.tags||[]).some(t=>t.toLowerCase().includes(search))||(c.notes||'').toLowerCase().includes(search);
     const mc=!col||c.collection===col;
     // Hide sold cards by default unless explicitly filtering for Sold
     const mSold=col==='Sold'?c.sold===true:(c.sold?false:true);
@@ -493,6 +493,11 @@ function openCardDetail(id){
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const sharePriceHtml = buildSharePriceHtml(c);
     const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option ${c.collection==='Private'?'selected':''} value="Private">Private Collection — hidden from shared view</option><option ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
+  const notesHtml = '<div style="margin-top:10px;"><div class="result-label">Notes</div>'
+    + '<div id="cardNotesDisplay_' + c.id + '" style="min-height:32px;padding:6px 0;font-size:13px;color:' + (c.notes ? 'var(--text-primary)' : 'var(--text-muted)') + ';cursor:pointer;border-radius:4px;" onclick="editCardNotes(' + c.id + ')" title="Click to edit">' + (c.notes || '<span style="opacity:0.5">Add notes...</span>') + '</div>'
+    + '<div id="cardNotesEdit_' + c.id + '" style="display:none;"><textarea id="cardNotesInput_' + c.id + '" class="result-input" rows="3" style="width:100%;resize:vertical;font-size:13px;" placeholder="Condition notes, purchase info, storage location...">' + (c.notes || '') + '</textarea>'
+    + '<div style="display:flex;gap:6px;margin-top:4px;"><button onclick="saveCardNotes(' + c.id + ')" style="padding:4px 12px;background:var(--ice-dark);border:none;border-radius:5px;color:white;font-size:12px;cursor:pointer;">Save</button>'
+    + '<button onclick="cancelCardNotes(' + c.id + ')" style="padding:4px 10px;background:transparent;border:1px solid var(--border-bright);border-radius:5px;color:var(--text-muted);font-size:12px;cursor:pointer;">Cancel</button></div></div></div>';
   document.getElementById('modalContent').innerHTML=`<div class="modal-player">${c.player}</div><div class="modal-meta">${c.year||''} · ${c.brand||''} · ${c.team||''}</div><div class="modal-grid"><div>${(c.imageUrl||c.imageData)?`<img class="modal-img" src="${c.imageUrl||c.imageData}" alt="${c.player}" data-cap="${c.player}" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;" title="Click to enlarge">`:'<div class="modal-img-placeholder">🏒</div>'}${_back?`<img class="modal-img" src="${_back}" alt="${c.player} back" data-cap="${c.player} Back" onclick="openLightbox(this.src,this.dataset.cap)" style="cursor:zoom-in;margin-top:8px;opacity:0.9;" title="Click to enlarge back">`:''}</div><div>
   <div class="detail-row"><span class="detail-key">Player</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'player',this)">${c.player||'—'}<span class="edit-hint">✎</span></span></div>
   <div class="detail-row"><span class="detail-key">Year</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'year',this)">${c.year||'—'}<span class="edit-hint">✎</span></span></div>
@@ -505,7 +510,7 @@ function openCardDetail(id){
   <div id="editSaveHint_${c.id}" class="edit-save-hint">↵ Enter or click away to save &nbsp;·&nbsp; Esc to cancel</div>
   <div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div>
   <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
-  ${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
+  ${notesHtml}${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
   ${c.imageUrl?`<div class="rescan-section">
     <div class="rescan-controls">
       <button class="rescan-trigger-btn" id="rescanBtn_${c.id}" onclick="triggerRescan(${c.id})">↺ Re-scan card with AI</button>
@@ -918,6 +923,68 @@ function confirmRescan(cardId, result, includeGrade) {
   closeModal('cardModal');
   renderCollection();
   showToast('Card updated from re-scan', 'success');
+}
+
+function editCardNotes(id) {
+  document.getElementById('cardNotesDisplay_' + id).style.display = 'none';
+  document.getElementById('cardNotesEdit_' + id).style.display = 'block';
+  const ta = document.getElementById('cardNotesInput_' + id);
+  if (ta) { ta.focus(); ta.selectionStart = ta.value.length; }
+}
+
+function cancelCardNotes(id) {
+  document.getElementById('cardNotesDisplay_' + id).style.display = 'block';
+  document.getElementById('cardNotesEdit_' + id).style.display = 'none';
+  // Restore original value
+  const c = collection.find(x => x.id === id);
+  if (c) document.getElementById('cardNotesInput_' + id).value = c.notes || '';
+}
+
+function saveCardNotes(id) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  const val = document.getElementById('cardNotesInput_' + id).value.trim();
+  c.notes = val || null;
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCardToCloud(c);
+  // Update display
+  const disp = document.getElementById('cardNotesDisplay_' + id);
+  if (disp) disp.innerHTML = c.notes || '<span style="opacity:0.5">Add notes...</span>';
+  if (disp) disp.style.color = c.notes ? 'var(--text-primary)' : 'var(--text-muted)';
+  document.getElementById('cardNotesDisplay_' + id).style.display = 'block';
+  document.getElementById('cardNotesEdit_' + id).style.display = 'none';
+  showToast('Notes saved', 'success');
+}
+
+function editCardNotes(id) {
+  document.getElementById('cardNotesDisplay_' + id).style.display = 'none';
+  document.getElementById('cardNotesEdit_' + id).style.display = 'block';
+  const ta = document.getElementById('cardNotesInput_' + id);
+  if (ta) { ta.focus(); ta.selectionStart = ta.value.length; }
+}
+
+function cancelCardNotes(id) {
+  document.getElementById('cardNotesDisplay_' + id).style.display = 'block';
+  document.getElementById('cardNotesEdit_' + id).style.display = 'none';
+  // Restore original value
+  const c = collection.find(x => x.id === id);
+  if (c) document.getElementById('cardNotesInput_' + id).value = c.notes || '';
+}
+
+function saveCardNotes(id) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  const val = document.getElementById('cardNotesInput_' + id).value.trim();
+  c.notes = val || null;
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCardToCloud(c);
+  // Update display
+  const disp = document.getElementById('cardNotesDisplay_' + id);
+  if (disp) disp.innerHTML = c.notes || '<span style="opacity:0.5">Add notes...</span>';
+  if (disp) disp.style.color = c.notes ? 'var(--text-primary)' : 'var(--text-muted)';
+  document.getElementById('cardNotesDisplay_' + id).style.display = 'block';
+  document.getElementById('cardNotesEdit_' + id).style.display = 'none';
+  showToast('Notes saved', 'success');
 }
 
 function editCardField(id, field, el) {
@@ -2141,7 +2208,7 @@ function exportCSV() {
     'Player','Year','Brand','Card Number','Team','Parallel',
     'Serial Number','Estimated Value','Collection','Tags',
     'AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale',
-    'Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added'
+    'Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes'
   ];
   const esc = v => {
     if (v === null || v === undefined) return '';
@@ -2159,7 +2226,8 @@ function exportCSV() {
     c.grade?.edges || '', c.grade?.surface || '', c.grade?.rationale || '',
     c.certNumber || '', c.certGrader || '', c.officialGrade || '',
     c.listedOnEbay ? 'Yes' : 'No',
-    c.addedAt ? new Date(c.addedAt).toLocaleDateString() : ''
+    c.addedAt ? new Date(c.addedAt).toLocaleDateString() : '',
+    c.notes || ''
   ].map(esc).join(','));
   const csv = [headers.join(','), ...rows].join('\n');
   const date = new Date().toISOString().split('T')[0];
