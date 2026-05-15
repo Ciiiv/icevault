@@ -837,6 +837,9 @@ export default {
         const search = (params.get('search') || '').trim().toLowerCase();
         const colFilter = (params.get('collection') || '').trim();
         const sort = params.get('sort') || 'date-desc';
+        const gradeFilter = (params.get('grade') || '').trim();
+        const valueFilter = (params.get('value') || '').trim();
+        const dateFilter = (params.get('date') || '').trim();
         const offset = (page - 1) * limit;
 
         // Build WHERE clause
@@ -885,7 +888,43 @@ export default {
           `SELECT card_data FROM cards WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
         ).bind(...binds, limit, offset).all();
 
-        const collection = cards.results.map(r => JSON.parse(r.card_data));
+        let collection = cards.results.map(r => JSON.parse(r.card_data));
+
+        // Apply grade/value/date filters (stored in JSON blob, can't SQL filter)
+        if (gradeFilter) {
+          collection = collection.filter(c => {
+            const g = parseFloat(c.grade?.overall) || 0;
+            if (gradeFilter === '9') return g >= 9;
+            if (gradeFilter === '8') return g >= 8;
+            if (gradeFilter === '7') return g >= 7;
+            if (gradeFilter === 'sub7') return g > 0 && g < 7;
+            return true;
+          });
+        }
+        if (valueFilter) {
+          collection = collection.filter(c => {
+            const v = parseFloat(c.estimatedValue) || 0;
+            if (valueFilter === '0-25') return v < 25;
+            if (valueFilter === '25-100') return v >= 25 && v < 100;
+            if (valueFilter === '100-500') return v >= 100 && v < 500;
+            if (valueFilter === '500+') return v >= 500;
+            return true;
+          });
+        }
+        if (dateFilter) {
+          const days = parseInt(dateFilter);
+          const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+          collection = collection.filter(c => new Date(c.addedAt).getTime() >= cutoff);
+        }
+
+        // Apply sorts that can't be done in SQL (player, value, grade)
+        if (sort === 'player-asc') collection.sort((a,b) => (a.player||'').localeCompare(b.player||''));
+        else if (sort === 'player-desc') collection.sort((a,b) => (b.player||'').localeCompare(a.player||''));
+        else if (sort === 'value-desc') collection.sort((a,b) => (parseFloat(b.estimatedValue)||0)-(parseFloat(a.estimatedValue)||0));
+        else if (sort === 'value-asc') collection.sort((a,b) => (parseFloat(a.estimatedValue)||0)-(parseFloat(b.estimatedValue)||0));
+        else if (sort === 'grade-desc') collection.sort((a,b) => (parseFloat(b.grade?.overall)||0)-(parseFloat(a.grade?.overall)||0));
+        else if (sort === 'grade-asc') collection.sort((a,b) => (parseFloat(a.grade?.overall)||0)-(parseFloat(b.grade?.overall)||0));
+
         return json({ collection, total, page, pages, limit }, 200, cors);
       } catch (e) {
         return err(e.message, 500, cors);
@@ -1052,7 +1091,7 @@ export default {
             ownerPrice: c.sharePrice && c.sharePriceType === 'owner' ? c.ownerPrice : null,
             // Explicitly exclude: imageData, imageDataBack, certNumber, ebayListingId, ebayListingId
           };
-        }).filter(Boolean);
+        });
 
         // Display name — first part of email
         const displayName = owner ? (owner.display_name || owner.email.split('@')[0]) : 'Unknown';

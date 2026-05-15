@@ -369,10 +369,16 @@ async function fetchFilteredPage(page){
   const search=(document.getElementById('searchInput').value||'').trim();
   const col=document.getElementById('collectionFilter').value;
   const sort=document.getElementById('sortSelect').value;
+  const gradeF=document.getElementById('gradeFilter')?.value||'';
+  const valueF=document.getElementById('valueFilter')?.value||'';
+  const dateF=document.getElementById('dateFilter')?.value||'';
   const params={};
   if(search)params.search=search;
   if(col)params.collection=col;
   if(sort)params.sort=sort;
+  if(gradeF)params.grade=gradeF;
+  if(valueF)params.value=valueF;
+  if(dateF)params.date=dateF;
   await syncCollectionFromCloud(page||currentPage,params);
   renderGridFromCollection();
   renderPaginationBar();
@@ -383,6 +389,9 @@ function _renderFilteredLocal(){
   const col=document.getElementById('collectionFilter').value;
   const status=document.getElementById('statusFilter').value;
   const sort=document.getElementById('sortSelect').value;
+  const gradeFilter=document.getElementById('gradeFilter')?.value||'';
+  const valueFilter=document.getElementById('valueFilter')?.value||'';
+  const dateFilter=document.getElementById('dateFilter')?.value||'';
   let filtered=collection.filter(c=>{
     const ms=!search||c.player.toLowerCase().includes(search)||(c.brand||'').toLowerCase().includes(search)||(c.year||'').includes(search)||(c.team||'').toLowerCase().includes(search)||(c.tags||[]).some(t=>t.toLowerCase().includes(search))||(c.notes||'').toLowerCase().includes(search);
     const mc=!col||c.collection===col;
@@ -390,7 +399,16 @@ function _renderFilteredLocal(){
     const mSold=col==='Sold'?c.sold===true:(c.sold?false:true);
     const mst=!status||(status==='listed'?c.listedOnEbay:!c.listedOnEbay);
     const mt=!activeTagFilter||(c.tags||[]).includes(activeTagFilter);
-    return ms&&mc&&mSold&&mst&&mt;
+    // Grade filter
+    const g=parseFloat(c.grade?.overall)||0;
+    const mg=!gradeFilter||(gradeFilter==='9'?g>=9:gradeFilter==='8'?g>=8:gradeFilter==='7'?g>=7:gradeFilter==='sub7'?g>0&&g<7:true);
+    // Value filter
+    const v=parseFloat(c.estimatedValue)||0;
+    const mv=!valueFilter||(valueFilter==='0-25'?v<25:valueFilter==='25-100'?v>=25&&v<100:valueFilter==='100-500'?v>=100&&v<500:valueFilter==='500+'?v>=500:true);
+    // Date filter
+    const daysAgo=dateFilter?Math.floor((Date.now()-new Date(c.addedAt))/(1000*60*60*24)):0;
+    const md=!dateFilter||daysAgo<=parseInt(dateFilter);
+    return ms&&mc&&mSold&&mst&&mt&&mg&&mv&&md;
   });
   filtered.sort((a,b)=>{
     switch(sort){
