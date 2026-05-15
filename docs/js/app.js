@@ -707,6 +707,23 @@ function switchGradeTab(cardId, source, tabEl) {
   if (contentEl) contentEl.innerHTML = renderGradeTabContent(cardId, source, sourceGrade);
 }
 
+async function fetchImageAsBase64(imageUrl) {
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const r = await fetch(WORKER_URL + '/image-proxy?url=' + encodeURIComponent(imageUrl), {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (r.ok) { const d = await r.json(); return { base64: d.base64, mime: d.contentType }; }
+    } catch(e) { /* fall through */ }
+  }
+  const res = await fetch(imageUrl, { mode: 'cors' });
+  if (!res.ok) throw new Error('Image fetch failed: ' + res.status);
+  const blob = await res.blob();
+  const base64 = await new Promise(resolve => { const r = new FileReader(); r.onload = e => resolve(e.target.result.split(',')[1]); r.readAsDataURL(blob); });
+  return { base64, mime: blob.type || 'image/jpeg' };
+}
+
 async function regradeCard(cardId, source) {
   const c = collection.find(x => x.id === cardId);
   if (!c) return;
@@ -731,22 +748,13 @@ async function regradeCard(cardId, source) {
   try {
     const imgs = [];
     // Fetch front image as base64
-    let frontRes;
-    try { frontRes = await fetch(c.imageUrl, { mode: 'cors' }); }
-    catch(fetchErr) { throw new Error('R2 image fetch failed: ' + fetchErr.message + ' (URL: ' + c.imageUrl.substring(0,50) + ')'); }
-    if (!frontRes.ok) throw new Error('R2 image fetch ' + frontRes.status + ': ' + c.imageUrl.substring(0,50));
-    const frontBlob = await frontRes.blob();
-    const frontB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(frontBlob); });
-    const frontMime = frontBlob.type || 'image/jpeg';
+    const { base64: frontB64, mime: frontMime } = await fetchImageAsBase64(c.imageUrl);
     imgs.push({ type: 'image', source: { type: 'base64', media_type: frontMime, data: frontB64 } });
     // frontMime and frontB64 kept in scope for Ximilar branch below
 
     // Fetch back image if available
     if (c.imageUrlBack) {
-      const backRes = await fetch(c.imageUrlBack, { mode: 'cors' });
-      const backBlob = await backRes.blob();
-      const backB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(backBlob); });
-      const backMime = backBlob.type || 'image/jpeg';
+      const { base64: backB64, mime: backMime } = await fetchImageAsBase64(c.imageUrlBack);
       imgs.push({ type: 'image', source: { type: 'base64', media_type: backMime, data: backB64 } });
     }
 
@@ -888,21 +896,12 @@ async function triggerRescan(cardId) {
 
   try {
     // Fetch front image
-    let frontRes;
-    try { frontRes = await fetch(c.imageUrl, { mode: 'cors' }); }
-    catch(fetchErr) { throw new Error('R2 image fetch failed: ' + fetchErr.message + ' (URL: ' + c.imageUrl.substring(0,50) + ')'); }
-    if (!frontRes.ok) throw new Error('R2 image fetch ' + frontRes.status + ': ' + c.imageUrl.substring(0,50));
-    const frontBlob = await frontRes.blob();
-    const frontB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(frontBlob); });
-    const frontMime = frontBlob.type || 'image/jpeg';
+    const { base64: frontB64, mime: frontMime } = await fetchImageAsBase64(c.imageUrl);
     const imgs = [{ type: 'image', source: { type: 'base64', media_type: frontMime, data: frontB64 } }];
 
     // Fetch back image if available
     if (c.imageUrlBack) {
-      const backRes = await fetch(c.imageUrlBack, { mode: 'cors' });
-      const backBlob = await backRes.blob();
-      const backB64 = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result.split(',')[1]); r.readAsDataURL(backBlob); });
-      const backMime = backBlob.type || 'image/jpeg';
+      const { base64: backB64, mime: backMime } = await fetchImageAsBase64(c.imageUrlBack);
       imgs.push({ type: 'image', source: { type: 'base64', media_type: backMime, data: backB64 } });
     }
 
