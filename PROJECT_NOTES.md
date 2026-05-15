@@ -104,6 +104,8 @@ icevault-worker\            # NOT a git repo
 - **Manual field editing** — inline click-to-edit on all card fields in detail modal (Player, Year, Brand, Team, Card #, Parallel, Serial #, Est. Value). Click field to edit, Enter or click away to save, Escape to cancel. Save hint shown while editing. Updates modal header instantly. Syncs to D1 via per-card upsert
 - **AI grade matrix** — replaces single grade box in card detail modal with 4-source matrix (Claude, GPT-4o, Gemini, Ximilar). Summary row shows all grades at a glance. Tabs switch detail view per source. Re-grade with Claude fetches existing R2 images (front + back), runs grade-only prompt, confirms before overwrite. Set as card grade copies selected source grade to main card grade. GPT-4o, Gemini, Ximilar tabs show coming soon. Grades stored per-source in card.grades object. Existing c.grade migrated to Claude slot automatically
 - **R2 CORS policy** — configured on icevault-images bucket to allow all app origins (GitHub Pages + Live Server). Required for browser fetch of R2 images during re-grade
+- **Card notes field** — free text per card in detail modal. Click to edit, Save/Cancel. Saved to card object, synced to D1. Searchable via search bar. Notes column in CSV export
+- **Search improvements** — 3 new filter dropdowns in collection toolbar: Grade range (9-10, 8+, 7+, under 7), Value range (under $25, $25-$100, $100-$500, $500+), Date added (last 30/90 days, this year). Filters work in guest mode (local) and signed-in mode (server-side worker filtering). Full sort support added to worker (player, value, grade sorts previously ignored server-side)
 - **Photography tips modal** — “Photo tips” button next to Front of Card upload zone. “Slab tips” button next to Front of Slab. Each opens a modal with 6-7 tips covering lighting, background, focus, framing, sleeves, and front+back. Slab variant adds angle/glare and case cleaning tips. Disclaimer about AI accuracy at bottom
 - **Private Collection** — new collection type. Cards visible in own grid but excluded from shared collection URL. Filter(Boolean) applied in worker /share endpoint. "Private Collection" option added to scan tab, cert save, card modal, and filter toolbar
 - **Multi-AI scan model picker** — Claude, GPT-4o, or Gemini selectable on scan tab. Ximilar is grading-only, not available for full OCR scan. Model-aware key check and error messages. Cost notes update dynamically per selected model
@@ -177,6 +179,8 @@ icevault-worker\            # NOT a git repo
 | 8 | Bulk eBay listing | ⬜ Low |
 | 9 | Photography tips popup -- card scan and slab scan variants, modal with 6-7 tips each | ✅ Done |
 | 10 | JS split -- extracted all JS from index.html into docs/js/app.js. index.html is now HTML+CSS+theme init only. sw.js bumped to v3 to cache app.js | ✅ Done |
+| 12 | Card notes field -- free text per card, click-to-edit in modal, searchable, CSV export | ✅ Done |
+| 13 | Search improvements -- grade range, value range, date added filters. Server-side filtering in worker | ✅ Done |
 | 11 | Account deletion + Legal + OAuth | ⚪ If public |
 
 ---
@@ -349,6 +353,8 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | OpenAI API pricing | No free tier. Paid balance required. GPT-4o costs ~$0.01-0.03 per card scan. Real pricing at platform.openai.com -- Ice Vault cost estimates are approximations only. Recommend turning off auto-recharge and setting a spend limit |
 | Gemini API pricing | Free tier: ~20 requests/day (as of Dec 2025, was 250+). Front+back scan = 1 request. Good for light use. Paid tier very cheap: $0.30/million input tokens -- a card scan costs fractions of a cent. Real pricing at aistudio.google.com -- Ice Vault cost estimates are approximations only |
 | Multi-AI CORS | Added x-openai-key, x-gemini-key, x-ximilar-key to worker CORS Access-Control-Allow-Headers. Required for preflight to pass on custom API key headers |
+| Card notes field | Stored in card.notes (string or null). Built as string concatenation outside the openCardDetail backtick template literal to avoid quote escaping issues. editCardNotes/saveCardNotes/cancelCardNotes functions. Included in search filter and CSV export |
+| Search filters server-side | Grade/value/date filters applied in worker after JSON parse -- cannot SQL filter since values are inside card_data JSON blob. Sort by player/value/grade also applied in worker after fetch. SQL only handles date/created_at sort |
 | Re-scan is OCR-only | Re-scan (card modal) uses Claude/GPT-4o/Gemini for OCR field update only -- no grade included. Grade updates handled separately via grade matrix tabs per source. Removed includeGrade checkbox from re-scan controls |
 | API key sanitization | saveApiKeys() strips non-ASCII chars with /[^\x20-\x7E]/g before saving. Prevents bullet mask chars (U+2022) from being saved as key values -- causes non-ISO-8859-1 fetch header errors |
 | JS split | All JS extracted from index.html to docs/js/app.js. index.html now HTML+CSS+theme init only. sw.js bumped to v3 to cache js/app.js. fix.py default target updated to app.js |
@@ -491,7 +497,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** eBay affiliate links (low), bulk eBay listing (low).
+> **Next priorities:** Bulk operations (select multiple cards, move/delete/export selected), eBay listing when dev keys arrive.
 > Ximilar grading API. eBay affiliate links, bulk listing, photography tips (all low).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
