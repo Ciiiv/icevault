@@ -28,6 +28,7 @@ const RATE_LIMITS = {
   '/auth/forgot': { limit: 5,   window: 60 * 60, message: 'Too many password reset requests — please wait 1 hour' },
   '/auth/reset':  { limit: 10,  window: 60 * 60, message: 'Too many reset attempts — please wait 1 hour' },
   '/proxy':       { limit: 100, window: 60 * 60, message: 'Too many scan requests — please wait 1 hour' },
+  '/image-proxy': { limit: 200, window: 60 * 60, message: 'Too many image requests — please wait 1 hour' },
   '/auth/change-password': { limit: 5, window: 60 * 60, message: 'Too many password change attempts — please wait 1 hour' },
   '/share/generate':  { limit: 5,   window: 60 * 60, message: 'Too many share requests — please wait 1 hour' },
   '/share/view':      { limit: 60,  window: 60 * 60, message: 'Too many requests — please wait 1 hour' },
@@ -348,6 +349,30 @@ export default {
     maybePurgeLogs(db);
 
     // ─── OPENAI PROXY ─────────────────────────────────────────────────────
+    // ─── IMAGE PROXY (R2 → base64, mobile re-grade/re-scan fix) ───────────────
+    if (path === '/image-proxy' && request.method === 'GET') {
+      const user = await getUser(request, db);
+      if (!user) return err('Unauthorized', 401, cors);
+      const rl = await checkRateLimit(kv, '/image-proxy', ip);
+      if (rl.limited) return rateLimited(rl.message, rl.retryAfter, cors);
+      const imageUrl = url.searchParams.get('url');
+      if (!imageUrl) return err('Missing url param', 400, cors);
+      if (!imageUrl.startsWith('https://pub-8fa31d4e964e401e8d40e2c4244f2868.r2.dev/')) return err('URL not allowed', 403, cors);
+      try {
+        const r = await fetch(imageUrl);
+        if (!r.ok) return err('Image fetch failed: ' + r.status, r.status, cors);
+        const buf = await r.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const base64 = btoa(binary);
+        const contentType = r.headers.get('content-type') || 'image/jpeg';
+        return new Response(JSON.stringify({ base64, contentType }), { status: 200, headers: { 'Content-Type': 'application/json', ...cors } });
+      } catch (e) {
+        return err('Image proxy error: ' + e.message, 500, cors);
+      }
+    }
+
     if (path === '/proxy/openai' && request.method === 'POST') {
       const rl = await checkRateLimit(kv, '/proxy', ip);
       if (rl.limited) {
