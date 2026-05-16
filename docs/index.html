@@ -1016,6 +1016,18 @@
     :root:not([data-theme="classic"]) .topbar-stat-lbl {
       font-size: 9px;
     }
+    /* Hide page title on mobile -- page heading already visible below */
+    :root:not([data-theme="classic"]) .topbar-title {
+      display: none;
+    }
+    /* Move topbar-right buttons to hamburger row */
+    :root:not([data-theme="classic"]) .topbar-right {
+      order: 2;
+      position: static;
+    }
+    :root:not([data-theme="classic"]) .sidebar-topbar > div:first-child {
+      justify-content: space-between;
+    }
   }
 
   /* ── SIDEBAR SHELL STYLES ── */
