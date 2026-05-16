@@ -191,6 +191,7 @@ icevault-worker\            # NOT a git repo
 | 11b | Bulk operations -- Select mode, checkboxes, Select All/Clear, Move/Delete/Export. bulkSelectMode + selectedCardIds Set state | ✅ Done |
 | 12 | Card notes field -- free text per card, click-to-edit in modal, searchable, CSV export | ✅ Done |
 | 13 | Search improvements -- grade range, value range, date added filters. Server-side filtering in worker | ✅ Done |
+| 14 | Duplicate card detection -- assign unique IceVault ID to each card at scan time. Detect duplicates (exact match on player/year/brand/parallel, not serial #). Flag shown in card modal when duplicate exists in collection. Two types: bad duplicates (same serial # = definitely same physical card scanned twice) vs intentional duplicates (two copies of same base card -- collectors do have these). Non-serial duplicates need physical labeling guidance -- tips modal explaining how to label physical cards to match IceVault IDs. Grade/visual differences between duplicate images could also be noted. Future consideration: image similarity comparison between duplicate cards | ⏯ Future |
 | 11 | Account deletion + Legal + OAuth | ⚪ If public |
 
 ---
