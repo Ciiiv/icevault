@@ -980,6 +980,44 @@
     :root:not([data-theme="classic"]) .sidebar-hamburger { display: none !important; }
   }
 
+  /* Mobile topbar: stats row on top, nav row below */
+  @media (max-width: 767px) {
+    :root:not([data-theme="classic"]) .sidebar-topbar {
+      flex-direction: column;
+      padding: 0;
+      gap: 0;
+    }
+    :root:not([data-theme="classic"]) .sidebar-topbar > div:first-child {
+      order: 2;
+      width: 100%;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    :root:not([data-theme="classic"]) .topbar-right {
+      order: 2;
+    }
+    :root:not([data-theme="classic"]) .sidebar-topbar > div[style*="position:absolute"] {
+      position: static !important;
+      transform: none !important;
+      order: 1;
+      width: 100%;
+      border-bottom: 1px solid var(--mc-border, rgba(10,42,110,0.12));
+      padding: 5px 12px;
+      justify-content: center;
+    }
+    :root:not([data-theme="classic"]) .topbar-stat-group {
+      gap: 20px;
+    }
+    :root:not([data-theme="classic"]) .topbar-stat-val {
+      font-size: 13px;
+    }
+    :root:not([data-theme="classic"]) .topbar-stat-lbl {
+      font-size: 9px;
+    }
+  }
+
   /* ── SIDEBAR SHELL STYLES ── */
   .sidebar-shell { display: none; width: 100%; }
   .sidebar-nav {
