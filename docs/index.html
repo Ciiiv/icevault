@@ -1738,7 +1738,7 @@
           <div class="result-field"><div class="result-label">Parallel / Variation</div><input type="text" class="result-input" id="fieldParallel" placeholder="Base" autocomplete="off"></div>
           <div class="result-field"><div class="result-label">Estimated Value ($)</div><input type="text" class="result-input" id="fieldValue" placeholder="—" autocomplete="off" data-lpignore="true" data-form-type="other"></div>
           <div class="result-field"><div class="result-label">Collection Tags</div><div class="tag-input-row" id="tagRow"><div class="tag-add" onclick="addTag()">+ Add Tag</div></div></div>
-          <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="fieldCollection"><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Graded">Graded Cards</option><option value="Wishlist">Wishlist</option><option value="Private">Private Collection</option><option value="Sold">Sold</option><option value="Private">Private</option></select></div>
+          <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="fieldCollection"><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Graded">Graded Cards</option><option value="Wishlist">Wishlist</option><option value="Private">Private Collection</option><option value="EbayQueue">eBay Queue</option><option value="Sold">Sold</option></select></div>
         </div>
         <div class="scan-panel" style="margin-top:16px;" id="gradePanel">
           <h3>AI Condition Estimate</h3>
@@ -1859,7 +1859,7 @@
             <div class="result-field"><div class="result-label">Variation</div><input type="text" class="result-input" id="certVariation" placeholder="—"></div>
             <div class="result-field"><div class="result-label">Estimated Value ($)</div><input type="text" class="result-input" id="certValue" placeholder="—"></div>
             <div class="result-field"><div class="result-label">Collection Tags</div><div class="tag-input-row" id="certTagRow"><div class="tag-add" onclick="addCertTag()">+ Add Tag</div></div></div>
-            <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="certCollection"><option value="Graded">Graded Cards</option><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Private">Private Collection</option></select></div>
+            <div class="result-field"><div class="result-label">Collection</div><select class="result-select" id="certCollection"><option value="Graded">Graded Cards</option><option value="Personal">Personal Collection</option><option value="For Sale">For Sale</option><option value="Trade">Trade Binder</option><option value="Private">Private Collection</option><option value="EbayQueue">eBay Queue</option></select></div>
             <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
               <div style="display:flex;gap:8px;align-items:center;">
                 <input type="text" class="result-input" id="certNumEditInput" placeholder="Cert # to verify" style="flex:1;font-size:13px;" oninput="updateRegistryLinkFromEdit()">
@@ -1882,7 +1882,7 @@
   <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;padding:6px 10px;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;">⚠ Cards showing <strong style="color:#E74C3C;">AI Est.</strong> grades are AI estimates only. Ice Vault is not responsible for any losses.</div>
   <div class="collection-toolbar">
     <input type="text" class="search-input" placeholder="🔍  Search player, year, brand..." oninput="filterCards()" id="searchInput">
-    <select class="filter-select" onchange="filterCards()" id="collectionFilter"><option value="">All Collections</option><option value="Personal">Personal</option><option value="For Sale">For Sale</option><option value="Trade">Trade</option><option value="Graded">Graded</option><option value="Wishlist">Wishlist</option><option value="Private">Private</option><option value="Sold">Sold</option></select>
+    <select class="filter-select" onchange="filterCards()" id="collectionFilter"><option value="">All Collections</option><option value="Personal">Personal</option><option value="For Sale">For Sale</option><option value="Trade">Trade</option><option value="Graded">Graded</option><option value="Wishlist">Wishlist</option><option value="Private">Private</option><option value="EbayQueue">eBay Queue</option><option value="Sold">Sold</option></select>
     <select class="filter-select" onchange="filterCards()" id="statusFilter"><option value="">All Status</option><option value="unlisted">Not Listed</option><option value="listed">Listed on eBay</option></select>
     <select class="filter-select" onchange="filterCards()" id="sortSelect"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="player-asc">Player A–Z</option><option value="player-desc">Player Z–A</option><option value="value-desc">Value High–Low</option><option value="value-asc">Value Low–High</option><option value="grade-desc">Grade High–Low</option><option value="grade-asc">Grade Low–High</option></select><select class="filter-select" onchange="filterCards()" id="gradeFilter"><option value="">Any Grade</option><option value="9">9–10 (Gem Mint)</option><option value="8">8+ (Near Mint+)</option><option value="7">7+ (Near Mint)</option><option value="sub7">Under 7</option></select><select class="filter-select" onchange="filterCards()" id="valueFilter"><option value="">Any Value</option><option value="0-25">Under $25</option><option value="25-100">$25–$100</option><option value="100-500">$100–$500</option><option value="500+">$500+</option></select><select class="filter-select" onchange="filterCards()" id="dateFilter"><option value="">Any Date</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">This year</option></select>
     <button class="export-btn" onclick="exportJSON()" title="Download full collection as JSON — lossless backup including images">⬇ JSON</button>
@@ -1905,6 +1905,7 @@
         <option value="Graded">Graded Cards</option>
         <option value="Wishlist">Wishlist</option>
         <option value="Private">Private Collection</option>
+        <option value="EbayQueue">eBay Queue</option>
         <option value="Sold">Sold</option>
       </select>
       <button onclick="bulkExport()" style="padding:5px 12px;border-radius:6px;border:1px solid var(--border-bright);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;">&#x2B07; Export CSV</button>
@@ -1986,7 +1987,30 @@
 <!-- EBAY VIEW -->
 <div class="view" id="view-ebay">
   <div class="section-title">List on eBay</div>
-  <div class="section-sub">Select a card from your collection and create an eBay listing</div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+    <button class="mode-toggle-btn active" id="ebayModeQueue" onclick="setEbayMode('queue')">&#x1F4CB; eBay Queue</button>
+    <button class="mode-toggle-btn" id="ebayModeSingle" onclick="setEbayMode('single')">&#x1F50D; Pick a Card</button>
+    <span style="font-size:12px;color:var(--text-muted);margin-left:4px;">Move cards to <strong>eBay Queue</strong> collection to batch list them here</span>
+  </div>
+  <!-- EBAY QUEUE PANEL -->
+  <div id="ebayQueuePanel">
+    <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#E74C3C;line-height:1.6;">⚠ <strong>AI Grade Disclaimer:</strong> AI grades are not official PSA/BGS/SGC grades. Do not represent an AI estimate as an official grade. <strong>Ice Vault is not responsible for listing disputes or financial losses.</strong></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div style="flex:2;min-width:300px;" id="ebayQueueList"><div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No cards in eBay Queue. Move cards to the eBay Queue collection to list them here.</div></div>
+      <div style="flex:1;min-width:240px;">
+        <div class="form-section" style="position:sticky;top:80px;">
+          <h3>Shared Settings</h3>
+          <div class="form-group"><label class="form-label">Duration</label><select class="form-control" id="queueDuration"><option>3 days</option><option>5 days</option><option selected>7 days</option><option>10 days</option><option>30 days (Fixed)</option></select></div>
+          <div class="form-group"><label class="form-label">Shipping</label><select class="form-control" id="queueShipping"><option>USPS First Class (PWE)</option><option>USPS First Class (Top Loader)</option><option>USPS Ground Advantage</option><option>Free Shipping</option></select></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">These settings apply to all cards when using Submit All.</div>
+          <button class="save-btn" onclick="ebayQueueSubmitAll()" id="queueSubmitAllBtn" style="background:var(--ice-dark);">&#x1F6D2; Submit All to eBay</button>
+          <div id="queueSubmitProgress" style="margin-top:10px;font-size:12px;color:var(--text-muted);display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- SINGLE CARD PANEL -->
+  <div id="ebaySinglePanel" style="display:none;">
   <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#E74C3C;line-height:1.6;">⚠ <strong>AI Grade Disclaimer:</strong> AI grades are not official PSA/BGS/SGC grades. Do not represent an AI estimate as an official grade. <strong>Ice Vault is not responsible for listing disputes or financial losses.</strong></div>
   <div style="display:flex;gap:24px;flex-wrap:wrap;">
     <div style="flex:1;min-width:280px;">
@@ -2007,6 +2031,12 @@
         </div>
         <div class="form-group"><label class="form-label">Description (AI-generated, editable)</label><textarea class="form-control" id="ebayDesc" rows="6" placeholder="Optional — select a card and click Generate to create an AI description"></textarea></div>
         <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:var(--gold);">⚠ Optional — ~$0.01–0.02 per description (Claude). Prices are estimates only.</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--text-muted);">AI Model:</span>
+          <button class="grader-btn active" id="ebayDescModelClaude" onclick="setEbayDescModel('claude')">Claude</button>
+          <button class="grader-btn" id="ebayDescModelGpt4o" onclick="setEbayDescModel('gpt4o')">GPT-4o</button>
+          <button class="grader-btn" id="ebayDescModelGemini" onclick="setEbayDescModel('gemini')">Gemini</button>
+        </div>
         <button class="camera-btn" onclick="generateListingAI()" style="margin-bottom:12px;">✦ &nbsp; Generate AI Description</button>
         <div class="listing-preview" id="listingPreview" style="display:none;"><h4>Preview</h4><div class="listing-title-preview" id="previewTitle"></div><div class="listing-desc-preview" id="previewDesc"></div></div>
       </div>
@@ -2018,18 +2048,16 @@
         </div>
       </div>
       <div class="form-section">
-        <h3>eBay API Settings</h3>
-        <div class="form-group"><label class="form-label">eBay App ID (Client ID)</label><input type="text" class="form-control" id="ebayAppId" placeholder="Your eBay App ID"></div>
-        <div class="form-group"><label class="form-label">eBay User Token (OAuth)</label><input type="text" class="form-control" id="ebayToken" placeholder="Paste your OAuth token"></div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Get your credentials at <a href="https://developer.ebay.com" style="color:var(--ice-dark);">developer.ebay.com</a>.</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">⚙ eBay credentials are set in <button onclick="openApiModal()" style="background:none;border:none;color:var(--ice-dark);cursor:pointer;font-size:12px;text-decoration:underline;padding:0;">API Keys</button>. Get credentials at <a href="https://developer.ebay.com" style="color:var(--ice-dark);">developer.ebay.com</a>.</div>
         <div style="display:flex;gap:10px;">
-          <button class="ebay-btn" onclick="submitToEbay()" id="ebaySubmitBtn">🛒 &nbsp; Submit to eBay</button>
-          <button class="camera-btn" style="flex:1;" onclick="simulateListing()">👁 &nbsp; Preview Only</button>
+          <button class="ebay-btn" onclick="submitToEbay()" id="ebaySubmitBtn">&#x1F6D2; &nbsp; Submit to eBay</button>
+          <button class="camera-btn" style="flex:1;" onclick="simulateListing()">&#x1F441; &nbsp; Preview Only</button>
         </div>
         <div id="ebayResult" style="margin-top:12px;font-size:13px;"></div>
       </div>
     </div>
   </div>
+  </div><!-- end ebaySinglePanel -->
 </div>
 
   </div><!-- end .main-content -->

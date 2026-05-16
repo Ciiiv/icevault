@@ -67,7 +67,7 @@ function switchView(name) {
   const te=document.getElementById('topbarTitle'); if(te) te.textContent=titles[name]||name;
   document.getElementById('sidebarShell')?.classList.remove('drawer-open');
   if(name==='collection') renderCollection();
-  if(name==='ebay') renderEbayCardSelect();
+  if(name==='ebay') { if(typeof _ebayMode!=='undefined'&&_ebayMode==='queue') renderEbayQueue(); else renderEbayCardSelect(); }
   if(name==='stats') renderStats();
 }
 
@@ -610,7 +610,7 @@ function openCardDetail(id){
   </div>`;
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const sharePriceHtml = buildSharePriceHtml(c);
-    const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option ${c.collection==='Private'?'selected':''} value="Private">Private Collection — hidden from shared view</option><option ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
+    const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option ${c.collection==='Private'?'selected':''} value="Private">Private Collection — hidden from shared view</option><option ${c.collection==='EbayQueue'?'selected':''} value="EbayQueue">eBay Queue</option><option ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
   const notesHtml = '<div style="margin-top:10px;"><div class="result-label">Notes</div>'
     + '<div id="cardNotesDisplay_' + c.id + '" style="min-height:32px;padding:6px 0;font-size:13px;color:' + (c.notes ? 'var(--text-primary)' : 'var(--text-muted)') + ';cursor:pointer;border-radius:4px;" onclick="editCardNotes(' + c.id + ')" title="Click to edit">' + (c.notes || '<span style="opacity:0.5">Add notes...</span>') + '</div>'
     + '<div id="cardNotesEdit_' + c.id + '" style="display:none;"><textarea id="cardNotesInput_' + c.id + '" class="result-input" rows="3" style="width:100%;resize:vertical;font-size:13px;" placeholder="Condition notes, purchase info, storage location...">' + (c.notes || '') + '</textarea>'
@@ -652,7 +652,7 @@ function openCardDetail(id){
 
 function addModalTag(id){const t=prompt('Enter tag:');if(!t||!t.trim())return;const c=collection.find(x=>x.id===id);if(!c)return;if(!c.tags)c.tags=[];if(!c.tags.includes(t.trim())){c.tags.push(t.trim());localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}}
 function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)return;c.tags=(c.tags||[]).filter(t=>t!==tag);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}
-function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','').replace(' — hidden from shared view','');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
+function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','').replace(' — hidden from shared view','').replace('eBay Queue','EbayQueue');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
 function listOnEbayFromModal(id){closeModal('cardModal');selectedCardForEbay=collection.find(c=>c.id===id);switchView('ebay');populateEbayForm(selectedCardForEbay);}
 function deleteCard(id){if(!confirm('Delete this card?'))return;collection=collection.filter(c=>c.id!==id);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)deleteCardFromCloud(id);closeModal('cardModal');renderCollection();showToast('Card deleted','success');}
 
@@ -1242,6 +1242,179 @@ function undoSold(id) {
   showToast('Sale undone — card moved back to Personal Collection', 'success');
 }
 
+let _ebayMode = 'queue';
+function setEbayMode(mode) {
+  _ebayMode = mode;
+  document.getElementById('ebayModeQueue').className = 'mode-toggle-btn' + (mode==='queue'?' active':'');
+  document.getElementById('ebayModeSingle').className = 'mode-toggle-btn' + (mode==='single'?' active':'');
+  document.getElementById('ebayQueuePanel').style.display = mode==='queue' ? 'block' : 'none';
+  document.getElementById('ebaySinglePanel').style.display = mode==='single' ? 'block' : 'none';
+  if (mode==='queue') renderEbayQueue();
+  else renderEbayCardSelect();
+}
+
+function renderEbayQueue() {
+  const queueCards = collection.filter(c => c.collection === 'EbayQueue' && !c.listedOnEbay && !c.sold);
+  const container = document.getElementById('ebayQueueList');
+  if (!container) return;
+  if (queueCards.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No cards in eBay Queue. Move cards to the eBay Queue collection to list them here.</div>';
+    return;
+  }
+  container.innerHTML = queueCards.map(c => {
+    const startPrice = c.estimatedValue ? (parseFloat(c.estimatedValue)*0.7).toFixed(2) : '';
+    const binPrice = c.estimatedValue || '';
+    const officialGrade = !c.aiGraded && c.grade ? (c.certGrader||'PSA')+' '+c.grade.overall : '';
+    const title = [c.player,c.year,c.brand,c.cardNumber?'#'+c.cardNumber:'',c.parallel&&c.parallel!=='Base'?c.parallel:'',c.serialNumber||'',officialGrade].filter(Boolean).join(' ').trim().substring(0,80);
+    const thumb = (c.imageUrl||c.imageData) ? '<img src="'+(c.imageUrl||c.imageData)+'" style="width:100%;height:100%;object-fit:cover;">' : '⚪';
+    const gradeLabel = c.grade ? '<span style="font-size:11px;color:var(--text-muted);">'+(c.aiGraded?'AI Est. ':'')+c.grade.overall+'</span>' : '';
+    return '<div class="form-section" id="queueCard_'+c.id+'" style="margin-bottom:12px;">'
+      +'<div style="display:flex;gap:12px;align-items:flex-start;">'
+      +'<div style="width:60px;height:80px;background:var(--rink);border-radius:6px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'+thumb+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-weight:600;font-size:14px;color:var(--text-primary);">'+c.player+'</div>'
+      +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">'+(c.year||'')+' '+(c.brand||'')+' '+gradeLabel+'</div>'
+      +'<input type="text" value="'+title+'" id="queueTitle_'+c.id+'" class="form-control" style="font-size:12px;margin-bottom:6px;" placeholder="Listing title">'
+      +'<div style="display:flex;gap:8px;">'
+      +'<div style="flex:1;"><label class="form-label">Start ($)</label><input type="number" class="form-control" id="queueStart_'+c.id+'" value="'+startPrice+'" step="0.01" placeholder="9.99"></div>'
+      +'<div style="flex:1;"><label class="form-label">BIN ($)</label><input type="number" class="form-control" id="queueBin_'+c.id+'" value="'+binPrice+'" step="0.01" placeholder="Optional"></div>'
+      +'</div>'
+      +'<div id="queueDesc_'+c.id+'" style="margin-top:6px;"></div>'
+      +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">'
+      +'<div style="display:flex;align-items:center;gap:4px;margin-top:6px;margin-bottom:4px;">'
+      +'<span style="font-size:10px;color:var(--text-muted);">Desc AI:</span>'
+      +'<button class="grader-btn active" id="queueDescModel_claude_'+c.id+'" onclick="setQueueDescModel('+c.id+',\'claude\')" style="padding:3px 8px;font-size:10px;">Claude</button>'
+      +'<button class="grader-btn" id="queueDescModel_gpt4o_'+c.id+'" onclick="setQueueDescModel('+c.id+',\'gpt4o\')" style="padding:3px 8px;font-size:10px;">GPT-4o</button>'
+      +'<button class="grader-btn" id="queueDescModel_gemini_'+c.id+'" onclick="setQueueDescModel('+c.id+',\'gemini\')" style="padding:3px 8px;font-size:10px;">Gemini</button>'
+      +'</div>'
+      +'<button onclick="queueGenerateDesc('+c.id+')" class="camera-btn" style="flex:1;font-size:12px;padding:6px 10px;">&#x2726; Generate desc</button>'
+      +'<button onclick="ebayQueueSubmitOne('+c.id+')" class="analyze-btn" style="flex:1;margin-top:0;font-size:12px;padding:6px 10px;">&#x1F6D2; Submit</button>'
+      +'<button onclick="ebayQueueRemove('+c.id+')" style="padding:6px 10px;border-radius:6px;border:1px solid rgba(192,57,43,0.3);background:transparent;color:#E74C3C;font-size:12px;cursor:pointer;font-family:var(--font,sans-serif);">&#x2715; Remove</button>'
+      +'</div>'
+      +'<div id="queueStatus_'+c.id+'" style="font-size:11px;margin-top:4px;color:var(--text-muted);"></div>'
+      +'</div></div></div>';
+  }).join('');
+}
+
+function ebayQueueRemove(id) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  c.collection = 'Personal';
+  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+  if (currentUser) syncCardToCloud(c);
+  renderEbayQueue();
+  showToast('Removed from eBay Queue', 'success');
+}
+
+const _queueDescModels = {};
+function setQueueDescModel(id, model) {
+  _queueDescModels[id] = model;
+  ['claude','gpt4o','gemini'].forEach(m => {
+    const btn = document.getElementById('queueDescModel_' + m + '_' + id);
+    if (btn) btn.className = 'grader-btn' + (m === model ? ' active' : '');
+  });
+}
+
+async function queueGenerateDesc(id) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  const keys = getKeys();
+  // Use selected model, fall back to first available key
+  const selectedModel = _queueDescModels[id];
+  const descModel = selectedModel && (
+    (selectedModel==='claude'&&keys.anthropic)||(selectedModel==='gpt4o'&&keys.openai)||(selectedModel==='gemini'&&keys.gemini)
+  ) ? selectedModel : keys.anthropic ? 'claude' : keys.openai ? 'gpt4o' : keys.gemini ? 'gemini' : null;
+  if (!descModel) { showToast('Add an AI API key in ⚙ Settings to generate descriptions', 'error'); return; }
+  const statusEl = document.getElementById('queueStatus_' + id);
+  if (statusEl) statusEl.textContent = 'Generating description...';
+  const gt = c.grade ? 'Grade '+c.grade.overall+'/10. '+c.grade.rationale : 'Not graded';
+  const prompt = 'Write a compelling eBay listing description for this hockey card.\n\nPlayer: '+c.player+'\nYear: '+(c.year||'Unknown')+'\nBrand/Set: '+(c.brand||'Unknown')+'\nCard #: '+(c.cardNumber||'N/A')+'\nTeam: '+(c.team||'Unknown')+'\nParallel: '+(c.parallel||'Base')+'\nCondition: '+gt+'\nValue: $'+(c.estimatedValue||'N/A')+'\n\nWrite 3-4 short paragraphs. No markdown. Under 250 words.';
+  try {
+    let desc;
+    if (descModel === 'gpt4o') {
+      const res = await fetch(WORKER_URL + '/proxy/openai', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-openai-key': keys.openai }, body: JSON.stringify({ model: 'gpt-4o', max_tokens: 400, messages: [{ role: 'user', content: prompt }] }) });
+      const data = await res.json(); if (data.error) throw new Error(data.error.message);
+      desc = data.choices[0].message.content;
+    } else if (descModel === 'gemini') {
+      const res = await fetch(WORKER_URL + '/proxy/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-gemini-key': keys.gemini }, body: JSON.stringify({ model: 'gemini-2.5-flash', contents: [{ parts: [{ text: prompt }] }] }) });
+      const data = await res.json(); if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      desc = data.candidates[0].content.parts[0].text;
+    } else {
+      const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] }) });
+      const data = await res.json(); if (data.error) throw new Error(data.error.message);
+      desc = data.content[0].text;
+    }
+    const descEl = document.getElementById('queueDesc_' + id);
+    if (descEl) descEl.innerHTML = '<textarea class="form-control" id="queueDescText_'+id+'" rows="4" style="font-size:12px;margin-top:4px;">'+desc+'</textarea>';
+    const modelLabel = descModel === 'gpt4o' ? 'GPT-4o' : descModel === 'gemini' ? 'Gemini' : 'Claude';
+    if (statusEl) statusEl.textContent = '✓ Description generated (' + modelLabel + ')';
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '✕ Failed: ' + e.message;
+  }
+}
+
+async function ebayQueueSubmitOne(id) {
+  const c = collection.find(x => x.id === id);
+  if (!c) return;
+  const keys = getKeys();
+  const token = keys.ebayToken;
+  if (!token) { showToast('Add your eBay OAuth token in ⚙ Settings', 'error'); return; }
+  if (!confirm('Submit "' + c.player + '" to eBay?')) return;
+  const statusEl = document.getElementById('queueStatus_' + id);
+  if (statusEl) statusEl.textContent = 'Submitting...';
+  const title = (document.getElementById('queueTitle_' + id)?.value || c.player).substring(0,80);
+  const price = document.getElementById('queueStart_' + id)?.value || '9.99';
+  const bin = document.getElementById('queueBin_' + id)?.value || '';
+  const desc = document.getElementById('queueDescText_' + id)?.value || c.player+' '+(c.year||'')+' '+(c.brand||'');
+  const duration = document.getElementById('queueDuration')?.value || '7 days';
+  const days = duration.includes('30')?'Days_30':duration.includes('10')?'Days_10':duration.includes('5')?'Days_5':duration.includes('3')?'Days_3':'Days_7';
+  const shipping = document.getElementById('queueShipping')?.value || 'USPS First Class (Top Loader)';
+  const shippingService = shipping.includes('Ground')?'USPSParcel':'USPSFirstClass';
+  const binXml = bin ? '<BuyItNowPrice>'+bin+'</BuyItNowPrice>' : '';
+  const xml = '<?xml version="1.0" encoding="utf-8"?><AddItemRequest xmlns="urn:ebay:apis:eBLBaseComponents"><RequesterCredentials><eBayAuthToken>'+token+'</eBayAuthToken></RequesterCredentials><Item><Title>'+title+'</Title><Description><![CDATA['+desc+']]></Description><PrimaryCategory><CategoryID>214</CategoryID></PrimaryCategory><StartPrice>'+price+'</StartPrice>'+binXml+'<Country>US</Country><Currency>USD</Currency><DispatchTimeMax>3</DispatchTimeMax><ListingDuration>'+days+'</ListingDuration><ListingType>Auction</ListingType><Quantity>1</Quantity><ReturnPolicy><ReturnsAcceptedOption>ReturnsNotAccepted</ReturnsAcceptedOption></ReturnPolicy><ShippingDetails><ShippingType>Flat</ShippingType><ShippingServiceOptions><ShippingService>'+shippingService+'</ShippingService><ShippingServiceCost>1.00</ShippingServiceCost></ShippingServiceOptions></ShippingDetails><Site>US</Site></Item></AddItemRequest>';
+  try {
+    const r = await fetch('https://api.ebay.com/ws/api.dll', { method:'POST', headers:{'X-EBAY-API-SITEID':'0','X-EBAY-API-COMPATIBILITY-LEVEL':'967','X-EBAY-API-CALL-NAME':'AddItem','Content-Type':'text/xml'}, body: xml });
+    const text = await r.text();
+    if (text.includes('<Ack>Success</Ack>') || text.includes('<Ack>Warning</Ack>')) {
+      const im = text.match(/<ItemID>(\d+)<\/ItemID>/);
+      const lid = im ? im[1] : 'Unknown';
+      c.listedOnEbay = true; c.ebayListingId = lid; c.collection = 'For Sale';
+      localStorage.setItem('iceVault_cards', JSON.stringify(collection));
+      if (currentUser) syncCardToCloud(c);
+      if (statusEl) statusEl.innerHTML = '✓ Listed! <a href="https://ebay.com/itm/'+lid+'" target="_blank" style="color:var(--ice-dark);">View listing</a>';
+      showToast(c.player + ' listed on eBay!', 'success');
+      setTimeout(() => renderEbayQueue(), 1500);
+    } else {
+      const em = text.match(/<ShortMessage>(.*?)<\/ShortMessage>/);
+      throw new Error(em ? em[1] : 'Unknown eBay error');
+    }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '✕ Failed: ' + e.message;
+    showToast('Listing failed: ' + e.message, 'error');
+  }
+}
+
+async function ebayQueueSubmitAll() {
+  const queueCards = collection.filter(c => c.collection === 'EbayQueue' && !c.listedOnEbay && !c.sold);
+  if (queueCards.length === 0) { showToast('No cards in queue', 'error'); return; }
+  const keys = getKeys();
+  if (!keys.ebayToken) { showToast('Add your eBay OAuth token in ⚙ Settings', 'error'); return; }
+  if (!confirm('Submit all ' + queueCards.length + ' card(s) to eBay? Each will be listed separately.')) return;
+  const progressEl = document.getElementById('queueSubmitProgress');
+  if (progressEl) progressEl.style.display = 'block';
+  let success = 0, failed = 0;
+  for (const c of queueCards) {
+    if (progressEl) progressEl.textContent = 'Listing '+(success+failed+1)+' of '+queueCards.length+': '+c.player+'...';
+    const statusBefore = document.getElementById('queueStatus_' + c.id)?.textContent || '';
+    await ebayQueueSubmitOne(c.id);
+    await new Promise(r => setTimeout(r, 600));
+    const statusAfter = document.getElementById('queueStatus_' + c.id)?.textContent || '';
+    if (statusAfter.includes('✓')) success++; else failed++;
+  }
+  if (progressEl) progressEl.textContent = 'Done: '+success+' listed, '+failed+' failed.';
+  showToast(success+' card(s) listed on eBay', 'success');
+}
+
 function renderEbayCardSelect(){
   const ctr=document.getElementById('ebayCardSelect');
   if(collection.length===0){ctr.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:10px 0;">No cards yet. Scan and save cards first.</div>';return;}
@@ -1269,15 +1442,37 @@ function populateEbayForm(card){
   prev.style.display='block';
 }
 
+let _ebayDescModel = 'claude';
+function setEbayDescModel(model) {
+  _ebayDescModel = model;
+  ['claude','gpt4o','gemini'].forEach(m => {
+    const btn = document.getElementById('ebayDescModel' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (btn) btn.className = 'grader-btn' + (m === model ? ' active' : '');
+  });
+}
+
 async function generateListingAI(){
   if(!selectedCardForEbay){showToast('Please select a card','error');return;}
-  const keys=getKeys();if(!keys.anthropic){showToast('Set your Anthropic API key first','error');return;}
+  const keys=getKeys();
+  const ebayDescKey = _ebayDescModel==='gpt4o'?keys.openai:_ebayDescModel==='gemini'?keys.gemini:keys.anthropic;
+  const ebayDescLabel = _ebayDescModel==='gpt4o'?'OpenAI':_ebayDescModel==='gemini'?'Google AI':'Anthropic';
+  if(!ebayDescKey){showToast('Add your '+ebayDescLabel+' API key in ⚙ Settings','error');return;}
   if(window._lastEbayData&&window._lastEbayData.description){document.getElementById('ebayDesc').value=window._lastEbayData.description;if(window._lastEbayData.title){const te=document.getElementById('ebayTitle');if(te&&!te.value)te.value=window._lastEbayData.title.substring(0,80);}showToast('eBay description loaded from scan!','success');window._lastEbayData=null;return;}
   const c=selectedCardForEbay;
   const gt=c.grade?`Grade ${c.grade.overall}/10. C:${c.grade.centering} Co:${c.grade.corners} E:${c.grade.edges} S:${c.grade.surface}. ${c.grade.rationale}`:'Not graded';
   try{
-    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':keys.anthropic,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:600,messages:[{role:'user',content:`Write a compelling eBay listing description for this hockey card.\n\nPlayer: ${c.player}\nYear: ${c.year||'Unknown'}\nBrand/Set: ${c.brand||'Unknown'}\nCard #: ${c.cardNumber||'N/A'}\nTeam: ${c.team||'Unknown'}\nParallel: ${c.parallel||'Base'}\nCondition: ${gt}\nValue: $${c.estimatedValue||'N/A'}\n\nWrite 3-4 short paragraphs. No markdown. Under 250 words.`}]})});
-    const data=await res.json();const desc=data.content[0].text;
+    const ebayDescPrompt=`Write a compelling eBay listing description for this hockey card.\n\nPlayer: ${c.player}\nYear: ${c.year||'Unknown'}\nBrand/Set: ${c.brand||'Unknown'}\nCard #: ${c.cardNumber||'N/A'}\nTeam: ${c.team||'Unknown'}\nParallel: ${c.parallel||'Base'}\nCondition: ${gt}\nValue: $${c.estimatedValue||'N/A'}\n\nWrite 3-4 short paragraphs. No markdown. Under 250 words.`;
+    let res,data,desc;
+    if(_ebayDescModel==='gpt4o'){
+      res=await fetch(WORKER_URL+'/proxy/openai',{method:'POST',headers:{'Content-Type':'application/json','x-openai-key':keys.openai},body:JSON.stringify({model:'gpt-4o',max_tokens:600,messages:[{role:'user',content:ebayDescPrompt}]})});
+      data=await res.json();if(data.error)throw new Error(data.error.message);desc=data.choices[0].message.content;
+    }else if(_ebayDescModel==='gemini'){
+      res=await fetch(WORKER_URL+'/proxy/gemini',{method:'POST',headers:{'Content-Type':'application/json','x-gemini-key':keys.gemini},body:JSON.stringify({model:'gemini-2.5-flash',contents:[{parts:[{text:ebayDescPrompt}]}]})});
+      data=await res.json();if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));desc=data.candidates[0].content.parts[0].text;
+    }else{
+      res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':keys.anthropic,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:600,messages:[{role:'user',content:ebayDescPrompt}]})});
+      data=await res.json();if(data.error)throw new Error(data.error.message);desc=data.content[0].text;
+    }
     document.getElementById('ebayDesc').value=desc;
     document.getElementById('previewTitle').textContent=document.getElementById('ebayTitle').value;
     document.getElementById('previewDesc').textContent=desc.substring(0,200)+'...';
