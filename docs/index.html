@@ -980,32 +980,29 @@
     :root:not([data-theme="classic"]) .sidebar-hamburger { display: none !important; }
   }
 
-  /* Mobile topbar: stats row on top, nav row below */
+  /* Mobile topbar: stats row on top, hamburger+buttons row below */
   @media (max-width: 767px) {
     :root:not([data-theme="classic"]) .sidebar-topbar {
       flex-direction: column;
       padding: 0;
       gap: 0;
+      align-items: stretch;
     }
-    :root:not([data-theme="classic"]) .sidebar-topbar > div:first-child {
-      order: 2;
-      width: 100%;
-      padding: 6px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    :root:not([data-theme="classic"]) .topbar-right {
-      order: 2;
-    }
-    :root:not([data-theme="classic"]) .sidebar-topbar > div[style*="position:absolute"] {
+    :root:not([data-theme="classic"]) .topbar-stats-row {
       position: static !important;
       transform: none !important;
-      order: 1;
-      width: 100%;
+      width: 100% !important;
+      justify-content: center;
       border-bottom: 1px solid var(--mc-border, rgba(10,42,110,0.12));
       padding: 5px 12px;
-      justify-content: center;
+      order: 1;
+    }
+    :root:not([data-theme="classic"]) .topbar-nav-row {
+      order: 2;
+      padding: 5px 12px;
+    }
+    :root:not([data-theme="classic"]) .topbar-title {
+      display: none;
     }
     :root:not([data-theme="classic"]) .topbar-stat-group {
       gap: 20px;
@@ -1015,18 +1012,6 @@
     }
     :root:not([data-theme="classic"]) .topbar-stat-lbl {
       font-size: 9px;
-    }
-    /* Hide page title on mobile -- page heading already visible below */
-    :root:not([data-theme="classic"]) .topbar-title {
-      display: none;
-    }
-    /* Move topbar-right buttons to hamburger row */
-    :root:not([data-theme="classic"]) .topbar-right {
-      order: 2;
-      position: static;
-    }
-    :root:not([data-theme="classic"]) .sidebar-topbar > div:first-child {
-      justify-content: space-between;
     }
   }
 
@@ -1684,33 +1669,23 @@
   </div>
   <div class="main-content">
     <div class="sidebar-topbar" style="position:relative;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <button class="sidebar-hamburger" id="hamburgerBtn" onclick="toggleDrawer()">☰</button>
-        <div class="topbar-title" id="topbarTitle">Scan Card</div>
-      </div>
-      <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;">
+      <div class="topbar-stats-row" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;">
         <div class="topbar-stat-group">
-          <div class="topbar-stat">
-            <div class="topbar-stat-val" id="sbStatTotal">0</div>
-            <div class="topbar-stat-lbl">Cards</div>
-          </div>
-          <div class="topbar-stat">
-            <div class="topbar-stat-val" id="sbStatValue">$0</div>
-            <div class="topbar-stat-lbl">Est. Value</div>
-          </div>
-          <div class="topbar-stat">
-            <div class="topbar-stat-val" id="sbStatSold" style="color:var(--green);">$0</div>
-            <div class="topbar-stat-lbl">Sold</div>
-          </div>
-          <div class="topbar-stat">
-            <div class="topbar-stat-val" id="sbStatVsEst" style="color:var(--gold);">—</div>
-            <div class="topbar-stat-lbl">Vs Est.</div>
-          </div>
+          <div class="topbar-stat"><div class="topbar-stat-val" id="sbStatTotal">0</div><div class="topbar-stat-lbl">Cards</div></div>
+          <div class="topbar-stat"><div class="topbar-stat-val" id="sbStatValue">$0</div><div class="topbar-stat-lbl">Est. Value</div></div>
+          <div class="topbar-stat"><div class="topbar-stat-val" id="sbStatSold" style="color:var(--green);">$0</div><div class="topbar-stat-lbl">Sold</div></div>
+          <div class="topbar-stat"><div class="topbar-stat-val" id="sbStatVsEst" style="color:var(--gold);">—</div><div class="topbar-stat-lbl">Vs Est.</div></div>
         </div>
       </div>
-      <div class="topbar-right">
-        <button class="topbar-api-btn" onclick="openApiModal()">⚙ Keys</button>
-        <button class="topbar-account-btn" id="sbAccountBtn" onclick="openAuthModal()">👤 Sign In</button>
+      <div class="topbar-nav-row" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="sidebar-hamburger" id="hamburgerBtn" onclick="toggleDrawer()">☰</button>
+          <div class="topbar-title" id="topbarTitle">Scan Card</div>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-api-btn" onclick="openApiModal()">⚙ Keys</button>
+          <button class="topbar-account-btn" id="sbAccountBtn" onclick="openAuthModal()">👤 Sign In</button>
+        </div>
       </div>
     </div>
 
