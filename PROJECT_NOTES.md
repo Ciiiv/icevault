@@ -107,6 +107,10 @@ icevault-worker\            # NOT a git repo
 - **Mobile topbar two-row layout** — on mobile (max-width: 767px) topbar switches to two rows: stats centered on top row, hamburger + Keys + account on bottom row. Title hidden on mobile (page heading already visible). Desktop unchanged. Uses .topbar-stats-row and .topbar-nav-row classes. Works across all themes
 - **eBay description model picker** — Claude/GPT-4o/Gemini picker added to single eBay tab Generate AI Description button. _ebayDescModel state. Duplicate eBay API key fields removed from single tab -- link to Settings instead
 - **eBay Queue + bulk listing** — "eBay Queue" collection type added to all dropdowns and filter toolbar. eBay tab has two modes: Queue (batch) and Pick a Card (single). Queue panel shows all queued cards with editable title/price, AI description generator with Claude/GPT-4o/Gemini model picker, Submit and Remove per card. Shared settings panel: duration and shipping. Submit All lists all in sequence with progress indicator. After listing card auto-moves to For Sale. Single tab cleaned up -- eBay API key fields removed, link to ⚙ Settings instead. AI description model picker added to single tab too
+- **D1 SQL columns** — added grade_overall, estimated_value, added_at_ts, icevault_id columns to cards table. Grade/value/date filters and sorts now run in SQL (accurate COUNT, correct pagination). icevault_id auto-increments per user on first insert, never updated on subsequent saves. Displayed as ICV-000001 in card modal. Included in CSV export as first column
+- **Accurate pagination** — grade/value/date filters previously applied in JS after fetch, causing wrong COUNT and misleading page numbers. Now all filtering done in SQL WHERE clause -- COUNT(*) is always accurate
+- **Showing X results** — results count shown above card grid at all times. Updates on filter/search. Shows in both guest mode (_renderFilteredLocal) and signed-in mode (renderPaginationBar)
+- **Card notes privacy** — notes field is never rendered in the shared collection view. Shared view template only shows player/year/brand/grade/image fields. Verified notes do not appear on shared URLs
 - **Mobile re-grade/re-scan fix** — direct R2 fetch via browser fetch() fails on mobile Chrome (CORS/security policy). Fixed by adding /image-proxy worker endpoint that fetches R2 server-side and returns base64. fetchImageAsBase64() helper tries proxy first (signed-in), falls back to direct fetch (desktop/guest). Rate limited at 200/hr
 - **Grade saved to correct model slot at scan** — initial scan now saves grade to card.grades[_scanModel] in addition to card.grade. Previously all scan grades appeared in Claude tab regardless of selected model
 - **Bulk operations** — Select mode toggle in collection toolbar. Checkboxes appear on cards. Select All / Clear. Bulk Move to collection, Delete (with confirm), Export selected as CSV. Selection state tracked in Set(). Works in guest and signed-in mode
@@ -219,6 +223,10 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 CREATE TABLE IF NOT EXISTS cards (
   id TEXT NOT NULL, user_id TEXT NOT NULL,
   card_data TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT,
+  grade_overall REAL,        -- for SQL filtering/sorting
+  estimated_value REAL,      -- for SQL filtering/sorting
+  added_at_ts INTEGER,       -- timestamp ms for date filtering
+  icevault_id INTEGER,       -- sequential per-user ID (ICV-000001)
   PRIMARY KEY (id, user_id)
 );
 CREATE TABLE IF NOT EXISTS share_tokens (
@@ -364,6 +372,9 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | OpenAI API pricing | No free tier. Paid balance required. GPT-4o costs ~$0.01-0.03 per card scan. Real pricing at platform.openai.com -- Ice Vault cost estimates are approximations only. Recommend turning off auto-recharge and setting a spend limit |
 | Gemini API pricing | Free tier: ~20 requests/day (as of Dec 2025, was 250+). Front+back scan = 1 request. Good for light use. Paid tier very cheap: $0.30/million input tokens -- a card scan costs fractions of a cent. Real pricing at aistudio.google.com -- Ice Vault cost estimates are approximations only |
 | Multi-AI CORS | Added x-openai-key, x-gemini-key, x-ximilar-key to worker CORS Access-Control-Allow-Headers. Required for preflight to pass on custom API key headers |
+| D1 SQL columns for filtering | grade_overall REAL, estimated_value REAL, added_at_ts INTEGER, icevault_id INTEGER added to cards table. Populated on every upsert. icevault_id uses MAX(icevault_id)+1 per user, only set on first insert. SELECT now includes icevault_id alongside card_data. Worker attaches icevault_id to card object from SQL column if not already in JSON blob |
+| Pagination accuracy | COUNT(*) uses same WHERE clause as fetch -- grade/value/date filters in SQL mean COUNT is always the true filtered count. Previously COUNT was unfiltered total causing wrong page numbers |
+| Card notes not in shared view | Shared view renders from a separate template that only outputs specific fields. notes field is never included. No server-side scrubbing needed -- template simply omits it |
 | Mobile topbar two-row | topbar-stats-row div gets position:static + order:1 on mobile, topbar-nav-row gets order:2. .topbar-title hidden via display:none. Stats row gets border-bottom separator. Desktop keeps position:absolute centered layout unchanged |
 | eBay Queue collection | EbayQueue stored as c.collection value. Filtered from shared URL same as Private. Queue panel in eBay tab filters collection===EbayQueue&&!listedOnEbay&&!sold. Submit moves card to For Sale and sets listedOnEbay:true. Remove moves back to Personal |
 | eBay description model picker | _ebayDescModel state for single tab, _queueDescModels[id] per-card state for queue tab. Both fall back to first available key if selected model key not set |
@@ -513,7 +524,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** eBay OAuth token setup and listing test when dev keys arrive.
+> **Next priorities:** eBay listing test when dev keys arrive, duplicate card detection (future).
 > Ximilar grading API. eBay affiliate links, bulk listing, photography tips (all low).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
