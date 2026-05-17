@@ -1668,71 +1668,89 @@ async function exportStatsPDF() {
     doc.text('Ice Vault - AI estimates only, not official grades',margin,H-6);
     doc.text('Page 1',W-margin,H-6,{align:'right'});
 
-    // Per-card pages
+    // Per-card pages -- warn and chunk at 250
+    const CHUNK=250;
+    const totalCards=collection.length;
+    const numFiles=Math.ceil(totalCards/CHUNK);
+    if(totalCards>CHUNK){
+      if(!confirm(`Your collection has ${totalCards} cards. This will create ${numFiles} PDF files of up to ${CHUNK} cards each. Each file is complete on its own \u2014 combine them externally if desired. A free tool like ilovepdf.com might work or your own methods. Continue?`)){
+        if(btn){btn.innerHTML='&#x2B07; PDF';btn.disabled=false;}
+        return;
+      }
+    }
     const cols=3,cardW=(W-margin*2-8)/3,cardH=68;
     const startX=margin,startY=22,cardsPerPage=9;
-    for(let ci=0;ci<collection.length;ci++){
+    for(let chunkIdx=0;chunkIdx<numFiles;chunkIdx++){
+      const chunkStart=chunkIdx*CHUNK;
+      const chunkEnd=Math.min(chunkStart+CHUNK,totalCards);
+      const chunkCards=collection.slice(chunkStart,chunkEnd);
+      const cdoc=chunkIdx===0?doc:new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    for(let ci=0;ci<chunkCards.length;ci++){
       if(ci%cardsPerPage===0){
-        doc.addPage();
-        doc.setFillColor(...teal); doc.rect(0,0,W,14,'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
-        doc.text('Ice Vault -- Card Collection',margin,9);
-        doc.setFont('helvetica','normal'); doc.setFontSize(7);
-        doc.text('Page '+(Math.floor(ci/cardsPerPage)+2),W-margin,9,{align:'right'});
+        if(ci>0||chunkIdx>0) cdoc.addPage();
+        cdoc.setFillColor(...teal); cdoc.rect(0,0,W,14,'F');
+        cdoc.setFont('helvetica','bold'); cdoc.setFontSize(10); cdoc.setTextColor(255,255,255);
+        cdoc.text('Ice Vault -- Card Collection',margin,9);
+        cdoc.setFont('helvetica','normal'); cdoc.setFontSize(7);
+        const pageLabel='Page '+(chunkIdx===0?Math.floor(ci/cardsPerPage)+2:Math.floor(ci/cardsPerPage)+1);
+        const rangeLabel='Cards '+(chunkStart+ci+1)+'-'+Math.min(chunkStart+ci+cardsPerPage,chunkEnd);
+        cdoc.text(pageLabel+' \u00b7 '+rangeLabel,W-margin,9,{align:'right'});
       }
-      const c=collection[ci];
+      const c=chunkCards[ci];
       const col=ci%cols,row=Math.floor((ci%cardsPerPage)/cols);
       const x=startX+col*(cardW+4),y=startY+row*(cardH+4);
-      doc.setFillColor(...light); doc.roundedRect(x,y,cardW,cardH,2,2,'F');
+      cdoc.setFillColor(...light); cdoc.roundedRect(x,y,cardW,cardH,2,2,'F');
       const thumbW=22,thumbH=28;
-      doc.setFillColor(220,228,240); doc.roundedRect(x+3,y+3,thumbW,thumbH,1,1,'F');
+      cdoc.setFillColor(220,228,240); cdoc.roundedRect(x+3,y+3,thumbW,thumbH,1,1,'F');
       if(c.imageUrl){
         try{
           const img=await loadImageAsBase64(c.imageUrl);
-          doc.addImage(img,'JPEG',x+3,y+3,thumbW,thumbH);
+          cdoc.addImage(img,'JPEG',x+3,y+3,thumbW,thumbH);
         }catch(e){}
       }
       const tx=x+thumbW+6;
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...navy);
-      doc.text(c.player.substring(0,22),tx,y+7);
-      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...muted);
-      doc.text(((c.year||'')+' '+(c.brand||'')).substring(0,24).trim(),tx,y+11);
+      cdoc.setFont('helvetica','bold'); cdoc.setFontSize(7.5); cdoc.setTextColor(...navy);
+      cdoc.text(c.player.substring(0,22),tx,y+7);
+      cdoc.setFont('helvetica','normal'); cdoc.setFontSize(6.5); cdoc.setTextColor(...muted);
+      cdoc.text(((c.year||'')+' '+(c.brand||'')).substring(0,24).trim(),tx,y+11);
       const colHalf=(cardW-thumbW-12)/2;
       const stats=[['Est. Value',c.estimatedValue?'$'+c.estimatedValue:'--'],['Grade',c.grade?(c.aiGraded?'AI ':'')+c.grade.overall:'--'],['Parallel',(c.parallel||'Base').substring(0,10)],['Serial #',(c.serialNumber||'--').substring(0,8)]];
       stats.forEach(([label,val],si)=>{
         const sx=tx+(si%2)*colHalf,sy=y+16+(Math.floor(si/2)*8);
-        doc.setFontSize(6); doc.setTextColor(...muted); doc.text(label,sx,sy);
-        doc.setFontSize(6.5); doc.setTextColor(...navy); doc.setFont('helvetica','bold');
-        doc.text(val,sx,sy+4,{maxWidth:colHalf-2});
-        doc.setFont('helvetica','normal');
+        cdoc.setFontSize(6); cdoc.setTextColor(...muted); cdoc.text(label,sx,sy);
+        cdoc.setFontSize(6.5); cdoc.setTextColor(...navy); cdoc.setFont('helvetica','bold');
+        cdoc.text(val,sx,sy+4,{maxWidth:colHalf-2});
+        cdoc.setFont('helvetica','normal');
       });
       if(c.sold){
-        doc.setFillColor(...green); doc.roundedRect(tx,y+33,cardW-thumbW-12,5,1,1,'F');
-        doc.setFontSize(5.5); doc.setTextColor(255,255,255);
-        doc.text('Sold $'+c.soldPrice+' - '+(c.soldAt?new Date(c.soldAt).toLocaleDateString():'--'),tx+2,y+36.5);
+        cdoc.setFillColor(...green); cdoc.roundedRect(tx,y+33,cardW-thumbW-12,5,1,1,'F');
+        cdoc.setFontSize(5.5); cdoc.setTextColor(255,255,255);
+        cdoc.text('Sold $'+c.soldPrice+' - '+(c.soldAt?new Date(c.soldAt).toLocaleDateString():'--'),tx+2,y+36.5);
       }
       const history=c.valueHistory||(c.estimatedValue?[{value:c.estimatedValue}]:[]);
       if(history.length>0){
         const barAreaX=x+3,barAreaY=y+34,barAreaW=cardW-6,barAreaH=12;
-        doc.setFontSize(5.5); doc.setTextColor(...muted); doc.text('VALUE HISTORY',barAreaX,barAreaY);
+        cdoc.setFontSize(5.5); cdoc.setTextColor(...muted); cdoc.text('VALUE HISTORY',barAreaX,barAreaY);
         const maxV=Math.max(...history.map(h=>parseFloat(h.value)||0),1);
         const barW2=Math.min(8,(barAreaW-4)/history.length);
         history.forEach((h,hi)=>{
           const bh=Math.max(1,((parseFloat(h.value)||0)/maxV)*(barAreaH-4));
           const bx=barAreaX+2+hi*(barW2+1),by=barAreaY+barAreaH-bh;
           const isSold=c.sold&&hi===history.length-1;
-          doc.setFillColor(...(isSold?green:teal)); doc.rect(bx,by,Math.max(1.5,barW2-0.5),bh,'F');
+          cdoc.setFillColor(...(isSold?green:teal)); cdoc.rect(bx,by,Math.max(1.5,barW2-0.5),bh,'F');
         });
-        doc.setFontSize(5); doc.setTextColor(...muted);
-        doc.text('$'+history[0].value,barAreaX+2,barAreaY+barAreaH+3);
-        if(history.length>1) doc.text('$'+history[history.length-1].value,barAreaX+barAreaW-8,barAreaY+barAreaH+3);
+        cdoc.setFontSize(5); cdoc.setTextColor(...muted);
+        cdoc.text('$'+history[0].value,barAreaX+2,barAreaY+barAreaH+3);
+        if(history.length>1) cdoc.text('$'+history[history.length-1].value,barAreaX+barAreaW-8,barAreaY+barAreaH+3);
       }
-    }
-    doc.setFontSize(7); doc.setTextColor(...muted);
-    doc.text('Ice Vault - AI estimates only, not official grades',margin,H-6);
-    const date=new Date().toISOString().split('T')[0];
-    doc.save('icevault-stats-'+date+'.pdf');
-    showToast('PDF exported!', 'success');
+    } // end card loop
+      cdoc.setFontSize(7); cdoc.setTextColor(...muted);
+      cdoc.text('Ice Vault - AI estimates only, not official grades',margin,H-6);
+      const date=new Date().toISOString().split('T')[0];
+      const suffix=numFiles>1?'-cards-'+(chunkStart+1)+'-'+chunkEnd:'-stats';
+      cdoc.save('icevault'+suffix+'-'+date+'.pdf');
+    } // end chunk loop
+    showToast(numFiles>1?numFiles+' PDFs exported!':'PDF exported!', 'success');
   } catch(e) {
     console.error('PDF export error:',e);
     showToast('PDF export failed: '+e.message, 'error');
