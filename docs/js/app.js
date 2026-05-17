@@ -275,7 +275,14 @@ async function saveCard(){
     valueHistory: estimatedValueAtScan ? [{ value: estimatedValueAtScan, date: new Date().toISOString(), source: 'scan' }] : []
   };
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
-  if(currentUser)syncCardToCloud(card);
+  if(currentUser){
+    syncCardToCloud(card).then(res=>{
+      if(res&&res.ok){
+        card.iceVaultId=res.ok;
+        localStorage.setItem('iceVault_cards',JSON.stringify(collection));
+      }
+    });
+  }
   updateHeaderStats();showToast(`"${player}" saved to collection!`,'success');
   document.getElementById('previewBox').innerHTML='<div class="preview-placeholder"><div style="font-size:32px;">🏒</div></div>';
   document.getElementById('analyzeBtn').disabled=true;document.getElementById('clearBtn').classList.remove('visible');
@@ -309,6 +316,9 @@ function renderGridFromCollection(){
 
 function renderPaginationBar(){
   const bar=document.getElementById('paginationBar');
+  // Always update results count
+  const rc=document.getElementById('resultsCount');
+  if(rc)rc.textContent=totalCards===1?'Showing 1 result':'Showing '+totalCards+' results';
   if(!isServerPaginated||totalPages<=1){bar.style.display='none';return;}
   bar.style.display='flex';
   const pages=[];
@@ -417,7 +427,7 @@ function bulkDelete() {
 function bulkExport() {
   if (selectedCardIds.size === 0) { showToast('Select cards first', 'error'); return; }
   const selected = collection.filter(c => selectedCardIds.has(c.id));
-  const headers = ['Player','Year','Brand','Card Number','Team','Parallel','Serial Number','Estimated Value','Collection','Tags','AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale','Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes'];
+  const headers = ['IceVault ID','Player','Year','Brand','Card Number','Team','Parallel','Serial Number','Estimated Value','Collection','Tags','AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale','Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes'];
   const esc = v => { if(v===null||v===undefined)return''; const s=String(v); if(s.includes(',')||s.includes('"')||s.includes('\n'))return'"'+s.replace(/"/g,'""')+'"'; return s; };
   const rows = selected.map(c => [c.player,c.year,c.brand,c.cardNumber,c.team,c.parallel,c.serialNumber||'',c.estimatedValue,c.collection,(c.tags||[]).join('; '),c.aiGraded?'Yes':'No',c.grade?.overall||'',c.grade?.centering||'',c.grade?.corners||'',c.grade?.edges||'',c.grade?.surface||'',c.grade?.rationale||'',c.certNumber||'',c.certGrader||'',c.officialGrade||'',c.listedOnEbay?'Yes':'No',c.addedAt?new Date(c.addedAt).toLocaleDateString():'',c.notes||''].map(esc).join(','));
   const csv = [headers.join(','), ...rows].join('\n');
@@ -539,6 +549,8 @@ function _renderFilteredLocal(){
       </div>
     </div>`).join('');
   document.getElementById('paginationBar').style.display='none';
+  const rcEl=document.getElementById('resultsCount');
+  if(rcEl)rcEl.textContent=filtered.length===1?'Showing 1 result':'Showing '+filtered.length+' results';
 }
 
 function gradeClass(g){const n=parseFloat(g);if(n>=9)return'9';if(n>=7)return'7';if(n>=5)return'5';return'low';}
@@ -626,6 +638,7 @@ function openCardDetail(id){
   <div class="detail-row"><span class="detail-key">Serial #</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'serialNumber',this)" ${c.serialNumber?'style="color:var(--gold);font-weight:600;"':''}>${c.serialNumber||'—'}<span class="edit-hint">✎</span></span></div>
   <div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'estimatedValue',this)">${c.estimatedValue?'$'+c.estimatedValue:'—'}<span class="edit-hint">✎</span></span></div>
   <div id="editSaveHint_${c.id}" class="edit-save-hint">↵ Enter or click away to save &nbsp;·&nbsp; Esc to cancel</div>
+  ${c.iceVaultId ? '<div class="detail-row"><span class="detail-key">IceVault ID</span><span class="detail-val" style="font-family:monospace;color:var(--ice-dark);font-size:12px;">ICV-'+String(c.iceVaultId).padStart(6,'0')+'</span></div>' : ''}
   <div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div>
   <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
   ${notesHtml}${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
@@ -2298,13 +2311,14 @@ async function syncCollectionToCloud(){
 }
 
 async function syncCardToCloud(card){
-  // Single card upsert — used for all individual card saves/edits
-  const t=getAuthToken();if(!t||!currentUser||!card)return;
+  // Single card upsert -- used for all individual card saves/edits
+  const t=getAuthToken();if(!t||!currentUser||!card)return null;
   try{
-    await fetch(WORKER_URL+'/collection/'+card.id,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({card})});
+    const r=await fetch(WORKER_URL+'/collection/'+card.id,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({card})});
     localStorage.setItem('iceVault_lastSync', new Date().toISOString());
+    return await r.json();
   }
-  catch(e){console.warn('Card sync failed:',e);}
+  catch(e){console.warn('Card sync failed:',e);return null;}
 }
 
 async function deleteCardFromCloud(cardId){
@@ -2560,7 +2574,8 @@ function exportCSV() {
     c.certNumber || '', c.certGrader || '', c.officialGrade || '',
     c.listedOnEbay ? 'Yes' : 'No',
     c.addedAt ? new Date(c.addedAt).toLocaleDateString() : '',
-    c.notes || ''
+    c.notes || '',
+    c.iceVaultId ? 'ICV-'+String(c.iceVaultId).padStart(6,'0') : ''
   ].map(esc).join(','));
   const csv = [headers.join(','), ...rows].join('\n');
   const date = new Date().toISOString().split('T')[0];
