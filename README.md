@@ -47,6 +47,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **eBay Queue** -- move cards to the eBay Queue collection to batch list them. Queue panel in the eBay tab shows all queued cards with editable titles, prices, AI-generated descriptions (Claude/GPT-4o/Gemini), and per-card Submit. Submit All lists everything in sequence. Cards auto-move to For Sale after listing
 - **Bulk operations** -- Select mode in collection toolbar. Check multiple cards, then Move to collection, Delete, or Export selected as CSV. Select All / Clear included
 - **Card notes** -- free text notes per card (condition, purchase info, storage). Click to edit in card detail, searchable, included in CSV export
+- **PDF export** -- exports collection stats and per-card grid as PDF. Collections over 250 cards split into separate files automatically, each with page numbers and card range labels. Combine externally if needed
 - **IceVault ID** -- every card gets a unique sequential ID (ICV-000001) assigned on first scan. Shown in card modal and included in CSV export. Foundation for future duplicate detection
 - **Advanced filters** -- filter collection by grade range, value range, and date added. Combines with existing search, collection, and status filters
 - **Photography tips** -- tap "Photo tips" near the upload zone for lighting, background, focus, and framing guidance. Separate "Slab tips" variant for graded card scans
