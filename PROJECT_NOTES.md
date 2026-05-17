@@ -25,7 +25,7 @@
 | Email | Maileroo | 3,000/mo free. From: `noreply@af4c1dd0a43e50da.maileroo.org` |
 | AI | Anthropic Claude (`claude-opus-4-5`), OpenAI GPT-4o, Google Gemini 2.5 Flash, Ximilar Card Grader v2 | card OCR, grading, eBay descriptions |
 | Android app | PWABuilder | TWA wrapper — sideloaded APK |
-| Worker deployment | Wrangler CLI | `C:\Users\civ2g\icevault-worker` |
+| Worker deployment | Wrangler CLI | `C:\Users\civ2g\icevault-worker` -- requires Node.js (v18+) and npm. Install: `npm install -g wrangler`. Authenticate: `wrangler login`. Deploy: `wrangler deploy` from worker directory |
 
 ---
 
