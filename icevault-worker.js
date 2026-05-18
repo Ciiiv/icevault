@@ -162,7 +162,7 @@ function getCORS(origin) {
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, x-api-key, anthropic-version, Authorization, x-openai-key, x-gemini-key, x-ximilar-key',
+    'Access-Control-Allow-Headers': 'Content-Type, x-api-key, anthropic-version, Authorization, x-openai-key, x-gemini-key, x-ximilar-key, x-ebay-call-name',
     'Vary': 'Origin',
   };
 }
@@ -347,6 +347,30 @@ export default {
 
     // Probabilistic 7-day log purge — runs ~2% of requests
     maybePurgeLogs(db);
+
+    // ─── EBAY SOAP PROXY ────────────────────────────────────────────────
+    if (path === '/proxy/ebay' && request.method === 'POST') {
+      const rl = await checkRateLimit(kv, '/proxy', ip);
+      if (rl.limited) return rateLimited(rl.message, rl.retryAfter, cors);
+      try {
+        const body = await request.text();
+        const callName = request.headers.get('x-ebay-call-name') || 'AddItem';
+        const r = await fetch('https://api.ebay.com/ws/api.dll', {
+          method: 'POST',
+          headers: {
+            'X-EBAY-API-SITEID': '0',
+            'X-EBAY-API-COMPATIBILITY-LEVEL': '967',
+            'X-EBAY-API-CALL-NAME': callName,
+            'Content-Type': 'text/xml'
+          },
+          body
+        });
+        const text = await r.text();
+        return new Response(text, { status: r.status, headers: { 'Content-Type': 'text/xml', ...cors } });
+      } catch (e) {
+        return err('eBay proxy error: ' + e.message, 500, cors);
+      }
+    }
 
     // ─── OPENAI PROXY ─────────────────────────────────────────────────────
     // ─── IMAGE PROXY (R2 → base64, mobile re-grade/re-scan fix) ───────────────
@@ -842,10 +866,20 @@ export default {
         const cardJson = JSON.stringify(card);
         if (cardJson.length > LIMITS.cardDataSize) return err('Card data too large', 400, cors);
         const now = new Date().toISOString();
+        const gradeOverall = parseFloat(card.grade?.overall) || null;
+        const estValue = parseFloat(card.estimatedValue) || null;
+        const addedAtTs = card.addedAt ? new Date(card.addedAt).getTime() : Date.now();
+        // Assign icevault_id on first insert only
+        const existingCard = await db.prepare('SELECT icevault_id FROM cards WHERE id = ? AND user_id = ?').bind(cardId.toString(), user.id).first();
+        let iceVaultId = existingCard?.icevault_id || null;
+        if (!iceVaultId) {
+          const maxId = await db.prepare('SELECT MAX(icevault_id) as maxId FROM cards WHERE user_id = ?').bind(user.id).first();
+          iceVaultId = (maxId?.maxId || 0) + 1;
+        }
         await db.prepare(
-          'INSERT INTO cards (id, user_id, card_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id, user_id) DO UPDATE SET card_data = excluded.card_data, updated_at = excluded.updated_at'
-        ).bind(cardId.toString(), user.id, cardJson, card.addedAt || now, now).run();
-        return json({ ok: true }, 200, cors);
+          'INSERT INTO cards (id, user_id, card_data, created_at, updated_at, grade_overall, estimated_value, added_at_ts, icevault_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id, user_id) DO UPDATE SET card_data = excluded.card_data, updated_at = excluded.updated_at, grade_overall = excluded.grade_overall, estimated_value = excluded.estimated_value, added_at_ts = excluded.added_at_ts'
+        ).bind(cardId.toString(), user.id, cardJson, card.addedAt || now, now, gradeOverall, estValue, addedAtTs, iceVaultId).run();
+        return json({ ok: iceVaultId }, 200, cors);
       } catch (e) {
         return err(e.message, 500, cors);
       }
@@ -893,13 +927,38 @@ export default {
           binds.push('%"sold":true%', '%"sold":false%');
         }
 
-        // Sort order
+        // Grade filter -- SQL column
+        if (gradeFilter) {
+          if (gradeFilter === '9') { where += ' AND grade_overall >= ?'; binds.push(9); }
+          else if (gradeFilter === '8') { where += ' AND grade_overall >= ?'; binds.push(8); }
+          else if (gradeFilter === '7') { where += ' AND grade_overall >= ?'; binds.push(7); }
+          else if (gradeFilter === 'sub7') { where += ' AND grade_overall > ? AND grade_overall < ?'; binds.push(0, 7); }
+        }
+        // Value filter -- SQL column
+        if (valueFilter) {
+          if (valueFilter === '0-25') { where += ' AND estimated_value < ?'; binds.push(25); }
+          else if (valueFilter === '25-100') { where += ' AND estimated_value >= ? AND estimated_value < ?'; binds.push(25, 100); }
+          else if (valueFilter === '100-500') { where += ' AND estimated_value >= ? AND estimated_value < ?'; binds.push(100, 500); }
+          else if (valueFilter === '500+') { where += ' AND estimated_value >= ?'; binds.push(500); }
+        }
+        // Date filter -- SQL column
+        if (dateFilter) {
+          const days = parseInt(dateFilter);
+          const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+          where += ' AND added_at_ts >= ?';
+          binds.push(cutoff);
+        }
+        // Sort order -- SQL columns for grade/value sorts
         const orderMap = {
-          'date-desc': 'created_at DESC',
-          'date-asc': 'created_at ASC',
+          'date-desc': 'added_at_ts DESC',
+          'date-asc': 'added_at_ts ASC',
           'updated-desc': 'COALESCE(updated_at, created_at) DESC',
+          'grade-desc': 'grade_overall DESC NULLS LAST',
+          'grade-asc': 'grade_overall ASC NULLS LAST',
+          'value-desc': 'estimated_value DESC NULLS LAST',
+          'value-asc': 'estimated_value ASC NULLS LAST',
         };
-        const orderBy = orderMap[sort] || 'created_at DESC';
+        const orderBy = orderMap[sort] || 'added_at_ts DESC';
 
         // Count total matching
         const countResult = await db.prepare(
@@ -910,45 +969,11 @@ export default {
 
         // Fetch page
         const cards = await db.prepare(
-          `SELECT card_data FROM cards WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+          `SELECT card_data, icevault_id FROM cards WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
         ).bind(...binds, limit, offset).all();
 
-        let collection = cards.results.map(r => JSON.parse(r.card_data));
+        const collection = cards.results.map(r => { const c = JSON.parse(r.card_data); if (r.icevault_id && !c.iceVaultId) c.iceVaultId = r.icevault_id; return c; });
 
-        // Apply grade/value/date filters (stored in JSON blob, can't SQL filter)
-        if (gradeFilter) {
-          collection = collection.filter(c => {
-            const g = parseFloat(c.grade?.overall) || 0;
-            if (gradeFilter === '9') return g >= 9;
-            if (gradeFilter === '8') return g >= 8;
-            if (gradeFilter === '7') return g >= 7;
-            if (gradeFilter === 'sub7') return g > 0 && g < 7;
-            return true;
-          });
-        }
-        if (valueFilter) {
-          collection = collection.filter(c => {
-            const v = parseFloat(c.estimatedValue) || 0;
-            if (valueFilter === '0-25') return v < 25;
-            if (valueFilter === '25-100') return v >= 25 && v < 100;
-            if (valueFilter === '100-500') return v >= 100 && v < 500;
-            if (valueFilter === '500+') return v >= 500;
-            return true;
-          });
-        }
-        if (dateFilter) {
-          const days = parseInt(dateFilter);
-          const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-          collection = collection.filter(c => new Date(c.addedAt).getTime() >= cutoff);
-        }
-
-        // Apply sorts that can't be done in SQL (player, value, grade)
-        if (sort === 'player-asc') collection.sort((a,b) => (a.player||'').localeCompare(b.player||''));
-        else if (sort === 'player-desc') collection.sort((a,b) => (b.player||'').localeCompare(a.player||''));
-        else if (sort === 'value-desc') collection.sort((a,b) => (parseFloat(b.estimatedValue)||0)-(parseFloat(a.estimatedValue)||0));
-        else if (sort === 'value-asc') collection.sort((a,b) => (parseFloat(a.estimatedValue)||0)-(parseFloat(b.estimatedValue)||0));
-        else if (sort === 'grade-desc') collection.sort((a,b) => (parseFloat(b.grade?.overall)||0)-(parseFloat(a.grade?.overall)||0));
-        else if (sort === 'grade-asc') collection.sort((a,b) => (parseFloat(a.grade?.overall)||0)-(parseFloat(b.grade?.overall)||0));
 
         return json({ collection, total, page, pages, limit }, 200, cors);
       } catch (e) {
