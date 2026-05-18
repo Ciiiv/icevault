@@ -1384,9 +1384,9 @@ async function ebayQueueSubmitOne(id) {
   const shipping = document.getElementById('queueShipping')?.value || 'USPS First Class (Top Loader)';
   const shippingService = shipping.includes('Ground')?'USPSParcel':'USPSFirstClass';
   const binXml = bin ? '<BuyItNowPrice>'+bin+'</BuyItNowPrice>' : '';
-  const xml = '<?xml version="1.0" encoding="utf-8"?><AddItemRequest xmlns="urn:ebay:apis:eBLBaseComponents"><RequesterCredentials><eBayAuthToken>'+token+'</eBayAuthToken></RequesterCredentials><Item><Title>'+title+'</Title><Description><![CDATA['+desc+']]></Description><PrimaryCategory><CategoryID>214</CategoryID></PrimaryCategory><StartPrice>'+price+'</StartPrice>'+binXml+'<Country>US</Country><Currency>USD</Currency><DispatchTimeMax>3</DispatchTimeMax><ListingDuration>'+days+'</ListingDuration><ListingType>Auction</ListingType><Quantity>1</Quantity><ReturnPolicy><ReturnsAcceptedOption>ReturnsNotAccepted</ReturnsAcceptedOption></ReturnPolicy><ShippingDetails><ShippingType>Flat</ShippingType><ShippingServiceOptions><ShippingService>'+shippingService+'</ShippingService><ShippingServiceCost>1.00</ShippingServiceCost></ShippingServiceOptions></ShippingDetails><Site>US</Site></Item></AddItemRequest>';
+  const xml = '<?xml version="1.0" encoding="utf-8"?><AddItemRequest xmlns="urn:ebay:apis:eBLBaseComponents"><RequesterCredentials><eBayAuthToken>'+token+'</eBayAuthToken></RequesterCredentials><Item><Title>'+title+'</Title><Description><![CDATA['+desc+']]></Description><PrimaryCategory><CategoryID>261328</CategoryID></PrimaryCategory><StartPrice>'+price+'</StartPrice>'+binXml+'<ConditionID>'+(document.getElementById('queueCondition')?.value||'3000')+'</ConditionID>'+'<ItemSpecifics><NameValueList><Name>Sport</Name><Value>Hockey</Value></NameValueList>'+'<NameValueList><Name>Player</Name><Value>'+c.player+'</Value></NameValueList>'+'<NameValueList><Name>Season</Name><Value>'+(c.year||'Unknown')+'</Value></NameValueList></ItemSpecifics>'+(c.imageUrl?'<PictureDetails><PictureURL>'+c.imageUrl+'</PictureURL></PictureDetails>':'')+'<Country>US</Country><Currency>USD</Currency><Location>'+(document.getElementById('queueLocation')?.value||'United States')+'</Location><DispatchTimeMax>3</DispatchTimeMax><ListingDuration>'+days+'</ListingDuration><ListingType>'+(document.getElementById('queueListingType')?.value||'FixedPriceItem')+'</ListingType>'+(document.getElementById('queueBestOffer')?.checked?'<BestOfferDetails><BestOfferEnabled>true</BestOfferEnabled></BestOfferDetails>':'')+'<Quantity>1</Quantity><ReturnPolicy><ReturnsAcceptedOption>ReturnsNotAccepted</ReturnsAcceptedOption></ReturnPolicy><ShippingDetails><ShippingType>Flat</ShippingType><ShippingServiceOptions><ShippingService>'+shippingService+'</ShippingService><ShippingServiceCost>1.00</ShippingServiceCost></ShippingServiceOptions></ShippingDetails><Site>US</Site></Item></AddItemRequest>';
   try {
-    const r = await fetch('https://api.ebay.com/ws/api.dll', { method:'POST', headers:{'X-EBAY-API-SITEID':'0','X-EBAY-API-COMPATIBILITY-LEVEL':'967','X-EBAY-API-CALL-NAME':'AddItem','Content-Type':'text/xml'}, body: xml });
+    const r = await fetch(WORKER_URL + '/proxy/ebay', { method:'POST', headers:{'Content-Type':'text/xml','x-ebay-call-name':'AddItem'}, body: xml });
     const text = await r.text();
     if (text.includes('<Ack>Success</Ack>') || text.includes('<Ack>Warning</Ack>')) {
       const im = text.match(/<ItemID>(\d+)<\/ItemID>/);
@@ -1446,12 +1446,12 @@ function populateEbayForm(card){
   const t=`${card.player} ${card.year||''} ${card.brand||''} ${card.cardNumber?'#'+card.cardNumber:''} ${card.parallel&&card.parallel!=='Base'?card.parallel:''} ${card.serialNumber||''} ${officialGrade}`.trim().replace(/\s+/g,' ');
   document.getElementById('ebayTitle').value=t.substring(0,80);
   if(card.estimatedValue){document.getElementById('ebayPrice').value=(parseFloat(card.estimatedValue)*0.7).toFixed(2);document.getElementById('ebayBIN').value=card.estimatedValue;}
-  document.getElementById('ebayAppId').value=getKeys().ebayApp||'';
-  document.getElementById('ebayToken').value=getKeys().ebayToken?'••••':'';
+  // ebayAppId and ebayToken fields removed from UI -- keys managed in Settings
+  // const ebayAppIdEl=document.getElementById('ebayAppId'); if(ebayAppIdEl) ebayAppIdEl.value=getKeys().ebayApp||'';
   document.getElementById('ebayMarketResearch').style.display='block';
   document.getElementById('ebayResearchLink').href=ebaySearchUrl(card);
   const prev=document.getElementById('selectedCardPreview');
-  prev.innerHTML=`<h3 style="font-size:13px;font-weight:500;color:var(--ice-dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Selected Card</h3><div style="display:flex;gap:12px;align-items:center;">${(card.imageUrl||card.imageData)?`<img src="${card.imageUrl||card.imageData}" style="width:60px;height:80px;object-fit:cover;border-radius:6px;">`:`<div style="width:60px;height:80px;background:var(--rink);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏒</div>`}<div><div style="font-weight:600;font-size:15px;">${card.player}</div><div style="color:var(--text-muted);font-size:12px;">${card.year||''} · ${card.brand||''}</div>${card.grade?`<div style="margin-top:4px;"><span class="grade-badge grade-${gradeClass(card.grade.overall)}" style="font-size:11px;padding:2px 8px;">${gl} ${card.grade.overall}</span></div>`:''}</div></div>`;
+  prev.innerHTML=`<h3 style="font-size:13px;font-weight:500;color:var(--ice-dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Selected Card</h3><div style="display:flex;gap:12px;align-items:center;">${(card.imageUrl||card.imageData)?`<img src="${card.imageUrl||card.imageData}" style="width:60px;height:80px;object-fit:cover;border-radius:6px;">`:`<div style="width:60px;height:80px;background:var(--rink);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏒</div>`}<div><div style="font-weight:600;font-size:15px;">${card.player}</div><div style="color:var(--text-muted);font-size:12px;">${card.year||''} · ${card.brand||''}</div>${card.grade?`<div style="margin-top:4px;"><span class="grade-badge grade-${gradeClass(card.grade.overall)}" style="font-size:11px;padding:2px 8px;">${card.aiGraded?'AI Est.':card.certGrader||'PSA'} ${card.grade.overall}</span></div>`:''}</div></div>`;
   prev.style.display='block';
 }
 
@@ -1466,13 +1466,15 @@ function setEbayDescModel(model) {
 
 async function generateListingAI(){
   if(!selectedCardForEbay){showToast('Please select a card','error');return;}
+  const ebayDescBtnEl=document.getElementById('ebayDescBtn');
+  if(ebayDescBtnEl){ebayDescBtnEl.disabled=true;ebayDescBtnEl.innerHTML='<span class="spinner"></span> &nbsp; Generating...';}
   const keys=getKeys();
   const ebayDescKey = _ebayDescModel==='gpt4o'?keys.openai:_ebayDescModel==='gemini'?keys.gemini:keys.anthropic;
   const ebayDescLabel = _ebayDescModel==='gpt4o'?'OpenAI':_ebayDescModel==='gemini'?'Google AI':'Anthropic';
   if(!ebayDescKey){showToast('Add your '+ebayDescLabel+' API key in ⚙ Settings','error');return;}
   if(window._lastEbayData&&window._lastEbayData.description){document.getElementById('ebayDesc').value=window._lastEbayData.description;if(window._lastEbayData.title){const te=document.getElementById('ebayTitle');if(te&&!te.value)te.value=window._lastEbayData.title.substring(0,80);}showToast('eBay description loaded from scan!','success');window._lastEbayData=null;return;}
   const c=selectedCardForEbay;
-  const gt=c.grade?`Grade ${c.grade.overall}/10. C:${c.grade.centering} Co:${c.grade.corners} E:${c.grade.edges} S:${c.grade.surface}. ${c.grade.rationale}`:'Not graded';
+  const gt=c.grade&&!c.aiGraded?`${c.certGrader||'PSA'} ${c.grade.overall} (officially graded)`:'Ungraded raw card';
   try{
     const ebayDescPrompt=`Write a compelling eBay listing description for this hockey card.\n\nPlayer: ${c.player}\nYear: ${c.year||'Unknown'}\nBrand/Set: ${c.brand||'Unknown'}\nCard #: ${c.cardNumber||'N/A'}\nTeam: ${c.team||'Unknown'}\nParallel: ${c.parallel||'Base'}\nCondition: ${gt}\nValue: $${c.estimatedValue||'N/A'}\n\nWrite 3-4 short paragraphs. No markdown. Under 250 words.`;
     let res,data,desc;
@@ -1492,6 +1494,7 @@ async function generateListingAI(){
     document.getElementById('listingPreview').style.display='block';
     showToast('AI description generated!','success');
   }catch(err){showToast('Generation failed: '+err.message,'error');}
+  finally{if(ebayDescBtnEl){ebayDescBtnEl.disabled=false;ebayDescBtnEl.innerHTML='✦ &nbsp; Generate AI Description';}}
 }
 
 async function submitToEbay(){
@@ -1500,12 +1503,66 @@ async function submitToEbay(){
   if(!token||token==='••••'){showToast('Add your eBay OAuth token first','error');return;}
   const re=document.getElementById('ebayResult');re.innerHTML='<span class="spinner"></span> Submitting...';
   const title=document.getElementById('ebayTitle').value,price=document.getElementById('ebayPrice').value,desc=document.getElementById('ebayDesc').value;
-  const xml=`<?xml version="1.0" encoding="utf-8"?><AddItemRequest xmlns="urn:ebay:apis:eBLBaseComponents"><RequesterCredentials><eBayAuthToken>${token}</eBayAuthToken></RequesterCredentials><Item><Title>${title}</Title><Description><![CDATA[${desc}]]></Description><PrimaryCategory><CategoryID>214</CategoryID></PrimaryCategory><StartPrice>${price}</StartPrice><Country>US</Country><Currency>USD</Currency><DispatchTimeMax>3</DispatchTimeMax><ListingDuration>Days_7</ListingDuration><ListingType>Auction</ListingType><Quantity>1</Quantity><ReturnPolicy><ReturnsAcceptedOption>ReturnsNotAccepted</ReturnsAcceptedOption></ReturnPolicy><ShippingDetails><ShippingType>Flat</ShippingType><ShippingServiceOptions><ShippingService>USPSFirstClass</ShippingService><ShippingServiceCost>1.00</ShippingServiceCost></ShippingServiceOptions></ShippingDetails><Site>US</Site></Item></AddItemRequest>`;
+  const _sc = selectedCardForEbay;
+  const _condDescId = document.getElementById('ebayCondition')?.value||'400012';
+  const _cond = '4000'; // Ungraded -- ConditionID for sports trading cards
+
+  const _loc = document.getElementById('ebayLocation')?.value||'Detroit, MI';
+  const _lt = document.getElementById('ebayListingType')?.value||'FixedPriceItem';
+  const _dur = document.getElementById('ebayDuration')?.value||'7 days';
+  const _days = _dur.includes('30')?'GTC':_dur.includes('10')?'Days_10':_dur.includes('5')?'Days_5':_dur.includes('3')?'Days_3':'Days_7';
+  const _bo = document.getElementById('ebayBestOffer')?.checked?'<BestOfferDetails><BestOfferEnabled>true</BestOfferEnabled></BestOfferDetails>':'';
+  const _ship = document.getElementById('ebayShipping')?.value||'USPS First Class (Top Loader)';
+  const _shipSvc = _ship.includes('Ground')?'USPSParcel':_ship.includes('PWE')?'USPSFirstClass':'USPSFirstClass';
+  const _graderXml = (!_sc.aiGraded&&_sc.grade)
+    ? '<NameValueList><Name>Professional Grader</Name><Value>'+(_sc.certGrader||'PSA')+'</Value></NameValueList><NameValueList><Name>Grade</Name><Value>'+_sc.grade.overall+'</Value></NameValueList>'
+    : '<NameValueList><Name>Professional Grader</Name><Value>Ungraded</Value></NameValueList>';
+  const _picXml = _sc.imageUrl ? '<PictureDetails><PictureURL>'+_sc.imageUrl+'</PictureURL></PictureDetails>' : '';
+  const _binXml = document.getElementById('ebayBIN')?.value ? '<BuyItNowPrice>'+document.getElementById('ebayBIN').value+'</BuyItNowPrice>' : '';
+  const xml = '<?xml version="1.0" encoding="utf-8"?>'
+    +'<AddItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">'
+    +'<RequesterCredentials><eBayAuthToken>'+token+'</eBayAuthToken></RequesterCredentials>'
+    +'<Item>'
+    +'<Title>'+title+'</Title>'
+    +'<Description><![CDATA['+desc+']]></Description>'
+    +'<PrimaryCategory><CategoryID>261328</CategoryID></PrimaryCategory>'
+    +'<StartPrice>'+price+'</StartPrice>'+_binXml
+    +'<ConditionID>'+_cond+'</ConditionID>'
+    +'<ItemSpecifics>'
+    +'<NameValueList><Name>Sport</Name><Value>Hockey</Value></NameValueList>'
+    +'<NameValueList><Name>Card Manufacturer</Name><Value>'+(_sc.brand||'Unknown')+'</Value></NameValueList>'
+    +'<NameValueList><Name>Season</Name><Value>'+(_sc.year||'Unknown')+'</Value></NameValueList>'
+    +'<NameValueList><Name>Player</Name><Value>'+(_sc.player||'Unknown')+'</Value></NameValueList>'
+    +_graderXml
+    +'</ItemSpecifics>'
+    +'<ConditionDescriptors>'
+    +'<ConditionDescriptor><Name>40001</Name><Value>'+_condDescId+'</Value></ConditionDescriptor>'
+    +'</ConditionDescriptors>'
+    +_picXml
+    +'<Country>US</Country><Currency>USD</Currency>'
+    +'<Location>'+_loc+'</Location>'
+    +'<DispatchTimeMax>3</DispatchTimeMax>'
+    +'<ListingDuration>'+_days+'</ListingDuration>'
+    +'<ListingType>'+_lt+'</ListingType>'
+    +_bo
+    +'<Quantity>1</Quantity>'
+    +'<ReturnPolicy><ReturnsAcceptedOption>ReturnsNotAccepted</ReturnsAcceptedOption></ReturnPolicy>'
+    +'<ShippingDetails><ShippingType>Flat</ShippingType>'
+    +'<ShippingServiceOptions><ShippingService>'+_shipSvc+'</ShippingService>'
+    +'<ShippingServiceCost>1.00</ShippingServiceCost></ShippingServiceOptions></ShippingDetails>'
+    +'<Site>US</Site></Item></AddItemRequest>';
+
+  console.log('[eBay XML]', xml);
   try{
-    const r=await fetch('https://api.ebay.com/ws/api.dll',{method:'POST',headers:{'X-EBAY-API-SITEID':'0','X-EBAY-API-COMPATIBILITY-LEVEL':'967','X-EBAY-API-CALL-NAME':'AddItem','Content-Type':'text/xml'},body:xml});
+    const r=await fetch(WORKER_URL+'/proxy/ebay',{method:'POST',headers:{'Content-Type':'text/xml','x-ebay-call-name':'AddItem'},body:xml});
     const text=await r.text();
     if(text.includes('<Ack>Success</Ack>')||text.includes('<Ack>Warning</Ack>')){const im=text.match(/<ItemID>(\d+)<\/ItemID>/);const lid=im?im[1]:'Unknown';selectedCardForEbay.listedOnEbay=true;selectedCardForEbay.ebayListingId=lid;localStorage.setItem('iceVault_cards',JSON.stringify(collection));re.innerHTML=`<span style="color:var(--green);">✓ Listed! <a href="https://ebay.com/itm/${lid}" target="_blank" style="color:var(--ice-dark);">${lid}</a></span>`;showToast('Listed on eBay!','success');}
-    else{const em=text.match(/<ShortMessage>(.*?)<\/ShortMessage>/);throw new Error(em?em[1]:'Unknown eBay error');}
+    else{
+      console.log('[eBay SOAP response]', text);
+      const em=text.match(/<ShortMessage>(.*?)<\/ShortMessage>/);
+      const lm=text.match(/<LongMessage>(.*?)<\/LongMessage>/);
+      throw new Error((em?em[1]:'Unknown eBay error')+(lm?' -- '+lm[1]:''));
+    }
   }catch(err){re.innerHTML=`<span style="color:var(--red);">✕ ${err.message}</span>`;showToast('eBay listing failed','error');}
 }
 
