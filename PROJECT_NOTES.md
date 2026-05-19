@@ -204,6 +204,7 @@ icevault-worker\            # NOT a git repo
 | 13 | Search improvements -- grade range, value range, date added filters. Server-side filtering in worker | ✅ Done |
 | 15 | API Keys modal polish -- security tip moved above all AI key fields, made generic with links to Anthropic/OpenAI/Google AI. eBay App ID field already starred out (type=password) | ✅ Done |
 | 16 | eBay Best Offer -- Allow Best Offers checkbox added to single card tab and eBay Queue shared settings | ✅ Done |
+| 23 | eBay listing reset -- when a listing ends or is removed on eBay, the card stays marked as "Listed" in Ice Vault with no way to reset. Add a "Reset Listing Status" button in the card modal (visible when card.listedOnEbay is true) that clears listedOnEbay, ebayListingId, and optionally moves card back to eBay Queue. Syncs to D1 | ⏯ Next |
 | 17 | eBay listing preview modal -- Preview Only button shows no visual preview. Future: render eBay-style listing mockup modal | ⏯ Low |
 | 18 | eBay SOAP proxy -- /proxy/ebay POST endpoint in worker forwards XML to api.ebay.com/ws/api.dll. CORS header x-ebay-call-name added | ✅ Done |
 | 19 | eBay token label -- renamed to "eBay Auth'n'Auth Token (Legacy SOAP)". eBay App ID starred out (type=password) | ✅ Done |
