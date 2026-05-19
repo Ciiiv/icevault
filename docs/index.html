@@ -2013,34 +2013,11 @@
 <!-- EBAY VIEW -->
 <div class="view" id="view-ebay">
   <div class="section-title">List on eBay</div>
-  <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
-    <button class="mode-toggle-btn active" id="ebayModeQueue" onclick="setEbayMode('queue')">&#x1F4CB; eBay Queue</button>
-    <button class="mode-toggle-btn" id="ebayModeSingle" onclick="setEbayMode('single')">&#x1F50D; Pick a Card</button>
-    <span style="font-size:12px;color:var(--text-muted);margin-left:4px;">Move cards to <strong>eBay Queue</strong> collection to batch list them here</span>
-  </div>
-  <!-- EBAY QUEUE PANEL -->
-  <div id="ebayQueuePanel">
-    <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#E74C3C;line-height:1.6;">⚠ <strong>AI Grade Disclaimer:</strong> AI grades are not official PSA/BGS/SGC grades. Do not represent an AI estimate as an official grade. <strong>Ice Vault is not responsible for listing disputes or financial losses.</strong></div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;">
-      <div style="flex:2;min-width:300px;" id="ebayQueueList"><div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No cards in eBay Queue. Move cards to the eBay Queue collection to list them here.</div></div>
-      <div style="flex:1;min-width:240px;">
-        <div class="form-section" style="position:sticky;top:80px;">
-          <h3>Shared Settings</h3>
-          <div class="form-group"><label class="form-label">Condition</label><select class="form-control" id="queueCondition"><option value="400014">Near Mint or Better</option><option value="400013">Excellent</option><option value="400012" selected>Very Good</option><option value="400011">Good</option><option value="400010">Poor</option></select></div>
-          <div class="form-group"><label class="form-label">Item Location <span style="color:var(--text-muted);font-size:10px;">(city, state)</span></label><input type="text" class="form-control" id="queueLocation" placeholder="e.g. Detroit, MI" value=""></div>
-          <div class="form-group"><label class="form-label">Listing Type</label><select class="form-control" id="queueListingType"><option value="FixedPriceItem">Fixed Price</option><option value="Auction">Auction</option></select></div>
-          <div class="form-group"><label class="form-label">Duration</label><select class="form-control" id="queueDuration"><option>3 days</option><option>5 days</option><option selected>7 days</option><option>10 days</option><option>30 days (Fixed)</option></select></div>
-          <div class="form-group" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="queueBestOffer" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ice-dark);"><label for="queueBestOffer" class="form-label" style="margin:0;cursor:pointer;">Allow Best Offers</label></div>
-          <div class="form-group"><label class="form-label">Shipping</label><select class="form-control" id="queueShipping"><option selected>USPS First Class (Top Loader)</option><option>USPS First Class (PWE)</option><option>USPS Ground Advantage</option><option>Free Shipping</option></select></div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">These settings apply to all cards when using Submit All.</div>
-          <button class="save-btn" onclick="ebayQueueSubmitAll()" id="queueSubmitAllBtn" style="background:var(--ice-dark);">&#x1F6D2; Submit All to eBay</button>
-          <div id="queueSubmitProgress" style="margin-top:10px;font-size:12px;color:var(--text-muted);display:none;"></div>
-        </div>
-      </div>
-    </div>
+  <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;padding:10px 14px;background:var(--rink);border-radius:8px;border:1px solid var(--border);">
+    &#x1F4CB; To list a card on eBay, move it to the <strong style="color:var(--text-primary);">eBay Queue</strong> collection first. It will appear here for listing.
   </div>
   <!-- SINGLE CARD PANEL -->
-  <div id="ebaySinglePanel" style="display:none;">
+  <div id="ebaySinglePanel">
   <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#E74C3C;line-height:1.6;">⚠ <strong>AI Grade Disclaimer:</strong> AI grades are not official PSA/BGS/SGC grades. Do not represent an AI estimate as an official grade. <strong>Ice Vault is not responsible for listing disputes or financial losses.</strong></div>
   <div style="display:flex;gap:24px;flex-wrap:wrap;">
     <div style="flex:1;min-width:280px;">
@@ -2052,16 +2029,17 @@
         <h3>Listing Details</h3>
         <div class="form-group"><label class="form-label">Listing Title</label><input type="text" class="form-control" id="ebayTitle" placeholder="Auto-generated from card data"></div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Starting Price ($)</label><input type="number" class="form-control" id="ebayPrice" placeholder="9.99" step="0.01"></div>
-          <div class="form-group"><label class="form-label">Buy It Now ($)</label><input type="number" class="form-control" id="ebayBIN" placeholder="Optional" step="0.01"></div>
+          <div class="form-group"><label class="form-label">Starting Price ($) <span style="color:var(--text-muted);font-size:10px;">Fixed Price: your asking price. Auction: opening bid</span></label><input type="number" class="form-control" id="ebayPrice" placeholder="9.99" step="0.01"></div>
+          <div class="form-group"><label class="form-label">Buy It Now ($) <span style="color:var(--text-muted);font-size:10px;">Auction only — leave blank for Fixed Price</span></label><input type="number" class="form-control" id="ebayBIN" placeholder="Optional" step="0.01"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Condition</label><select class="form-control" id="ebayCondition"><option value="400014">Near Mint or Better</option><option value="400013">Excellent</option><option value="400012" selected>Very Good</option><option value="400011">Good</option><option value="400010">Poor</option></select></div>
+          <div class="form-group"><label class="form-label">Condition</label><select class="form-control" id="ebayCondition"><option value="400010">Near Mint or Better</option><option value="400011">Excellent</option><option value="400012" selected>Very Good</option><option value="400013">Poor</option></select></div>
           <div class="form-group"><label class="form-label">Item Location <span style="color:var(--text-muted);font-size:10px;">(city, state)</span></label><input type="text" class="form-control" id="ebayLocation" placeholder="e.g. Detroit, MI" value="Detroit, MI"></div>
           <div class="form-group"><label class="form-label">Listing Type</label><select class="form-control" id="ebayListingType"><option value="FixedPriceItem">Fixed Price</option><option value="Auction">Auction</option></select></div>
           <div class="form-group"><label class="form-label">Duration</label><select class="form-control" id="ebayDuration"><option>3 days</option><option>5 days</option><option selected>7 days</option><option>10 days</option><option>30 days (Fixed)</option></select></div>
           <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:20px;"><input type="checkbox" id="ebayBestOffer" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ice-dark);"><label for="ebayBestOffer" class="form-label" style="margin:0;cursor:pointer;">Allow Best Offers</label></div>
-          <div class="form-group"><label class="form-label">Shipping</label><select class="form-control" id="ebayShipping"><option selected>USPS First Class (Top Loader)</option><option>USPS First Class (PWE)</option><option>USPS Ground Advantage</option><option>Free Shipping</option></select></div>
+          <div class="form-group"><label class="form-label">Shipping</label><select class="form-control" id="ebayShipping" onchange="updateEbayShippingCost()"><option value="USPSGroundAdvantage" data-cost="5.00">USPS Ground Advantage — bubble mailer, tracked (~$5)</option><option value="USPSPriority" data-cost="10.00">USPS Priority Mail — bubble mailer/box, faster (~$10)</option><option value="USPSFirstClassTopLoader" data-cost="4.00">USPS First Class (Top Loader) — small envelope, tracked (~$4)</option><option value="USPSFirstClassPWE" data-cost="1.00">USPS First Class (PWE) — plain envelope, no tracking (~$1)</option><option value="Free" data-cost="0.00">Free Shipping</option></select></div>
+          <div class="form-group"><label class="form-label">Shipping Cost ($)</label><input type="number" class="form-control" id="ebayShippingCost" value="5.00" step="0.01" min="0" placeholder="0.00"></div>
         </div>
         <div class="form-group"><label class="form-label">Description (AI-generated, editable)</label><textarea class="form-control" id="ebayDesc" rows="6" placeholder="Optional — select a card and click Generate to create an AI description"></textarea></div>
         <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:var(--gold);" id="ebayDescCostHint">⚠ Optional — ~$0.01–0.02 per description (Claude, paid). Prices are estimates only.</div>
