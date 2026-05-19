@@ -29,6 +29,7 @@ const RATE_LIMITS = {
   '/auth/reset':  { limit: 10,  window: 60 * 60, message: 'Too many reset attempts — please wait 1 hour' },
   '/proxy':       { limit: 100, window: 60 * 60, message: 'Too many scan requests — please wait 1 hour' },
   '/image-proxy': { limit: 200, window: 60 * 60, message: 'Too many image requests — please wait 1 hour' },
+  '/proxy/ebay':  { limit: 30,  window: 60 * 60, message: 'Too many eBay listing requests — please wait 1 hour' },
   '/auth/change-password': { limit: 5, window: 60 * 60, message: 'Too many password change attempts — please wait 1 hour' },
   '/share/generate':  { limit: 5,   window: 60 * 60, message: 'Too many share requests — please wait 1 hour' },
   '/share/view':      { limit: 60,  window: 60 * 60, message: 'Too many requests — please wait 1 hour' },
@@ -350,7 +351,7 @@ export default {
 
     // ─── EBAY SOAP PROXY ────────────────────────────────────────────────
     if (path === '/proxy/ebay' && request.method === 'POST') {
-      const rl = await checkRateLimit(kv, '/proxy', ip);
+      const rl = await checkRateLimit(kv, '/proxy/ebay', ip);
       if (rl.limited) return rateLimited(rl.message, rl.retryAfter, cors);
       try {
         const body = await request.text();
