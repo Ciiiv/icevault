@@ -1462,6 +1462,9 @@ function setEbayDescModel(model) {
     const btn = document.getElementById('ebayDescModel' + m.charAt(0).toUpperCase() + m.slice(1));
     if (btn) btn.className = 'grader-btn' + (m === model ? ' active' : '');
   });
+  const costHints = { claude: '~$0.01–0.02 per description (Claude, paid)', gpt4o: '~$0.01–0.02 per description (GPT-4o, paid)', gemini: '~$0.001–0.01 per description (Gemini, free tier available)' };
+  const hint = document.getElementById('ebayDescCostHint');
+  if (hint) hint.textContent = '⚠ Optional — ' + (costHints[model] || costHints.claude) + '. Prices are estimates only.';
 }
 
 async function generateListingAI(){

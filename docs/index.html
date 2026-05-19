@@ -2064,7 +2064,7 @@
           <div class="form-group"><label class="form-label">Shipping</label><select class="form-control" id="ebayShipping"><option selected>USPS First Class (Top Loader)</option><option>USPS First Class (PWE)</option><option>USPS Ground Advantage</option><option>Free Shipping</option></select></div>
         </div>
         <div class="form-group"><label class="form-label">Description (AI-generated, editable)</label><textarea class="form-control" id="ebayDesc" rows="6" placeholder="Optional — select a card and click Generate to create an AI description"></textarea></div>
-        <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:var(--gold);">⚠ Optional — ~$0.01–0.02 per description (Claude). Prices are estimates only.</div>
+        <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:6px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:var(--gold);" id="ebayDescCostHint">⚠ Optional — ~$0.01–0.02 per description (Claude, paid). Prices are estimates only.</div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
           <span style="font-size:11px;color:var(--text-muted);">AI Model:</span>
           <button class="grader-btn active" id="ebayDescModelClaude" onclick="setEbayDescModel('claude')">Claude</button>
@@ -2162,11 +2162,11 @@
         <div style="font-size:13px;color:#27AE60;font-weight:500;margin-bottom:4px;">🔒 Your keys are private and secure</div>
         <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">API keys are stored <strong style="color:var(--text-primary);">only in your browser's local storage on this device</strong>. They are never sent to any server. Keys go directly from your browser to the respective API (Anthropic / eBay).<br><br>You will need to re-enter your keys if you clear your browser cache, use incognito, or switch devices.</div>
       </div>
+      <div style="background:rgba(74,156,201,0.07);border:1px solid rgba(74,156,201,0.2);border-radius:8px;padding:9px 13px;margin-bottom:14px;">
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">💡 <strong style="color:var(--text-primary);">Security tip:</strong> Set a monthly spend limit and disable auto-reload on each AI provider account. Prices shown in Ice Vault are estimates only — check your provider for actual costs.<br><a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--ice-dark);font-size:11px;">Anthropic</a> · <a href="https://platform.openai.com" target="_blank" rel="noopener" style="color:var(--ice-dark);font-size:11px;">OpenAI</a> · <a href="https://aistudio.google.com" target="_blank" rel="noopener" style="color:var(--ice-dark);font-size:11px;">Google AI</a></div>
+      </div>
       <label class="form-label">Anthropic API Key <span style="font-size:10px;color:var(--text-muted);">(Claude — card scan, grading, eBay desc)</span></label>
       <input type="password" class="api-key-input result-input" id="anthropicKeyInput" placeholder="sk-ant-...">
-      <div style="background:rgba(74,156,201,0.07);border:1px solid rgba(74,156,201,0.2);border-radius:8px;padding:9px 13px;margin-top:10px;margin-bottom:4px;">
-        <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">💡 <strong style="color:var(--text-primary);">Security tip:</strong> Set a monthly spend limit and turn off auto-reload in your Anthropic console.<br><a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--ice-dark);font-size:11px;">console.anthropic.com → Settings → Limits</a></div>
-      </div>
       <label class="form-label" style="margin-top:12px;">OpenAI API Key <span style="font-size:10px;color:var(--text-muted);">(GPT-4o — card scan, grading)</span></label>
       <input type="password" class="api-key-input result-input" id="openaiKeyInput" placeholder="sk-...">
       <label class="form-label" style="margin-top:12px;">Google AI API Key <span style="font-size:10px;color:var(--text-muted);">(Gemini — card scan, grading)</span></label>
