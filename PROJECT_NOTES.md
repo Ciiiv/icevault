@@ -55,7 +55,7 @@ icevault/
 ├── docs/
 │   ├── index.html          # HTML + CSS + theme init only (~2200 lines)
 │   ├── js/
-│   │   └── app.js              # All application JS (~2490 lines)
+│   │   └── app.js              # All application JS (~3050 lines)
 │   ├── manifest.json
 │   ├── sw.js               # v3 -- caches index.html + js/app.js
 │   ├── favicon.svg
@@ -203,9 +203,9 @@ icevault-worker\            # NOT a git repo
 | 12 | Card notes field -- free text per card, click-to-edit in modal, searchable, CSV export | ✅ Done |
 | 13 | Search improvements -- grade range, value range, date added filters. Server-side filtering in worker | ✅ Done |
 | 15 | API Keys modal polish -- security tip moved above all AI key fields, made generic with links to Anthropic/OpenAI/Google AI. eBay App ID field already starred out (type=password) | ✅ Done |
-| 16 | eBay Best Offer -- Allow Best Offers checkbox added to single card tab and eBay Queue shared settings | ? Done |
-| 17 | eBay listing preview modal -- Preview Only button shows no visual preview. Future: render eBay-style listing mockup modal | ? Low |
-| 18 | eBay SOAP proxy -- /proxy/ebay POST endpoint in worker forwards XML to api.ebay.com/ws/api.dll. CORS header x-ebay-call-name added | ? Done |
+| 16 | eBay Best Offer -- Allow Best Offers checkbox added to single card tab and eBay Queue shared settings | ✅ Done |
+| 17 | eBay listing preview modal -- Preview Only button shows no visual preview. Future: render eBay-style listing mockup modal | ⏯ Low |
+| 18 | eBay SOAP proxy -- /proxy/ebay POST endpoint in worker forwards XML to api.ebay.com/ws/api.dll. CORS header x-ebay-call-name added | ✅ Done |
 | 19 | eBay token label -- renamed to "eBay Auth'n'Auth Token (Legacy SOAP)". eBay App ID starred out (type=password) | ✅ Done |
 | 20 | eBay shipping -- editable shipping cost field added. Options with hints: USPS Ground Advantage (bubble mailer, tracked, ~$5), USPS Priority Mail (~$10), USPS First Class Top Loader (~$4), USPS First Class PWE (~$1), Free Shipping. Default Ground Advantage $5.00. Auto-updates price field when dropdown changes. SOAP service code: USPSFirstClass for Ground Advantage (USPSGroundAdvantage not valid in SOAP), USPSPriority for Priority | ✅ Done |
 | 22 | eBay SOAP proxy rate limiting -- /proxy/ebay now has dedicated rate limit bucket at 30/hr, separate from /proxy AI scan bucket (100/hr) | ✅ Done |
@@ -542,7 +542,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** Item 14 (duplicate detection -- future), item 17 (eBay preview modal -- low), item 15 (API keys modal -- low).
+> **Next priorities:** Item 14 (duplicate detection -- future), item 17 (eBay preview modal -- low).
 > Ximilar grading API. eBay affiliate links, bulk listing, photography tips (all low).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
