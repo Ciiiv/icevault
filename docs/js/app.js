@@ -1092,37 +1092,6 @@ function saveCardNotes(id) {
   showToast('Notes saved', 'success');
 }
 
-function editCardNotes(id) {
-  document.getElementById('cardNotesDisplay_' + id).style.display = 'none';
-  document.getElementById('cardNotesEdit_' + id).style.display = 'block';
-  const ta = document.getElementById('cardNotesInput_' + id);
-  if (ta) { ta.focus(); ta.selectionStart = ta.value.length; }
-}
-
-function cancelCardNotes(id) {
-  document.getElementById('cardNotesDisplay_' + id).style.display = 'block';
-  document.getElementById('cardNotesEdit_' + id).style.display = 'none';
-  // Restore original value
-  const c = collection.find(x => x.id === id);
-  if (c) document.getElementById('cardNotesInput_' + id).value = c.notes || '';
-}
-
-function saveCardNotes(id) {
-  const c = collection.find(x => x.id === id);
-  if (!c) return;
-  const val = document.getElementById('cardNotesInput_' + id).value.trim();
-  c.notes = val || null;
-  localStorage.setItem('iceVault_cards', JSON.stringify(collection));
-  if (currentUser) syncCardToCloud(c);
-  // Update display
-  const disp = document.getElementById('cardNotesDisplay_' + id);
-  if (disp) disp.innerHTML = c.notes || '<span style="opacity:0.5">Add notes...</span>';
-  if (disp) disp.style.color = c.notes ? 'var(--text-primary)' : 'var(--text-muted)';
-  document.getElementById('cardNotesDisplay_' + id).style.display = 'block';
-  document.getElementById('cardNotesEdit_' + id).style.display = 'none';
-  showToast('Notes saved', 'success');
-}
-
 function editCardField(id, field, el) {
   const c = collection.find(x => x.id === id);
   if (!c) return;
