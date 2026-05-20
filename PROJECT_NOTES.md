@@ -297,6 +297,8 @@ Two PowerShell terminals open side by side in Windows Terminal:
 **fix.py known gotchas:**
 - `\n` in JS strings: Python may write a literal newline instead of escaped `\n` inside JS string literals. Use `String.fromCharCode(10)` in JS instead, or build patches with Python string concatenation rather than raw multiline strings
 - Non-ASCII chars: em-dashes, box-drawing chars, unicode minus may corrupt. Use only ASCII in JS patches -- replace with `--`, `-` etc.
+- **Windows CRLF line endings:** app.js uses CRLF (`\r\n`). Always open files in **binary mode** (`rb`/`wb`) in fix.py -- never text mode. Build pattern strings as byte literals (`b"..."`) with explicit `\r\n`. Text mode silently normalizes line endings and str.replace() will never match. This is the most reliable approach for all fix.py patches on this project.
+- **Line count verification:** every fix.py must print lines before, lines after, and lines added/removed. Use `len(content.splitlines())` before and after the replace. If the delta is unexpected, bail with `sys.exit(1)` before writing the file.
 - Aggressive regex: never use `re.sub` with broad patterns on the full file -- it can collapse everything. Use `str.replace()` with exact strings only
 - Always verify line count after saving: `(Get-Content "path").Count` -- if it drops dramatically, run `git checkout docs/index.html` immediately
 - Syntax errors after patching: check F12 console for line number, then `Get-Content "path" | Select-Object -Index (N-3..N+3)` to inspect
