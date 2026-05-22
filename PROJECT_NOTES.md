@@ -243,6 +243,8 @@ CREATE TABLE IF NOT EXISTS cards (
   estimated_value REAL,      -- for SQL filtering/sorting
   added_at_ts INTEGER,       -- timestamp ms for date filtering
   icevault_id INTEGER,       -- sequential per-user ID (ICV-000001)
+  is_sold INTEGER DEFAULT 0,  -- 1 if sold, 0 if not. SQL column replacing JSON LIKE filter. Added May 2026
+  collection_name TEXT,       -- mirrors card.collection. SQL column for fast filtering. Added May 2026
   PRIMARY KEY (id, user_id)
 );
 CREATE TABLE IF NOT EXISTS share_tokens (
@@ -377,7 +379,7 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | R2 for images, D1 for metadata | D1 1MB row limit. R2 = zero egress, 10GB free, CDN cached |
 | Per-card sync + smart meta check | Full resync was N writes per save. Meta check skips pull if nothing changed |
 | Server-side pagination | All search/filter/sort hit D1. 100/page. Scales to 50k+ cards |
-| Sold cards never deleted | Marked sold cards stay in D1 with sold:true flag — filtered out of default view via JSON string match in D1 query. Preserved for historical data and future value tracking |
+| Sold cards never deleted | Marked sold cards stay in D1 with sold:true flag — filtered out of default view via SQL column `is_sold = 0` (not JSON string match). `is_sold` (INTEGER) and `collection_name` (TEXT) are dedicated D1 columns added May 2026 to replace fragile LIKE pattern matching on card_data JSON blob. Backfilled on existing cards via SQL file. Populated on every upsert going forward. Preserved for historical data and future value tracking |
 | R2 CORS policy | Browser fetch of R2 images (for re-grade) requires CORS headers on the bucket. Configured directly in R2 dashboard — worker ALLOWED_ORIGINS does not cover R2 direct fetches. Policy allows GET from all app origins |
 | Grade matrix data structure | Grades stored per-source in card.grades.{claude,gpt4o,gemini,ximilar}. Main card.grade = the "set" grade shown in grid and eBay title. Existing aiGraded cards auto-migrated to claude slot in modal render |
 | Re-grade fetches R2 directly | Browser fetches R2 image URLs as base64 for re-grade API call. No worker proxy needed — R2 CORS policy handles cross-origin access cleanly without extra latency or worker CPU |
