@@ -878,8 +878,8 @@ export default {
           iceVaultId = (maxId?.maxId || 0) + 1;
         }
         await db.prepare(
-          'INSERT INTO cards (id, user_id, card_data, created_at, updated_at, grade_overall, estimated_value, added_at_ts, icevault_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id, user_id) DO UPDATE SET card_data = excluded.card_data, updated_at = excluded.updated_at, grade_overall = excluded.grade_overall, estimated_value = excluded.estimated_value, added_at_ts = excluded.added_at_ts'
-        ).bind(cardId.toString(), user.id, cardJson, card.addedAt || now, now, gradeOverall, estValue, addedAtTs, iceVaultId).run();
+          'INSERT INTO cards (id, user_id, card_data, created_at, updated_at, grade_overall, estimated_value, added_at_ts, icevault_id, is_sold, collection_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id, user_id) DO UPDATE SET card_data = excluded.card_data, updated_at = excluded.updated_at, grade_overall = excluded.grade_overall, estimated_value = excluded.estimated_value, added_at_ts = excluded.added_at_ts, is_sold = excluded.is_sold, collection_name = excluded.collection_name'
+        ).bind(cardId.toString(), user.id, cardJson, card.addedAt || now, now, gradeOverall, estValue, addedAtTs, iceVaultId, card.sold ? 1 : 0, card.collection || 'Personal').run();
         return json({ ok: iceVaultId }, 200, cors);
       } catch (e) {
         return err(e.message, 500, cors);
@@ -916,16 +916,13 @@ export default {
           // When explicitly filtering for Sold, only show sold cards
           // When filtering for anything else, exclude sold cards
           if (colFilter.toLowerCase() === 'sold') {
-            where += ' AND LOWER(card_data) LIKE ?';
-            binds.push('%"sold":true%');
+            where += ' AND is_sold = 1';
           } else {
-            where += ' AND (LOWER(card_data) NOT LIKE ? OR LOWER(card_data) LIKE ?)';
-            binds.push('%"sold":true%', '%"sold":false%');
+            where += ' AND is_sold = 0';
           }
         } else {
           // Default — hide sold cards unless explicitly requested
-          where += ' AND (LOWER(card_data) NOT LIKE ? OR LOWER(card_data) LIKE ?)';
-          binds.push('%"sold":true%', '%"sold":false%');
+          where += ' AND is_sold = 0';
         }
 
         // Grade filter -- SQL column
