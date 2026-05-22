@@ -911,8 +911,8 @@ export default {
           binds.push('%' + search + '%');
         }
         if (colFilter) {
-          where += ' AND LOWER(card_data) LIKE ?';
-          binds.push('%"collection":"' + colFilter.toLowerCase() + '"%');
+          where += ' AND collection_name = ?';
+          binds.push(colFilter);
           // When explicitly filtering for Sold, only show sold cards
           // When filtering for anything else, exclude sold cards
           if (colFilter.toLowerCase() === 'sold') {
