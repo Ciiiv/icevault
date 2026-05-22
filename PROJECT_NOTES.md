@@ -300,7 +300,7 @@ Two PowerShell terminals open side by side in Windows Terminal:
 - `\n` in JS strings: Python may write a literal newline instead of escaped `\n` inside JS string literals. Use `String.fromCharCode(10)` in JS instead, or build patches with Python string concatenation rather than raw multiline strings
 - Non-ASCII chars: em-dashes, box-drawing chars, unicode minus may corrupt. Use only ASCII in JS patches -- replace with `--`, `-` etc.
 - **Windows CRLF line endings:** app.js uses CRLF (`\r\n`). Always open files in **binary mode** (`rb`/`wb`) in fix.py -- never text mode. Build pattern strings as byte literals (`b"..."`) with explicit `\r\n`. Text mode silently normalizes line endings and str.replace() will never match. This is the most reliable approach for all fix.py patches on this project.
-- **Line count verification:** every fix.py must print lines before, lines after, and lines added/removed. Use `len(content.splitlines())` before and after the replace. If the delta is unexpected, bail with `sys.exit(1)` before writing the file.
+- **Line count verification:** every fix.py must print lines before, lines after, and lines added/removed. Use `len(content.splitlines())` before and after the replace. If the delta is unexpected, bail with `sys.exit(1)` before writing the file. Note: same-line patches will show 0 lines changed -- for those, verify with a targeted `content.count()` check on the new string instead of relying on line count delta.
 - Aggressive regex: never use `re.sub` with broad patterns on the full file -- it can collapse everything. Use `str.replace()` with exact strings only
 - Always verify line count after saving: `(Get-Content "path").Count` -- if it drops dramatically, run `git checkout docs/index.html` immediately
 - Syntax errors after patching: check F12 console for line number, then `Get-Content "path" | Select-Object -Index (N-3..N+3)` to inspect
@@ -362,6 +362,9 @@ wrangler d1 execute icevault --remote --command "DELETE FROM users WHERE id = 'U
 
 # Storage check
 wrangler d1 execute icevault --remote --command "SELECT user_id, COUNT(*) as cards, SUM(LENGTH(card_data)) as bytes FROM cards GROUP BY user_id"
+
+# Verify is_sold and collection_name columns are populated (added May 2026)
+wrangler d1 execute icevault --remote --command "SELECT COUNT(*) as total, SUM(is_sold) as sold, COUNT(collection_name) as has_collection FROM cards"
 
 # Recent logs
 wrangler d1 execute icevault --remote --command "SELECT ip, path, event, detail, created_at FROM request_logs ORDER BY created_at DESC LIMIT 20"
@@ -548,9 +551,11 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
 > **Next priorities:** Item 14 (duplicate detection -- future), item 17 (eBay preview modal -- low).
-> Ximilar grading API. eBay affiliate links, bulk listing, photography tips (all low).
+> eBay affiliate links only if going public.
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
+>
+> **Completed May 2026:** Removed duplicate editCardNotes/cancelCardNotes/saveCardNotes functions. Removed duplicate grades: key in saveCard(). Added is_sold + collection_name SQL columns to D1, backfilled existing cards, replaced all JSON LIKE pattern matching with SQL column filters in worker.
 >
 > D1 ops: --remote flag, $env:CLOUDFLARE_API_TOKEN if auth fails.
 > See PROJECT_NOTES.md for full context."
