@@ -1011,7 +1011,7 @@ Analyze this hockey card and respond ONLY with JSON:
         <div class="rescan-summary"><span>●</span> ${changedCount} field${changedCount !== 1 ? 's' : ''} changed · ${unchangedCount} unchanged</div>
         <div class="rescan-review-actions">
           <button class="rescan-cancel-btn" onclick="cancelRescan(${cardId})">Cancel</button>
-          <button class="rescan-confirm-btn" onclick="confirmRescan(${cardId}, ${JSON.stringify(result).replace(/"/g, '&quot;')}, ${includeGrade})">✓ Save changes</button>
+          <button class="rescan-confirm-btn" onclick="confirmRescan(${cardId}, ${JSON.stringify(result).replace(/"/g, '&quot;')}, ${includeGrade}, '${rescanModel}')">✓ Save changes</button>
         </div>
       </div>`;
       reviewEl.style.display = 'block';
@@ -1028,9 +1028,10 @@ function cancelRescan(cardId) {
   if (reviewEl) reviewEl.style.display = 'none';
 }
 
-function confirmRescan(cardId, result, includeGrade) {
+function confirmRescan(cardId, result, includeGrade, rescanModel) {
   const c = collection.find(x => x.id === cardId);
   if (!c) return;
+  rescanModel = rescanModel || 'claude'; // fallback for safety
   if (result.player) c.player = result.player;
   if (result.year) c.year = result.year;
   if (result.brand) c.brand = result.brand;
@@ -1048,9 +1049,9 @@ function confirmRescan(cardId, result, includeGrade) {
   }
   if (includeGrade && result.grade) {
     result.grade.gradedAt = new Date().toISOString();
-    result.grade.source = 'claude';
+    result.grade.source = rescanModel;
     if (!c.grades) c.grades = {};
-    c.grades.claude = result.grade;
+    c.grades[rescanModel] = result.grade;
     c.grade = result.grade;
     c.aiGraded = true;
   }
