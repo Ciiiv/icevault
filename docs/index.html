@@ -1819,7 +1819,7 @@
           </div>
           <div class="btn-row" style="margin-top:10px;">
             <button class="analyze-btn" id="slabAnalyzeBtn" onclick="analyzeSlabPhoto()" disabled>✦ &nbsp; Read Slab with AI</button>
-            <button class="clear-btn" id="slabClearBtn" onclick="clearSlabScan()" style="margin-top:0;">✕</button>
+            <button class="clear-btn" id="slabClearBtn" onclick="clearSlabScan()" style="margin-top:0;">✕ Clear</button>
           </div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">
             <span style="font-size:11px;color:var(--text-muted);">AI Model:</span>
@@ -1851,6 +1851,7 @@
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input type="text" class="result-input" id="certNumberInput" placeholder="e.g. 12345678" style="flex:1;" oninput="updateRegistryLink()" onkeydown="if(event.key==='Enter')lookupCert()">
             <button class="analyze-btn" style="margin-top:0;flex:0 0 auto;padding:8px 16px;background:var(--rink-light);border:1px solid var(--border-bright);color:var(--text-primary);" onclick="lookupCert()">Look Up</button>
+            <button class="clear-btn" style="margin-top:0;display:flex;" onclick="document.getElementById('certNumberInput').value='';document.getElementById('certRegistryLink').style.display='none';document.getElementById('certResultData').style.display='none';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certSaveBtn').style.display='none';">✕ Clear</button>
           </div>
           <div id="certRegistryLink" style="margin-bottom:10px;display:none;"><a id="certRegistryAnchor" href="#" target="_blank" style="color:var(--ice-dark);font-size:13px;">Open registry ↗</a></div>
           <div style="border-top:1px solid var(--border);padding-top:12px;">
@@ -1873,7 +1874,8 @@
             <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.2);border-radius:8px;padding:12px;margin-bottom:14px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Graded Card Info</span><span id="certGraderBadge" style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(201,162,39,0.2);color:var(--gold);border:1px solid rgba(201,162,39,0.3);">PSA</span></div>
               <div class="detail-row"><span class="detail-key">Cert #</span><span class="detail-val" id="certNum" style="color:var(--gold);">—</span></div>
-              <div class="detail-row"><span class="detail-key">Grade</span><span class="detail-val" id="certGrade" style="color:var(--gold);">—</span></div>
+              <div class="detail-row"><span class="detail-key">Grade</span><input type="text" class="result-input" id="certGrade" placeholder="— enter from registry" style="color:var(--gold);max-width:200px;"></div>
+              <div style="font-size:10px;color:var(--text-muted);padding:2px 0 6px;line-height:1.5;">Enter exactly as shown on label, e.g. <em>Gem Mint 10</em>, <em>Mint 9</em>, <em>NM-MT 8</em></div>
               <div class="detail-row"><span class="detail-key">Registry</span><span class="detail-val" id="certPop">—</span></div>
               <div class="detail-row"><span class="detail-key">Grade Date</span><span class="detail-val" id="certDate">—</span></div>
             </div>
@@ -1889,6 +1891,27 @@
               <div style="display:flex;gap:8px;align-items:center;">
                 <input type="text" class="result-input" id="certNumEditInput" placeholder="Cert # to verify" style="flex:1;font-size:13px;" oninput="updateRegistryLinkFromEdit()">
                 <a id="certVerifyAnchor" href="#" target="_blank" style="color:var(--ice-dark);font-size:13px;white-space:nowrap;padding:8px 12px;border:1px solid var(--border-bright);border-radius:6px;">Verify ↗</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Slab Photos - Option B only (optional)</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <div style="flex:1;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Front</div>
+              <div class="drop-zone" style="padding:12px;min-height:60px;position:relative;" onclick="document.getElementById('certFrontInput').click()">
+                <input type="file" id="certFrontInput" accept="image/*" style="display:none;" onchange="handleCertPhotoSelect(event,'front')">
+                <div id="certFrontPreview" style="display:none;width:100%;height:80px;"><img id="certFrontImg" src="" style="width:100%;height:100%;object-fit:contain;border-radius:4px;"></div>
+                <div id="certFrontPlaceholder" style="font-size:11px;color:var(--text-muted);text-align:center;">📷 Add front</div>
+              </div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Back</div>
+              <div class="drop-zone" style="padding:12px;min-height:60px;position:relative;" onclick="document.getElementById('certBackInput').click()">
+                <input type="file" id="certBackInput" accept="image/*" style="display:none;" onchange="handleCertPhotoSelect(event,'back')">
+                <div id="certBackPreview" style="display:none;width:100%;height:80px;"><img id="certBackImg" src="" style="width:100%;height:100%;object-fit:contain;border-radius:4px;"></div>
+                <div id="certBackPlaceholder" style="font-size:11px;color:var(--text-muted);text-align:center;">📷 Add back</div>
               </div>
             </div>
           </div>

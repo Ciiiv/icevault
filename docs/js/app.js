@@ -267,26 +267,33 @@ async function saveCard(){
   const player=document.getElementById('fieldPlayer').value.trim();
   if(!player){showToast('Please analyze a card first','error');return;}
   const cardId=Date.now();
-  // Upload front and back images to R2 if signed in, otherwise keep base64 for guest mode
-  const imageUrl=await uploadImageToR2(currentImageData,cardId);
-  const imageUrlBack=currentBackImageData?await uploadImageToR2(currentBackImageData,cardId+'_back'):null;
   const estimatedValueAtScan = document.getElementById('fieldValue').value;
-  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,notes:null,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:estimatedValueAtScan,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,grades:currentGrade?{[_scanModel]:Object.assign({},currentGrade,{gradedAt:new Date().toISOString(),source:_scanModel})}:{},imageUrl:imageUrl||null,imageUrlBack:imageUrlBack||null,imageData:imageUrl?null:currentImageData,imageDataBack:imageUrlBack?null:(currentBackImageData||null),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
+  // Build card immediately with base64 imageData -- R2 uploads happen in background
+  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,notes:null,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:estimatedValueAtScan,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,grades:currentGrade?{[_scanModel]:Object.assign({},currentGrade,{gradedAt:new Date().toISOString(),source:_scanModel})}:{},imageUrl:null,imageUrlBack:null,imageData:currentImageData,imageDataBack:currentBackImageData||null,listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
     valueHistory: estimatedValueAtScan ? [{ value: estimatedValueAtScan, date: new Date().toISOString(), source: 'scan' }] : []
   };
+  // Save to localStorage and reset UI immediately -- card appears instantly
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
-  if(currentUser){
-    syncCardToCloud(card).then(res=>{
-      if(res&&res.ok){
-        card.iceVaultId=res.ok;
-        localStorage.setItem('iceVault_cards',JSON.stringify(collection));
-      }
-    });
-  }
-  updateHeaderStats();showToast(`"${player}" saved to collection!`,'success');
+  updateHeaderStats();showToast(`"${player}" saved!`,'success');
   document.getElementById('previewBox').innerHTML='<div class="preview-placeholder"><div style="font-size:32px;">🏒</div></div>';
   document.getElementById('analyzeBtn').disabled=true;document.getElementById('clearBtn').classList.remove('visible');
-  resetFields();currentImageData=null;document.getElementById('fileInput').value='';
+  resetFields();currentImageData=null;currentBackImageData=null;document.getElementById('fileInput').value='';
+  // Upload images to R2 in background -- update card with imageUrl when complete
+  if(currentUser){
+    const frontData=card.imageData;
+    const backData=card.imageDataBack;
+    Promise.all([
+      uploadImageToR2(frontData,cardId),
+      backData?uploadImageToR2(backData,cardId+'_back'):Promise.resolve(null)
+    ]).then(([imageUrl,imageUrlBack])=>{
+      if(imageUrl){card.imageUrl=imageUrl;card.imageData=null;}
+      if(imageUrlBack){card.imageUrlBack=imageUrlBack;card.imageDataBack=null;}
+      localStorage.setItem('iceVault_cards',JSON.stringify(collection));
+      return syncCardToCloud(card);
+    }).then(res=>{
+      if(res&&res.ok){card.iceVaultId=res.ok;localStorage.setItem('iceVault_cards',JSON.stringify(collection));}
+    }).catch(e=>{console.warn('[saveCard] Background upload/sync failed:',e.message);});
+  }
 }
 
 let activeTagFilter=null;
@@ -639,6 +646,9 @@ function openCardDetail(id){
   <div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'estimatedValue',this)">${c.estimatedValue?'$'+c.estimatedValue:'—'}<span class="edit-hint">✎</span></span></div>
   <div id="editSaveHint_${c.id}" class="edit-save-hint">↵ Enter or click away to save &nbsp;·&nbsp; Esc to cancel</div>
   ${c.iceVaultId ? '<div class="detail-row"><span class="detail-key">IceVault ID</span><span class="detail-val" style="font-family:monospace;color:var(--ice-dark);font-size:12px;">ICV-'+String(c.iceVaultId).padStart(6,'0')+'</span></div>' : ''}
+  ${c.certGrader?`<div class="detail-row"><span class="detail-key">Grader</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.certGrader}</span></div>`:''}
+  ${c.certNumber?`<div class="detail-row"><span class="detail-key">Cert #</span><span class="detail-val" style="color:var(--gold);">${c.certNumber} <a href="${c.registryUrl||'#'}" target="_blank" style="color:var(--ice-dark);font-size:11px;">Verify ↗</a></span></div>`:''}
+  ${c.officialGrade?`<div class="detail-row"><span class="detail-key">Official Grade</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.officialGrade}</span></div>`:''}
   <div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div>
   <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
   ${notesHtml}${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
@@ -2471,7 +2481,15 @@ function handleSlabScanSelect(e,side){
 }
 let slabCameraTarget='front';
 function openSlabCamera(side){slabCameraTarget=side||'front';navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{cameraStream=s;document.getElementById('cameraFeed').srcObject=s;document.getElementById('cameraModal').classList.add('open');document.getElementById('cameraModal').dataset.mode='slab';}).catch(()=>showToast('Camera access denied','error'));}
-function clearSlabScan(){slabScanImageData=null;slabScanImageDataBack=null;certSlabImageData=null;document.getElementById('slabScanPreview').style.display='none';if(document.getElementById('slabScanPreviewBack'))document.getElementById('slabScanPreviewBack').style.display='none';document.getElementById('slabAnalyzeBtn').disabled=true;document.getElementById('slabClearBtn').classList.remove('visible');document.getElementById('slabScanFileInput').value='';if(document.getElementById('slabScanFileInputBack'))document.getElementById('slabScanFileInputBack').value='';document.getElementById('slabScanStatus').textContent='';}
+function clearSlabScan(){slabScanImageData=null;slabScanImageDataBack=null;certSlabImageData=null;document.getElementById('slabScanPreview').style.display='none';if(document.getElementById('slabScanPreviewBack'))document.getElementById('slabScanPreviewBack').style.display='none';document.getElementById('slabAnalyzeBtn').disabled=true;document.getElementById('slabClearBtn').classList.remove('visible');document.getElementById('slabScanFileInput').value='';if(document.getElementById('slabScanFileInputBack'))document.getElementById('slabScanFileInputBack').value='';document.getElementById('slabScanStatus').textContent='';
+  // Clear OCR result fields and hide result panel
+  ['certPlayer','certYear','certBrand','certCardNum','certVariation','certValue'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const certNum=document.getElementById('certNum');if(certNum)certNum.textContent='—';
+  const certGrade=document.getElementById('certGrade');if(certGrade){certGrade.value='';certGrade.readOnly=false;certGrade.style.opacity='';}
+  const certResultData=document.getElementById('certResultData');if(certResultData)certResultData.style.display='none';
+  const certResultPlaceholder=document.getElementById('certResultPlaceholder');if(certResultPlaceholder)certResultPlaceholder.style.display='block';
+  const certSaveBtn=document.getElementById('certSaveBtn');if(certSaveBtn)certSaveBtn.style.display='none';
+}
 
 let _slabModel = 'claude';
 function setSlabModel(model) {
@@ -2527,7 +2545,7 @@ async function analyzeSlabPhoto(){
     if(result.certNumber){document.getElementById('certNumberInput').value=result.certNumber;updateRegistryLink();}
     document.getElementById('certResultPlaceholder').style.display='none';document.getElementById('certResultData').style.display='block';document.getElementById('certSaveBtn').style.display='block';
     if(!currentUser)document.getElementById('certGuestWarning').style.display='flex';
-    document.getElementById('certGraderBadge').textContent=result.grader||currentGrader;document.getElementById('certNum').textContent=result.certNumber||'—';document.getElementById('certGrade').textContent=result.grade||'—';
+    document.getElementById('certGraderBadge').textContent=result.grader||currentGrader;document.getElementById('certNum').textContent=result.certNumber||'—';const cgEl=document.getElementById('certGrade');if(cgEl){cgEl.value=result.grade||'';cgEl.readOnly=true;cgEl.style.opacity='0.7';}
     const url=GRADERS[gm[result.grader]||currentGrader]?.url(result.certNumber||'')||'#';
     document.getElementById('certPop').innerHTML=`<a href="${url}" target="_blank" style="color:var(--ice-dark);">Verify at registry ↗</a>`;
     document.getElementById('certDate').textContent='—';
@@ -2551,12 +2569,32 @@ function lookupCert(){
   const g=GRADERS[currentGrader];window.open(g.url(n),'_blank');
   document.getElementById('certResultPlaceholder').style.display='none';document.getElementById('certResultData').style.display='block';document.getElementById('certSaveBtn').style.display='block';
   if(!currentUser)document.getElementById('certGuestWarning').style.display='flex';
-  document.getElementById('certGraderBadge').textContent=currentGrader==='AUT'?'Authority':currentGrader;document.getElementById('certNum').textContent=n;document.getElementById('certGrade').textContent='— enter from registry';document.getElementById('certPop').innerHTML=`<a href="${g.url(n)}" target="_blank" style="color:var(--ice-dark);">View at ${g.name} ↗</a>`;document.getElementById('certDate').textContent='—';document.getElementById('certNumEditInput').value=n;updateRegistryLinkFromEdit();
+  document.getElementById('certGraderBadge').textContent=currentGrader==='AUT'?'Authority':currentGrader;document.getElementById('certNum').textContent=n;document.getElementById('certGrade').value='';document.getElementById('certPop').innerHTML=`<a href="${g.url(n)}" target="_blank" style="color:var(--ice-dark);">View at ${g.name} ↗</a>`;document.getElementById('certDate').textContent='—';document.getElementById('certNumEditInput').value=n;updateRegistryLinkFromEdit();
   document.getElementById('certQrStatus').textContent=`✓ Registry opened — fill in details from the ${g.name} page`;document.getElementById('certQrStatus').style.color='var(--ice-dark)';
   certTags=[];renderCertTagRow();showToast(`${g.name} registry opened — fill in the details`,'success');
 }
 
 function handleCertImageSelect(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>decodeCertQR(ev.target.result);r.readAsDataURL(f);}
+function handleCertPhotoSelect(e,side){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const data=ev.target.result;
+    if(side==='back'){
+      slabScanImageDataBack=data;
+      document.getElementById('certBackImg').src=data;
+      document.getElementById('certBackPreview').style.display='block';
+      document.getElementById('certBackPlaceholder').style.display='none';
+    } else {
+      certSlabImageData=data;
+      slabScanImageData=data;
+      document.getElementById('certFrontImg').src=data;
+      document.getElementById('certFrontPreview').style.display='block';
+      document.getElementById('certFrontPlaceholder').style.display='none';
+    }
+  };
+  r.readAsDataURL(f);
+}
 function decodeCertQR(dataUrl){
   const st=document.getElementById('certQrStatus');st.textContent='Decoding QR/barcode...';st.style.color='var(--text-muted)';
   const img=new Image();img.onload=()=>{
@@ -2594,16 +2632,37 @@ function removeCertTag(t){certTags=certTags.filter(x=>x!==t);renderCertTagRow();
 
 function saveCertCard(){
   const player=document.getElementById('certPlayer').value.trim();
-  const gt=document.getElementById('certGrade').textContent,gn=gt.match(/(\d+\.?\d*)/)?.[1]||'';
+  const gt=document.getElementById('certGrade').value,gn=gt.match(/(\d+\.?\d*)/)?.[1]||'';
   const cn=document.getElementById('certNumEditInput')?.value.trim()||document.getElementById('certNum').textContent;
   if(!player){showToast('Enter the player name first','error');return;}
   const gl=currentGrader==='AUT'?'Authority':currentGrader;
   const certEstVal = document.getElementById('certValue').value;
-  const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,team:'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:certEstVal,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
+  const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,team:'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:certEstVal,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,imageDataBack:slabScanImageDataBack||null,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
     valueHistory: certEstVal ? [{ value: certEstVal, date: new Date().toISOString(), source: 'scan' }] : []
   };
-  collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(card);updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
-  document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certSlabImageData=null;certTags=[];clearSlabScan();
+  // Save to localStorage immediately -- card appears instantly
+  collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
+  updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
+  document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certTags=[];clearSlabScan();
+  // Upload slab image to R2 in background then sync to cloud
+  if(currentUser){
+    const slabData=card.imageData;
+    const slabBackData=card.imageDataBack;
+    certSlabImageData=null;
+    Promise.all([
+      slabData?uploadImageToR2(slabData,card.id):Promise.resolve(null),
+      slabBackData?uploadImageToR2(slabBackData,card.id+'_back'):Promise.resolve(null)
+    ]).then(([imageUrl,imageUrlBack])=>{
+      if(imageUrl){card.imageUrl=imageUrl;card.imageData=null;}
+      if(imageUrlBack){card.imageUrlBack=imageUrlBack;card.imageDataBack=null;}
+      localStorage.setItem('iceVault_cards',JSON.stringify(collection));
+      return syncCardToCloud(card);
+    }).then(res=>{
+      if(res&&res.ok){card.iceVaultId=res.ok;localStorage.setItem('iceVault_cards',JSON.stringify(collection));}
+    }).catch(e=>{console.warn('[saveCertCard] Background upload/sync failed:',e.message);});
+  } else {
+    certSlabImageData=null;
+  }
 }
 
 
