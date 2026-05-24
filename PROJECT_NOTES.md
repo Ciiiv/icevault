@@ -305,6 +305,8 @@ Two PowerShell terminals open side by side in Windows Terminal:
 - Always verify line count after saving: `(Get-Content "path").Count` -- if it drops dramatically, run `git checkout docs/index.html` immediately
 - Syntax errors after patching: check F12 console for line number, then `Get-Content "path" | Select-Object -Index (N-3..N+3)` to inspect
 - `textContent` vs `innerHTML`: setting button text via `textContent` won't render HTML entities -- use `innerHTML` instead
+- **Patch failure discipline:** when a pattern fails to match (found 0 times), STOP -- do not guess or iterate on assumptions. Instead: print exact bytes around the target (`content.find(b'known nearby string')`), build the new pattern from that exact output, then run. Never build a fix.py pattern from memory after a failed attempt
+- **Non-ASCII in fix.py string literals:** em-dashes, curly quotes, and other non-ASCII chars in source files cannot be written as Python byte literals directly -- Python will throw `SyntaxError: bytes can only contain ASCII literal characters`. Always print the exact bytes first (`repr(content[idx:idx+200])`) and use the `\xNN` escape sequences shown in the output instead of copy-pasting the visible characters
 
 ## 🛠 Wrangler Quick Reference
 
@@ -383,6 +385,7 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | Per-card sync + smart meta check | Full resync was N writes per save. Meta check skips pull if nothing changed |
 | Server-side pagination | All search/filter/sort hit D1. 100/page. Scales to 50k+ cards |
 | Sold cards never deleted | Marked sold cards stay in D1 with sold:true flag — filtered out of default view via SQL column `is_sold = 0` (not JSON string match). `is_sold` (INTEGER) and `collection_name` (TEXT) are dedicated D1 columns added May 2026 to replace fragile LIKE pattern matching on card_data JSON blob. Backfilled on existing cards via SQL file. Populated on every upsert going forward. Preserved for historical data and future value tracking |
+| saveCard/saveCertCard background upload | Both functions save to localStorage immediately and reset UI instantly, then upload images to R2 and sync to cloud in background via Promise.all(). Card appears instantly. base64 imageData never sent to D1 (causes 400 -- D1 10KB cardData limit). Only imageUrl (R2 URL) goes to D1 |
 | R2 CORS policy | Browser fetch of R2 images (for re-grade) requires CORS headers on the bucket. Configured directly in R2 dashboard — worker ALLOWED_ORIGINS does not cover R2 direct fetches. Policy allows GET from all app origins |
 | Grade matrix data structure | Grades stored per-source in card.grades.{claude,gpt4o,gemini,ximilar}. Main card.grade = the "set" grade shown in grid and eBay title. Existing aiGraded cards auto-migrated to claude slot in modal render |
 | Re-grade fetches R2 directly | Browser fetches R2 image URLs as base64 for re-grade API call. No worker proxy needed — R2 CORS policy handles cross-origin access cleanly without extra latency or worker CPU |
@@ -555,7 +558,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >
-> **Completed May 2026:** Removed duplicate editCardNotes/cancelCardNotes/saveCardNotes functions. Removed duplicate grades: key in saveCard(). Added is_sold + collection_name SQL columns to D1, backfilled existing cards, replaced all JSON LIKE pattern matching with SQL column filters in worker.
+> **Completed May 2026:** Removed duplicate editCardNotes/cancelCardNotes/saveCardNotes functions. Removed duplicate grades: key in saveCard(). Added is_sold + collection_name SQL columns to D1, backfilled existing cards, replaced all JSON LIKE pattern matching with SQL column filters in worker. saveCard() and saveCertCard() refactored to save locally first + reset UI instantly, then upload to R2 and sync to cloud in background (fixes 400 errors from base64 blobs in D1). confirmRescan() now saves grade to correct model slot. Cert card modal shows Grader/Cert#/Official Grade rows. Slab clear now clears all OCR fields. Option A grade field readonly after AI scan. Option B gets clear button, grade format tip, and optional front/back slab photo upload. certGrade changed from span to input throughout.
 >
 > D1 ops: --remote flag, $env:CLOUDFLARE_API_TOKEN if auth fails.
 > See PROJECT_NOTES.md for full context."

@@ -62,7 +62,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 
 ### ⬜ Graded Cert Lookup
 - **Option A — AI Slab Scan** (~$0.02–0.04): photograph **front and back** of your graded slab — AI reads both label sides through the plastic, filling in cert number, official grade, player, year, set, and variation
-- **Option B — Free cert # / QR lookup**: enter a cert number or scan the QR/barcode on the slab — opens the official registry in a new tab for manual entry (zero API cost)
+- **Option B — Free cert # / QR lookup**: enter a cert number or scan the QR/barcode on the slab — opens the official registry in a new tab for manual entry (zero API cost). Optionally attach front and back slab photos for the card modal image
 - Supports **8 grading companies**: PSA, BGS, SGC, CGC, Authority, TAG, KSA, HGA
 - QR scanning auto-detects the grading company from the barcode URL
 
