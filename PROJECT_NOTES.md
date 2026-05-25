@@ -204,8 +204,8 @@ icevault-worker\            # NOT a git repo
 | 13 | Search improvements -- grade range, value range, date added filters. Server-side filtering in worker | ✅ Done |
 | 15 | API Keys modal polish -- security tip moved above all AI key fields, made generic with links to Anthropic/OpenAI/Google AI. eBay App ID field already starred out (type=password) | ✅ Done |
 | 16 | eBay Best Offer -- Allow Best Offers checkbox added to single card tab and eBay Queue shared settings | ✅ Done |
-| 23 | eBay listing reset -- when a listing ends or is removed on eBay, the card stays marked as "Listed" in Ice Vault with no way to reset. Add a "Reset Listing Status" button in the card modal (visible when card.listedOnEbay is true) that clears listedOnEbay, ebayListingId, and optionally moves card back to eBay Queue. Syncs to D1 | ⏯ Next |
-| 17 | eBay listing preview modal -- Preview Only button shows no visual preview. Future: render eBay-style listing mockup modal | ⏯ Low |
+| 23 | eBay listing reset -- "Reset eBay Listing" gold button in card modal, visible only when card.listedOnEbay is true. Clears listedOnEbay + ebayListingId, moves card back to Graded (if certGrader set) or Personal Collection. Confirm dialog. Syncs to D1. To relist, manually move card to eBay Queue | ✅ Done |
+| 17 | eBay listing preview modal -- Preview Only button opens eBay-styled modal. Reads existing form fields (no API call). Shows: breadcrumb, card image + thumbnail strip, title, condition/sport/player, price in red, Best Offer label, shipping, Buy It Now button, description tabs (Description active), description text, preview disclaimer | ✅ Done |
 | 18 | eBay SOAP proxy -- /proxy/ebay POST endpoint in worker forwards XML to api.ebay.com/ws/api.dll. CORS header x-ebay-call-name added | ✅ Done |
 | 19 | eBay token label -- renamed to "eBay Auth'n'Auth Token (Legacy SOAP)". eBay App ID starred out (type=password) | ✅ Done |
 | 20 | eBay shipping -- editable shipping cost field added. Options with hints: USPS Ground Advantage (bubble mailer, tracked, ~$5), USPS Priority Mail (~$10), USPS First Class Top Loader (~$4), USPS First Class PWE (~$1), Free Shipping. Default Ground Advantage $5.00. Auto-updates price field when dropdown changes. SOAP service code: USPSFirstClass for Ground Advantage (USPSGroundAdvantage not valid in SOAP), USPSPriority for Priority | ✅ Done |
@@ -553,12 +553,12 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** Item 14 (duplicate detection -- future), item 17 (eBay preview modal -- low).
+> **Next priorities:** Item 14 (duplicate detection -- future).
 > eBay affiliate links only if going public.
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >
-> **Completed May 2026:** Removed duplicate editCardNotes/cancelCardNotes/saveCardNotes functions. Removed duplicate grades: key in saveCard(). Added is_sold + collection_name SQL columns to D1, backfilled existing cards, replaced all JSON LIKE pattern matching with SQL column filters in worker. saveCard() and saveCertCard() refactored to save locally first + reset UI instantly, then upload to R2 and sync to cloud in background (fixes 400 errors from base64 blobs in D1). confirmRescan() now saves grade to correct model slot. Cert card modal shows Grader/Cert#/Official Grade rows. Slab clear now clears all OCR fields. Option A grade field readonly after AI scan. Option B gets clear button, grade format tip, and optional front/back slab photo upload. certGrade changed from span to input throughout.
+> **Completed May 2026:** Removed duplicate editCardNotes/cancelCardNotes/saveCardNotes functions. Removed duplicate grades: key in saveCard(). Added is_sold + collection_name SQL columns to D1, backfilled existing cards, replaced all JSON LIKE pattern matching with SQL column filters in worker. saveCard() and saveCertCard() refactored to save locally first + reset UI instantly, then upload to R2 and sync to cloud in background (fixes 400 errors from base64 blobs in D1). confirmRescan() now saves grade to correct model slot. Cert card modal shows Grader/Cert#/Official Grade rows. Slab clear now clears all OCR fields. Option A grade field readonly after AI scan. Option B gets clear button, grade format tip, and optional front/back slab photo upload. certGrade changed from span to input throughout. Item 17: eBay listing preview modal -- Preview Only button now opens eBay-styled modal with card image, price, shipping, description tabs, no API calls. Item 23: Reset eBay Listing gold button in card modal -- clears listing status and moves card back to Personal/Graded. eBay form clear button added. clearEbayForm() resets form without auto-selecting a card.
 >
 > D1 ops: --remote flag, $env:CLOUDFLARE_API_TOKEN if auth fails.
 > See PROJECT_NOTES.md for full context."
