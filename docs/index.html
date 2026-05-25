@@ -2073,7 +2073,7 @@
           <button class="grader-btn" id="ebayDescModelGemini" onclick="setEbayDescModel('gemini')">Gemini</button>
         </div>
         <button class="camera-btn" id="ebayDescBtn" onclick="generateListingAI()" style="margin-bottom:12px;">✦ &nbsp; Generate AI Description</button>
-        <div class="listing-preview" id="listingPreview" style="display:none;"><h4>Preview</h4><div class="listing-title-preview" id="previewTitle"></div><div class="listing-desc-preview" id="previewDesc"></div></div>
+        <div id="listingPreview" style="display:none;"></div>
       </div>
       <div class="form-section" id="ebayMarketResearch" style="display:none;">
         <h3>Market Research</h3>
@@ -2087,6 +2087,7 @@
         <div style="display:flex;gap:10px;">
           <button class="ebay-btn" onclick="submitToEbay()" id="ebaySubmitBtn">&#x1F6D2; &nbsp; Submit to eBay</button>
           <button class="camera-btn" style="flex:1;" onclick="simulateListing()">&#x1F441; &nbsp; Preview Only</button>
+          <button class="clear-btn" style="display:flex;margin-top:0;" onclick="clearEbayForm()">&#x2715; Clear</button>
         </div>
         <div id="ebayResult" style="margin-top:12px;font-size:13px;"></div>
       </div>
@@ -2294,6 +2295,17 @@
     <button onclick="closeLightbox()" style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:var(--rink-light);border:1px solid var(--border-bright);color:var(--text-primary);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;">✕</button>
     <img id="lightboxImg" src="" alt="Card" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:10px;display:block;">
     <div id="lightboxCaption" style="text-align:center;color:var(--text-secondary);font-size:13px;margin-top:10px;"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ebayPreviewModal">
+  <div class="modal" style="max-width:620px;background:white;color:#111;">
+    <button class="modal-close" onclick="closeModal('ebayPreviewModal')" style="color:#777;">&#x2715;</button>
+    <div style="background:#e53238;margin:-28px -28px 16px -28px;padding:12px 20px;display:flex;align-items:center;gap:10px;border-radius:16px 16px 0 0;">
+      <span style="font-size:26px;font-weight:700;color:white;font-family:Georgia,serif;letter-spacing:-1px;">e</span>
+      <span style="font-size:14px;color:white;font-weight:500;">Listing Preview</span>
+    </div>
+    <div id="ebayPreviewContent" style="max-height:70vh;overflow-y:auto;"></div>
   </div>
 </div>
 

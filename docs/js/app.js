@@ -1436,7 +1436,7 @@ function renderEbayCardSelect(){
   const queueCards=collection.filter(c=>c.collection==='EbayQueue'&&!c.sold);
   if(queueCards.length===0){ctr.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:10px 0;">No cards in eBay Queue. Move cards to the eBay Queue collection to list them here.</div>';return;}
   ctr.innerHTML=`<div class="ebay-card-list">${queueCards.map(c=>`<div class="ebay-card-row ${selectedCardForEbay&&selectedCardForEbay.id===c.id?'selected':''}" onclick="selectCardForEbay(${c.id})"><div class="ebay-card-thumb">${(c.imageUrl||c.imageData)?`<img src="${c.imageUrl||c.imageData}" alt="">`:'🏒'}</div><div class="ebay-card-info"><div class="ebay-card-name">${c.player}</div><div class="ebay-card-meta">${c.year||''} ${c.brand||''} · ${c.grade?'Grade '+c.grade.overall:'No grade'}</div></div>${c.listedOnEbay?'<span style="color:var(--green);font-size:11px;">Listed</span>':''}</div>`).join('')}</div>`;
-  if(selectedCardForEbay&&selectedCardForEbay.collection==='EbayQueue')populateEbayForm(selectedCardForEbay);else if(queueCards.length>0&&!selectedCardForEbay){selectCardForEbay(queueCards[0].id);}
+  if(selectedCardForEbay&&selectedCardForEbay.collection==='EbayQueue')populateEbayForm(selectedCardForEbay);else if(queueCards.length>0&&!selectedCardForEbay&&!renderEbayCardSelect._skipAutoSelect){selectCardForEbay(queueCards[0].id);}
 }
 function selectCardForEbay(id){selectedCardForEbay=collection.find(c=>c.id===id);renderEbayCardSelect();populateEbayForm(selectedCardForEbay);}
 
@@ -1496,9 +1496,6 @@ async function generateListingAI(){
       data=await res.json();if(data.error)throw new Error(data.error.message);desc=data.content[0].text;
     }
     document.getElementById('ebayDesc').value=desc;
-    document.getElementById('previewTitle').textContent=document.getElementById('ebayTitle').value;
-    document.getElementById('previewDesc').textContent=desc.substring(0,200)+'...';
-    document.getElementById('listingPreview').style.display='block';
     showToast('AI description generated!','success');
   }catch(err){showToast('Generation failed: '+err.message,'error');}
   finally{if(ebayDescBtnEl){ebayDescBtnEl.disabled=false;ebayDescBtnEl.innerHTML='✦ &nbsp; Generate AI Description';}}
@@ -1575,14 +1572,75 @@ async function submitToEbay(){
   }catch(err){re.innerHTML=`<span style="color:var(--red);">✕ ${err.message}</span>`;showToast('eBay listing failed','error');}
 }
 
+function clearEbayForm(){
+  document.getElementById('ebayTitle').value='';
+  document.getElementById('ebayPrice').value='';
+  document.getElementById('ebayBIN').value='';
+  document.getElementById('ebayDesc').value='';
+  document.getElementById('ebayResult').innerHTML='';
+  selectedCardForEbay=null;
+  const prev=document.getElementById('selectedCardPreview');
+  if(prev){prev.innerHTML='';prev.style.display='none';}
+  document.getElementById('ebayMarketResearch').style.display='none';
+  document.getElementById('listingPreview').style.display='none';
+  // Re-render card list without auto-selecting
+  renderEbayCardSelect._skipAutoSelect=true;
+  renderEbayCardSelect();
+  renderEbayCardSelect._skipAutoSelect=false;
+  showToast('Form cleared -- select a card to list','success');
+}
 function simulateListing(){
   if(!selectedCardForEbay){showToast('Please select a card','error');return;}
-  const t=document.getElementById('ebayTitle').value||selectedCardForEbay.player;
-  const d=document.getElementById('ebayDesc').value||'No description yet.';
-  document.getElementById('previewTitle').textContent=t;
-  document.getElementById('previewDesc').textContent=d.substring(0,300)+(d.length>300?'...':'');
-  document.getElementById('listingPreview').style.display='block';
-  document.getElementById('ebayResult').innerHTML=`<span style="color:var(--text-secondary);">Preview only — not submitted.</span>`;
+  const c=selectedCardForEbay;
+  const title=document.getElementById('ebayTitle').value||c.player;
+  const price=document.getElementById('ebayPrice').value||'0';
+  const bin=document.getElementById('ebayBIN').value||'';
+  const desc=document.getElementById('ebayDesc').value||'No description added yet.';
+  const condition=document.getElementById('ebayCondition')?.selectedOptions[0]?.text||'Very Good';
+  const shipping=document.getElementById('ebayShipping')?.value||'';
+  const shippingCost=document.getElementById('ebayShippingCost')?.value||'5.00';
+  const location=document.getElementById('ebayLocation')?.value||'United States';
+  const bestOffer=document.getElementById('ebayBestOffer')?.checked;
+  const imgSrc=c.imageUrl||c.imageData||null;
+  const isFree=shipping.includes('Free');
+  const shipLabel=isFree?'Free shipping':'+ $'+parseFloat(shippingCost).toFixed(2)+' shipping';
+  const shipService=shipping.includes('Priority')?'USPS Priority Mail':shipping.includes('PWE')?'USPS First Class (PWE)':shipping.includes('Top')?'USPS First Class (Top Loader)':'USPS Ground Advantage';
+  document.getElementById('ebayPreviewModal').classList.add('open');
+  document.getElementById('ebayPreviewContent').innerHTML=`
+    <div style="font-size:11px;color:#777;margin-bottom:10px;">Sports Trading Cards &gt; Hockey &gt; Individual Cards</div>
+    <div style="display:flex;gap:16px;margin-bottom:16px;">
+      <div style="flex-shrink:0;">
+        <div style="width:120px;height:160px;background:#f3f3f3;border:1px solid #ddd;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">
+          ${imgSrc?`<img src="${imgSrc}" style="width:100%;height:100%;object-fit:contain;">`:'<span style="color:#aaa;font-size:11px;">No image</span>'}
+        </div>
+        <div style="display:flex;gap:3px;">
+          ${imgSrc?`<div style="width:36px;height:46px;border:2px solid #e53238;border-radius:2px;overflow:hidden;"><img src="${imgSrc}" style="width:100%;height:100%;object-fit:contain;"></div>`:''}
+          <div style="width:36px;height:46px;border:1px solid #ddd;border-radius:2px;background:#f3f3f3;"></div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:600;color:#111;line-height:1.4;margin-bottom:8px;">${title}</div>
+        <div style="font-size:12px;color:#777;margin-bottom:10px;">Condition: ${condition} &middot; Sport: Hockey &middot; Player: ${c.player}</div>
+        <div style="font-size:24px;font-weight:600;color:#e53238;margin-bottom:2px;">US $${parseFloat(price).toFixed(2)}</div>
+        ${bestOffer?'<div style="font-size:13px;color:#555;margin-bottom:8px;">or Best Offer</div>':''}
+        <div style="font-size:12px;color:#777;margin-bottom:12px;">${shipLabel} &middot; ${shipService} &middot; ${location}</div>
+        <div style="margin-bottom:8px;"><span style="background:#e53238;color:white;font-size:13px;font-weight:600;padding:8px 24px;border-radius:20px;">Buy It Now</span></div>
+        ${bin?`<div style="font-size:12px;color:#777;margin-bottom:8px;">Buy It Now: US $${parseFloat(bin).toFixed(2)}</div>`:''}
+        <div style="font-size:12px;color:#555;margin-bottom:4px;">&#9745; eBay Money Back Guarantee</div>
+        <div style="font-size:12px;color:#777;">Seller: <span style="color:#0064d2;">YourUsername</span> &middot; Returns: Not accepted</div>
+      </div>
+    </div>
+    <div style="border-top:2px solid #ddd;margin-bottom:0;">
+      <div style="display:flex;">
+        <div style="font-size:13px;padding:10px 16px;border-bottom:2px solid #e53238;color:#e53238;font-weight:500;">Description</div>
+        <div style="font-size:13px;padding:10px 16px;color:#777;">Shipping</div>
+        <div style="font-size:13px;padding:10px 16px;color:#777;">Returns</div>
+        <div style="font-size:13px;padding:10px 16px;color:#777;">Payments</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:#111;line-height:1.7;padding:12px 0;">${desc}</div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd;font-size:11px;color:#aaa;text-align:center;font-style:italic;">Preview only -- not submitted to eBay</div>
+  `;
   showToast('Preview generated','success');
 }
 
