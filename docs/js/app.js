@@ -651,7 +651,7 @@ function openCardDetail(id){
   ${c.officialGrade?`<div class="detail-row"><span class="detail-key">Official Grade</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.officialGrade}</span></div>`:''}
   <div class="detail-row"><span class="detail-key">eBay Status</span><span class="detail-val" style="color:${c.listedOnEbay?'var(--green)':'var(--text-muted)'}">${c.listedOnEbay?'● Listed':'Not listed'}</span></div>
   <div class="detail-row"><span class="detail-key">Added</span><span class="detail-val">${new Date(c.addedAt).toLocaleDateString()}</span></div>
-  ${notesHtml}${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
+  ${notesHtml}${tagsHtml}${colHtml}${sharePriceHtml}${gradeHtml}</div></div><div class="modal-actions"><button class="modal-action-btn primary" onclick="listOnEbayFromModal(${c.id})">🛒 List on eBay</button>${c.listedOnEbay?`<button class="modal-action-btn" style="background:rgba(201,162,39,0.1);border-color:rgba(201,162,39,0.4);color:var(--gold);" onclick="resetListingStatus(${c.id})">&#x21BA; Reset eBay Listing</button>`:''}${c.sold?`<button class="modal-action-btn" style="background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.4);color:#E74C3C;" onclick="undoSold(${c.id})">↩ Undo Sale</button>`:`<button class="modal-action-btn" style="background:rgba(39,174,96,0.12);border-color:rgba(39,174,96,0.4);color:var(--green);" onclick="markAsSold(${c.id})">✓ Mark as Sold</button>`}<button class="modal-action-btn" onclick="deleteCard(${c.id})">🗑 Delete</button></div>${c.sold?`<div style="margin-top:10px;padding:10px 14px;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;font-size:13px;color:var(--green);">✓ Sold for <strong>$${c.soldPrice}</strong> on ${new Date(c.soldAt).toLocaleDateString()}</div>`:''}<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px;">
   ${c.imageUrl?`<div class="rescan-section">
     <div class="rescan-controls">
       <button class="rescan-trigger-btn" id="rescanBtn_${c.id}" onclick="triggerRescan(${c.id})">↺ Re-scan card with AI</button>
@@ -676,6 +676,20 @@ function openCardDetail(id){
 function addModalTag(id){const t=prompt('Enter tag:');if(!t||!t.trim())return;const c=collection.find(x=>x.id===id);if(!c)return;if(!c.tags)c.tags=[];if(!c.tags.includes(t.trim())){c.tags.push(t.trim());localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}}
 function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)return;c.tags=(c.tags||[]).filter(t=>t!==tag);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}
 function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','').replace(' — hidden from shared view','').replace('eBay Queue','EbayQueue');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
+function resetListingStatus(id){
+  const c=collection.find(x=>x.id===id);if(!c)return;
+  if(!confirm('Reset listing status? The card will move back to '+
+    (c.certGrader?'Graded Cards':'Personal Collection')+
+    '. You can move it to eBay Queue again to relist.'))return;
+  c.listedOnEbay=false;
+  c.ebayListingId=null;
+  c.collection=c.certGrader?'Graded':'Personal';
+  localStorage.setItem('iceVault_cards',JSON.stringify(collection));
+  if(currentUser)syncCardToCloud(c);
+  closeModal('cardModal');
+  renderCollection();
+  showToast('Listing status reset -- card moved to '+(c.certGrader?'Graded Cards':'Personal Collection'),'success');
+}
 function listOnEbayFromModal(id){closeModal('cardModal');selectedCardForEbay=collection.find(c=>c.id===id);switchView('ebay');populateEbayForm(selectedCardForEbay);}
 function deleteCard(id){if(!confirm('Delete this card?'))return;collection=collection.filter(c=>c.id!==id);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)deleteCardFromCloud(id);closeModal('cardModal');renderCollection();showToast('Card deleted','success');}
 
