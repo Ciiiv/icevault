@@ -2298,6 +2298,34 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="icvDupeTipsModal">
+  <div class="modal" style="max-width:480px;">
+    <button class="modal-close" onclick="closeModal('icvDupeTipsModal')">&#x2715;</button>
+    <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--gold);margin-bottom:4px;">&#x26A0; Duplicate Card Detected</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">You have multiple copies of this card. Here's how to keep them sorted physically.</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="font-size:20px;flex-shrink:0;">&#x1F3F7;</div>
+        <div><div style="font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:2px;">Label each physical card with its IceVault ID</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Find the ICV-000001 number in the card detail modal. Write or print it on a small label and stick it on the toploader, sleeve, or penny sleeve of each physical card.</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="font-size:20px;flex-shrink:0;">&#x1F4F8;</div>
+        <div><div style="font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:2px;">Each copy has its own scan and grade</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Two copies of the same card can have different centering, corners, and condition. Scan each one separately so the grade reflects that specific physical card.</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="font-size:20px;flex-shrink:0;">&#x1F50D;</div>
+        <div><div style="font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:2px;">Find duplicates in your collection</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Search the player name in your collection to see all copies side by side. The Other Copies row in each card modal links directly between duplicates.</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="font-size:20px;flex-shrink:0;">&#x2705;</div>
+        <div><div style="font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:2px;">Intentional duplicates are fine</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Collectors often have multiple copies of the same base card. Ice Vault flags duplicates so you can label them -- it does not prevent you from saving them.</div></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:10px 12px;background:var(--rink);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text-muted);line-height:1.5;">&#x1F4A1; Serial numbered and graded cert cards warn if the exact same serial # or cert # is found -- those are always the same physical card. Raw cards warn on player + year + brand + parallel match.</div>
+    <button class="save-btn" style="margin-top:14px;" onclick="closeModal('icvDupeTipsModal')">Got it</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="ebayPreviewModal">
   <div class="modal" style="max-width:620px;background:white;color:#111;">
     <button class="modal-close" onclick="closeModal('ebayPreviewModal')" style="color:#777;">&#x2715;</button>

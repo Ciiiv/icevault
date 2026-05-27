@@ -155,6 +155,19 @@ function setScanModel(model) {
   if (analyzeNote) analyzeNote.textContent = '⚠ ' + cost + ' per scan (' + label + ')';
 }
 
+function normalizeImageToJpeg(dataUrl){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=img.width;canvas.height=img.height;
+      canvas.getContext('2d').drawImage(img,0,0);
+      resolve(canvas.toDataURL('image/jpeg',0.92));
+    };
+    img.onerror=()=>resolve(dataUrl); // fallback to original
+    img.src=dataUrl;
+  });
+}
 async function analyzeCard(){
   const keys=getKeys();
   const _needKey = _scanModel === 'gpt4o' ? keys.openai : _scanModel === 'gemini' ? keys.gemini : keys.anthropic;
@@ -166,9 +179,9 @@ async function analyzeCard(){
   const hasBack=!!currentBackImageData;
   try{
     const fb64=currentImageData.split(',')[1];
-    const fmt=currentImageData.startsWith('data:image/png')?'image/png':'image/jpeg';
+    const fmt=(currentImageData.match(/data:([^;]+);/)||[])[1]||'image/jpeg';
     const imgs=[{type:'image',source:{type:'base64',media_type:fmt,data:fb64}}];
-    if(hasBack){const bb=currentBackImageData.split(',')[1];const bm=currentBackImageData.startsWith('data:image/png')?'image/png':'image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
+    if(hasBack){const bb=currentBackImageData.split(',')[1];const bm=(currentBackImageData.match(/data:([^;]+);/)||[])[1]||'image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
     const ebayF=includeEbay?`,\n  "ebayTitle":"eBay title max 80 chars",\n  "ebayDescription":"Collector eBay description 2-3 paragraphs"`:'';
     const gradeF=includeGrade?`,\n  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}`:'';
     const backN=hasBack?'Second image is the BACK — use it for card number, parallel, serial number, back condition.':'Only front provided.';
@@ -263,6 +276,25 @@ async function uploadImageToR2(base64Data, cardId) {
   }
 }
 
+function checkForDuplicates(card){
+  // Serial # match -- same serial = definitely same physical card scanned twice
+  if(card.serialNumber){
+    return collection.filter(c=>c.id!==card.id&&c.serialNumber&&c.serialNumber===card.serialNumber);
+  }
+  // Cert # match -- same cert = same graded slab scanned twice
+  if(card.certNumber){
+    return collection.filter(c=>c.id!==card.id&&c.certNumber&&c.certNumber===card.certNumber);
+  }
+  // Raw non-serial card -- match on player + year + brand + parallel
+  return collection.filter(c=>
+    c.id!==card.id&&
+    c.player&&card.player&&c.player.toLowerCase()===card.player.toLowerCase()&&
+    c.year===card.year&&
+    c.brand===card.brand&&
+    (c.parallel||'Base')===(card.parallel||'Base')&&
+    !c.serialNumber&&!c.certNumber
+  );
+}
 async function saveCard(){
   const player=document.getElementById('fieldPlayer').value.trim();
   if(!player){showToast('Please analyze a card first','error');return;}
@@ -275,9 +307,18 @@ async function saveCard(){
   // Save to localStorage and reset UI immediately -- card appears instantly
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
   updateHeaderStats();showToast(`"${player}" saved!`,'success');
+  // Check for duplicates after save
+  setTimeout(()=>{
+    const dupes=checkForDuplicates(card);
+    if(dupes.length>0){
+      showToast(`Heads up -- ${dupes.length} other cop${dupes.length===1?'y':'ies'} of this card detected`,'error');
+      setTimeout(()=>document.getElementById('icvDupeTipsModal').classList.add('open'),1500);
+    }
+  },500);
   document.getElementById('previewBox').innerHTML='<div class="preview-placeholder"><div style="font-size:32px;">🏒</div></div>';
   document.getElementById('analyzeBtn').disabled=true;document.getElementById('clearBtn').classList.remove('visible');
-  resetFields();currentImageData=null;currentBackImageData=null;document.getElementById('fileInput').value='';
+  resetFields();currentImageData=null;currentBackImageData=null;document.getElementById('fileInput').value='';document.getElementById('fileInputBack').value='';
+  document.getElementById('previewBoxBack').innerHTML='<div class="preview-placeholder"><div style="font-size:24px;margin-bottom:4px;">&#x1F504;</div><div style="font-size:11px;">Back</div></div>';
   // Upload images to R2 in background -- update card with imageUrl when complete
   if(currentUser){
     const frontData=card.imageData;
@@ -646,6 +687,7 @@ function openCardDetail(id){
   <div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'estimatedValue',this)">${c.estimatedValue?'$'+c.estimatedValue:'—'}<span class="edit-hint">✎</span></span></div>
   <div id="editSaveHint_${c.id}" class="edit-save-hint">↵ Enter or click away to save &nbsp;·&nbsp; Esc to cancel</div>
   ${c.iceVaultId ? '<div class="detail-row"><span class="detail-key">IceVault ID</span><span class="detail-val" style="font-family:monospace;color:var(--ice-dark);font-size:12px;">ICV-'+String(c.iceVaultId).padStart(6,'0')+'</span></div>' : ''}
+  ${(()=>{const dupes=checkForDuplicates(c);return dupes.length>0?`<div class="detail-row" style="background:rgba(201,162,39,0.08);border-radius:6px;padding:6px 10px;margin:4px 0;"><span class="detail-key" style="color:var(--gold);">Other copies</span><span class="detail-val" style="font-size:12px;">${dupes.map(d=>`<span onclick="closeModal('cardModal');setTimeout(()=>openCardDetail(${d.id}),100)" style="color:var(--ice-dark);cursor:pointer;text-decoration:underline;">ICV-${String(d.iceVaultId||0).padStart(6,'0')}</span>`).join(', ')} &nbsp;<span onclick="document.getElementById('icvDupeTipsModal').classList.add('open')" style="color:var(--text-muted);cursor:pointer;font-size:11px;">(label tips)</span></span></div>`:'';})()}
   ${c.certGrader?`<div class="detail-row"><span class="detail-key">Grader</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.certGrader}</span></div>`:''}
   ${c.certNumber?`<div class="detail-row"><span class="detail-key">Cert #</span><span class="detail-val" style="color:var(--gold);">${c.certNumber} <a href="${c.registryUrl||'#'}" target="_blank" style="color:var(--ice-dark);font-size:11px;">Verify ↗</a></span></div>`:''}
   ${c.officialGrade?`<div class="detail-row"><span class="detail-key">Official Grade</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.officialGrade}</span></div>`:''}
@@ -2587,9 +2629,10 @@ async function analyzeSlabPhoto(){
   const btn=document.getElementById('slabAnalyzeBtn'),st=document.getElementById('slabScanStatus');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> &nbsp; Reading slab...';st.textContent='AI is reading the slab...';st.style.color='var(--text-muted)';
   try{
-    const b64=slabScanImageData.split(',')[1],mt=slabScanImageData.startsWith('data:image/png')?'image/png':'image/jpeg';
+    const normFront=await normalizeImageToJpeg(slabScanImageData);
+    const b64=normFront.split(',')[1],mt='image/jpeg';
     const imgs=[{type:'image',source:{type:'base64',media_type:mt,data:b64}}];
-    if(slabScanImageDataBack){const bb=slabScanImageDataBack.split(',')[1];const bm=slabScanImageDataBack.startsWith('data:image/png')?'image/png':'image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
+    if(slabScanImageDataBack){const normBack=await normalizeImageToJpeg(slabScanImageDataBack);const bb=normBack.split(',')[1];const bm='image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
     const slabPromptText = 'You are an expert graded sports card authenticator. Analyze this graded card slab and respond ONLY with JSON: {"grader":"PSA,BGS,SGC,CGC,Authority,TAG,KSA,HGA or Other","certNumber":"cert number from label","grade":"full grade text e.g. PSA 9 MINT","gradeNumeric":"numeric grade e.g. 9","player":"player name","year":"card year","brand":"brand and set","cardNumber":"card number if visible","variation":"parallel or variation","estimatedValue":"market value USD as number string"}';
     let slabRes, slabData;
     if (_slabModel === 'gpt4o') {
@@ -2715,6 +2758,14 @@ function saveCertCard(){
   // Save to localStorage immediately -- card appears instantly
   collection.push(card);localStorage.setItem('iceVault_cards',JSON.stringify(collection));
   updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
+  // Check for duplicates after cert card save
+  setTimeout(()=>{
+    const dupes=checkForDuplicates(card);
+    if(dupes.length>0){
+      showToast(`Heads up -- ${dupes.length} other cop${dupes.length===1?'y':'ies'} of this card detected`,'error');
+      setTimeout(()=>document.getElementById('icvDupeTipsModal').classList.add('open'),1500);
+    }
+  },500);
   document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certTags=[];clearSlabScan();
   // Upload slab image to R2 in background then sync to cloud
   if(currentUser){
