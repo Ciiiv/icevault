@@ -53,9 +53,9 @@
 ```
 icevault/
 ├── docs/
-│   ├── index.html          # HTML + CSS + theme init only (~2200 lines)
+│   ├── index.html          # HTML + CSS + theme init only (~2355 lines)
 │   ├── js/
-│   │   └── app.js              # All application JS (~3050 lines)
+│   │   └── app.js              # All application JS (~3236 lines)
 │   ├── manifest.json
 │   ├── sw.js               # v3 -- caches index.html + js/app.js
 │   ├── favicon.svg
