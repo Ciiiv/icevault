@@ -211,7 +211,7 @@ icevault-worker\            # NOT a git repo
 | 20 | eBay shipping -- editable shipping cost field added. Options with hints: USPS Ground Advantage (bubble mailer, tracked, ~$5), USPS Priority Mail (~$10), USPS First Class Top Loader (~$4), USPS First Class PWE (~$1), Free Shipping. Default Ground Advantage $5.00. Auto-updates price field when dropdown changes. SOAP service code: USPSFirstClass for Ground Advantage (USPSGroundAdvantage not valid in SOAP), USPSPriority for Priority | ✅ Done |
 | 22 | eBay SOAP proxy rate limiting -- /proxy/ebay now has dedicated rate limit bucket at 30/hr, separate from /proxy AI scan bucket (100/hr) | ✅ Done |
 | 21 | eBay description cost hint -- cost note now updates dynamically per selected model: Claude (~$0.01-0.02 paid), GPT-4o (~$0.01-0.02 paid), Gemini (~$0.001-0.01 free tier). Uses id=ebayDescCostHint, updated in setEbayDescModel() | ✅ Done |
-| 14 | Duplicate card detection -- assign unique IceVault ID to each card at scan time. Detect duplicates (exact match on player/year/brand/parallel, not serial #). Flag shown in card modal when duplicate exists in collection. Two types: bad duplicates (same serial # = definitely same physical card scanned twice) vs intentional duplicates (two copies of same base card -- collectors do have these). Non-serial duplicates need physical labeling guidance -- tips modal explaining how to label physical cards to match IceVault IDs. Grade/visual differences between duplicate images could also be noted. Future consideration: image similarity comparison between duplicate cards | ⏯ Future |
+| 14 | Duplicate card detection -- two-level detection: exact (serial #, cert #, all fields) and possible (player+year+brand fuzzy+cardNumber match, parallel differs). Tips modal with ICV label system. Other copies row in card modal with clickable ICV links. Hooks in saveCard() and saveCertCard(). normYear/normCardNum/brandMatch normalizers for OCR variance. PNG/JPEG media type fix. | ✅ Done |
 | 11 | Account deletion + Legal + OAuth | ⎪ If public -- includes: account deletion (GDPR right to erasure), Terms of Service, Privacy Policy, COPPA 13+ age gate, GDPR consent + data processing disclosure + EU user rights, Google OAuth, cookie/tracking disclosure |
 
 ---
@@ -502,6 +502,8 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 - **Wrangler OAuth expiry:** Use `$env:CLOUDFLARE_API_TOKEN` if deploy fails
 - **R2 CORS:** Re-grade fetches R2 images directly from browser. If CORS policy is removed or origins change, re-grade will fail with "Failed to fetch". Fix: update CORS policy in Cloudflare R2 dashboard → icevault-images → Settings → CORS Policy
 - **Re-grade requires R2 images:** Cards with only local base64 imageData (guest mode, old imports) cannot be re-graded — no imageUrl to fetch. Re-grade button is suppressed for these cards
+- **DELETE /collection/:id has no rate limit:** Card delete endpoint only checks auth, no KV rate limiting. Low risk for personal use. Add 100/hr rate limit when implementing R2 image cleanup on delete
+- **R2 images not cleaned up on card delete:** Deleting a card removes the D1 row but leaves imageUrl and imageUrlBack objects orphaned in R2. Accumulates over time. Fix: worker DELETE endpoint should also call env.IMAGES.delete() for both R2 keys
 
 ---
 
@@ -553,7 +555,9 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **D1 schema:** users(id,email,password_hash,display_name,verified,created_at) + unique index on display_name,
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
-> **Next priorities:** Item 14 (duplicate detection -- future).
+> **Next priorities:** Item 14 complete (duplicate detection done). Pending:
+> - Edit field tooltips -- tooltip on pencil icon on editable card modal fields (except grayed out fields like grade, cert #). Simple title attribute or CSS tooltip
+> - R2 image cleanup on card delete -- deleteCardFromCloud() only removes D1 row, R2 images orphaned. Worker DELETE /collection/:id endpoint needs to also delete cards/{userId}/{cardId}.png and cards/{userId}/{cardId}_back.png from R2. Add rate limiting (100/hr) to DELETE endpoint at same time -- currently has no rate limit. Also need one-time cleanup for existing orphaned images
 > eBay affiliate links only if going public.
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.

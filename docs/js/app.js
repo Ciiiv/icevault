@@ -178,10 +178,11 @@ async function analyzeCard(){
   const includeGrade=document.getElementById('includeGrade')?.checked !== false;
   const hasBack=!!currentBackImageData;
   try{
-    const fb64=currentImageData.split(',')[1];
-    const fmt=(currentImageData.match(/data:([^;]+);/)||[])[1]||'image/jpeg';
+    const normFront=await normalizeImageToJpeg(currentImageData);
+    const fb64=normFront.split(',')[1];
+    const fmt='image/jpeg';
     const imgs=[{type:'image',source:{type:'base64',media_type:fmt,data:fb64}}];
-    if(hasBack){const bb=currentBackImageData.split(',')[1];const bm=(currentBackImageData.match(/data:([^;]+);/)||[])[1]||'image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
+    if(hasBack){const normBack=await normalizeImageToJpeg(currentBackImageData);const bb=normBack.split(',')[1];const bm='image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
     const ebayF=includeEbay?`,\n  "ebayTitle":"eBay title max 80 chars",\n  "ebayDescription":"Collector eBay description 2-3 paragraphs"`:'';
     const gradeF=includeGrade?`,\n  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}`:'';
     const backN=hasBack?'Second image is the BACK — use it for card number, parallel, serial number, back condition.':'Only front provided.';
@@ -276,24 +277,53 @@ async function uploadImageToR2(base64Data, cardId) {
   }
 }
 
+function norm(s){return(s||'').trim().toLowerCase();}
+function normYear(s){const m=(s||'').match(/(\d{4})/);return m?m[1]:'';}
+function normCardNum(s){return(s||'').trim().toLowerCase().replace(/^#/,'').replace(/[\s\-]/g,'');}
+function openDupeTipsModal(level){
+  window._dupeLevel=level||'possible';
+  const title=document.getElementById('icvDupeTitle');
+  const sub=document.getElementById('icvDupeSubtitle');
+  if(level==='exact'){
+    if(title){title.textContent='Duplicate Card Detected';title.style.color='#E74C3C';}
+    if(sub)sub.textContent='This appears to be the same physical card scanned twice. Use ICV labels to tell copies apart.';
+  } else {
+    if(title){title.innerHTML='&#x26A0; Possible Duplicate';title.style.color='var(--gold)';}
+    if(sub)sub.textContent='Different parallel or OCR variance detected. Verify manually -- this may be a legitimately different card.';
+  }
+  document.getElementById('icvDupeTipsModal').classList.add('open');
+}
 function checkForDuplicates(card){
   // Serial # match -- same serial = definitely same physical card scanned twice
   if(card.serialNumber){
-    return collection.filter(c=>c.id!==card.id&&c.serialNumber&&c.serialNumber===card.serialNumber);
+    const exact=collection.filter(c=>c.id!==card.id&&c.serialNumber&&c.serialNumber===card.serialNumber);
+    return {exact,possible:[]};
   }
   // Cert # match -- same cert = same graded slab scanned twice
   if(card.certNumber){
-    return collection.filter(c=>c.id!==card.id&&c.certNumber&&c.certNumber===card.certNumber);
+    const exact=collection.filter(c=>c.id!==card.id&&c.certNumber&&c.certNumber===card.certNumber);
+    return {exact,possible:[]};
   }
-  // Raw non-serial card -- match on player + year + brand + parallel
-  return collection.filter(c=>
-    c.id!==card.id&&
-    c.player&&card.player&&c.player.toLowerCase()===card.player.toLowerCase()&&
-    c.year===card.year&&
-    c.brand===card.brand&&
-    (c.parallel||'Base')===(card.parallel||'Base')&&
-    !c.serialNumber&&!c.certNumber
+  // Raw card -- level 1: all key fields match exactly
+  const exact=collection.filter(c=>
+    c.id!==card.id&&!c.serialNumber&&!c.certNumber&&
+    norm(c.player)===norm(card.player)&&
+    normYear(c.year)===normYear(card.year)&&
+    norm(c.brand)===norm(card.brand)&&
+    normCardNum(c.cardNumber)===normCardNum(card.cardNumber)&&
+    norm(c.parallel||'Base')===norm(card.parallel||'Base')
   );
+  // Level 2: player + year + brand (fuzzy) + cardNumber match, but something else differs
+  const exactIds=new Set(exact.map(c=>c.id));
+  const brandMatch=(a,b)=>{const na=norm(a),nb=norm(b);return na===nb||na.includes(nb)||nb.includes(na);};
+  const possible=collection.filter(c=>
+    c.id!==card.id&&!c.serialNumber&&!c.certNumber&&!exactIds.has(c.id)&&
+    norm(c.player)===norm(card.player)&&
+    normYear(c.year)===normYear(card.year)&&
+    brandMatch(c.brand,card.brand)&&
+    normCardNum(c.cardNumber)===normCardNum(card.cardNumber)
+  );
+  return {exact,possible};
 }
 async function saveCard(){
   const player=document.getElementById('fieldPlayer').value.trim();
@@ -309,10 +339,13 @@ async function saveCard(){
   updateHeaderStats();showToast(`"${player}" saved!`,'success');
   // Check for duplicates after save
   setTimeout(()=>{
-    const dupes=checkForDuplicates(card);
-    if(dupes.length>0){
-      showToast(`Heads up -- ${dupes.length} other cop${dupes.length===1?'y':'ies'} of this card detected`,'error');
-      setTimeout(()=>document.getElementById('icvDupeTipsModal').classList.add('open'),1500);
+    const {exact,possible}=checkForDuplicates(card);
+    if(exact.length>0){
+      showToast(`Duplicate detected -- ${exact.length} identical cop${exact.length===1?'y':'ies'} in collection`,'error');
+      setTimeout(()=>{openDupeTipsModal('exact');},1500);
+    } else if(possible.length>0){
+      showToast(`Possible duplicate -- ${possible.length} similar card${possible.length===1?'':'s'} found, verify details`,'error');
+      setTimeout(()=>{openDupeTipsModal('possible');},1500);
     }
   },500);
   document.getElementById('previewBox').innerHTML='<div class="preview-placeholder"><div style="font-size:32px;">🏒</div></div>';
@@ -687,7 +720,7 @@ function openCardDetail(id){
   <div class="detail-row"><span class="detail-key">Est. Value</span><span class="detail-val editable-val" onclick="editCardField(${c.id},'estimatedValue',this)">${c.estimatedValue?'$'+c.estimatedValue:'—'}<span class="edit-hint">✎</span></span></div>
   <div id="editSaveHint_${c.id}" class="edit-save-hint">↵ Enter or click away to save &nbsp;·&nbsp; Esc to cancel</div>
   ${c.iceVaultId ? '<div class="detail-row"><span class="detail-key">IceVault ID</span><span class="detail-val" style="font-family:monospace;color:var(--ice-dark);font-size:12px;">ICV-'+String(c.iceVaultId).padStart(6,'0')+'</span></div>' : ''}
-  ${(()=>{const dupes=checkForDuplicates(c);return dupes.length>0?`<div class="detail-row" style="background:rgba(201,162,39,0.08);border-radius:6px;padding:6px 10px;margin:4px 0;"><span class="detail-key" style="color:var(--gold);">Other copies</span><span class="detail-val" style="font-size:12px;">${dupes.map(d=>`<span onclick="closeModal('cardModal');setTimeout(()=>openCardDetail(${d.id}),100)" style="color:var(--ice-dark);cursor:pointer;text-decoration:underline;">ICV-${String(d.iceVaultId||0).padStart(6,'0')}</span>`).join(', ')} &nbsp;<span onclick="document.getElementById('icvDupeTipsModal').classList.add('open')" style="color:var(--text-muted);cursor:pointer;font-size:11px;">(label tips)</span></span></div>`:'';})()}
+  ${(()=>{const {exact,possible}=checkForDuplicates(c);if(exact.length===0&&possible.length===0)return '';const exactLinks=exact.map(d=>`<span onclick="closeModal('cardModal');setTimeout(()=>openCardDetail(${d.id}),100)" style="color:#E74C3C;cursor:pointer;text-decoration:underline;" title="Exact duplicate -- same physical card">ICV-${String(d.iceVaultId||0).padStart(6,'0')} <span style="font-size:9px;background:rgba(192,57,43,0.15);border-radius:3px;padding:1px 4px;color:#E74C3C;">exact</span></span>`).join(', ');const possLinks=possible.map(d=>`<span onclick="closeModal('cardModal');setTimeout(()=>openCardDetail(${d.id}),100)" style="color:var(--gold);cursor:pointer;text-decoration:underline;" title="Possible duplicate -- verify manually">ICV-${String(d.iceVaultId||0).padStart(6,'0')} <span style="font-size:9px;background:rgba(201,162,39,0.15);border-radius:3px;padding:1px 4px;color:var(--gold);">check</span></span>`).join(', ');const allLinks=[exactLinks,possLinks].filter(Boolean).join(', ');return `<div class="detail-row" style="background:rgba(201,162,39,0.08);border-radius:6px;padding:6px 10px;margin:4px 0;"><span class="detail-key" style="color:var(--gold);">Other copies</span><span class="detail-val" style="font-size:12px;">${allLinks} &nbsp;<span onclick="openDupeTipsModal(this.dataset.level)" data-level="${exact.length>0?'exact':'possible'}" style="color:var(--text-muted);cursor:pointer;font-size:11px;">(label tips)</span></span></div>`;})()}
   ${c.certGrader?`<div class="detail-row"><span class="detail-key">Grader</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.certGrader}</span></div>`:''}
   ${c.certNumber?`<div class="detail-row"><span class="detail-key">Cert #</span><span class="detail-val" style="color:var(--gold);">${c.certNumber} <a href="${c.registryUrl||'#'}" target="_blank" style="color:var(--ice-dark);font-size:11px;">Verify ↗</a></span></div>`:''}
   ${c.officialGrade?`<div class="detail-row"><span class="detail-key">Official Grade</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${c.officialGrade}</span></div>`:''}
@@ -2760,10 +2793,13 @@ function saveCertCard(){
   updateHeaderStats();showToast(`${player} (${gl} ${gn||'?'}) saved!`,'success');
   // Check for duplicates after cert card save
   setTimeout(()=>{
-    const dupes=checkForDuplicates(card);
-    if(dupes.length>0){
-      showToast(`Heads up -- ${dupes.length} other cop${dupes.length===1?'y':'ies'} of this card detected`,'error');
-      setTimeout(()=>document.getElementById('icvDupeTipsModal').classList.add('open'),1500);
+    const {exact,possible}=checkForDuplicates(card);
+    if(exact.length>0){
+      showToast(`Duplicate detected -- ${exact.length} identical cop${exact.length===1?'y':'ies'} in collection`,'error');
+      setTimeout(()=>{openDupeTipsModal('exact');},1500);
+    } else if(possible.length>0){
+      showToast(`Possible duplicate -- ${possible.length} similar card${possible.length===1?'':'s'} found, verify details`,'error');
+      setTimeout(()=>{openDupeTipsModal('possible');},1500);
     }
   },500);
   document.getElementById('certNumberInput').value='';document.getElementById('certResultPlaceholder').style.display='block';document.getElementById('certResultData').style.display='none';document.getElementById('certSaveBtn').style.display='none';document.getElementById('certGuestWarning').style.display='none';document.getElementById('certQrStatus').textContent='';document.getElementById('certRegistryLink').style.display='none';certTags=[];clearSlabScan();

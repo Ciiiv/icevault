@@ -2298,11 +2298,11 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="icvDupeTipsModal">
-  <div class="modal" style="max-width:480px;">
+<div class="modal-overlay" id="icvDupeTipsModal" onclick="if(event.target===this)closeModal('icvDupeTipsModal')">
+  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="closeModal('icvDupeTipsModal')">&#x2715;</button>
-    <div style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--gold);margin-bottom:4px;">&#x26A0; Duplicate Card Detected</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">You have multiple copies of this card. Here's how to keep them sorted physically.</div>
+    <div id="icvDupeTitle" style="font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:1px;color:var(--gold);margin-bottom:4px;">&#x26A0; Duplicate Card Detected</div>
+    <div id="icvDupeSubtitle" style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">You have multiple copies of this card. Here's how to keep them sorted physically.</div>
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div style="display:flex;gap:12px;align-items:flex-start;">
         <div style="font-size:20px;flex-shrink:0;">&#x1F3F7;</div>
