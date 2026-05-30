@@ -186,7 +186,7 @@ async function analyzeCard(){
     const ebayF=includeEbay?`,\n  "ebayTitle":"eBay title max 80 chars",\n  "ebayDescription":"Collector eBay description 2-3 paragraphs"`:'';
     const gradeF=includeGrade?`,\n  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}`:'';
     const backN=hasBack?'Second image is the BACK — use it for card number, parallel, serial number, back condition.':'Only front provided.';
-    const prompt=`You are an expert hockey card analyst. ${backN}\nAnalyze this hockey card and respond ONLY with JSON:\n{\n  "player":"Full player name",\n  "year":"Card year",\n  "brand":"Brand and set name",\n  "cardNumber":"Card number if visible",\n  "team":"Player team",\n  "parallel":"Parallel or Base",\n  "serialNumber":"Serial number if present e.g. 47/99 or null",\n  "estimatedValue":"Market value USD as number string"${gradeF}${ebayF}\n}`;
+    const prompt=`You are an expert hockey card dealer and collector with 20 years of experience handling hundreds of thousands of cards. ${backN}\nAnalyze this hockey card carefully and respond ONLY with JSON. Be precise and consistent -- use the exact brand and set name as printed on the card (do not abbreviate or add words not printed on the card), the exact parallel name as printed on the card, and the exact card number as printed. If unsure of a field leave it as null rather than guessing:\n{\n  "player":"Full player name",\n  "year":"Card year",\n  "brand":"Brand and set name",\n  "cardNumber":"Card number if visible",\n  "team":"Player team",\n  "parallel":"Parallel or Base",\n  "serialNumber":"Serial number if present e.g. 47/99 or null",\n  "estimatedValue":"Market value USD as number string"${gradeF}${ebayF}\n}`;
     let res, data, raw;
     if (_scanModel === 'gpt4o') {
       if (!keys.openai) { showToast('Set your OpenAI API key first (\u2699 API Keys)', 'error'); btn.disabled=false; btn.innerHTML='\u2726 &nbsp; Analyze with AI'; return; }
@@ -1900,7 +1900,7 @@ async function exportStatsPDF() {
       const cdoc=chunkIdx===0?doc:new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     for(let ci=0;ci<chunkCards.length;ci++){
       if(ci%cardsPerPage===0){
-        if(ci>0||chunkIdx>0) cdoc.addPage();
+        cdoc.addPage();
         cdoc.setFillColor(...teal); cdoc.rect(0,0,W,14,'F');
         cdoc.setFont('helvetica','bold'); cdoc.setFontSize(10); cdoc.setTextColor(255,255,255);
         cdoc.text('Ice Vault -- Card Collection',margin,9);
@@ -1927,7 +1927,7 @@ async function exportStatsPDF() {
       cdoc.setFont('helvetica','normal'); cdoc.setFontSize(6.5); cdoc.setTextColor(...muted);
       cdoc.text(((c.year||'')+' '+(c.brand||'')).substring(0,24).trim(),tx,y+11);
       const colHalf=(cardW-thumbW-12)/2;
-      const stats=[['Est. Value',c.estimatedValue?'$'+c.estimatedValue:'--'],['Grade',c.grade?(c.aiGraded?'AI ':'')+c.grade.overall:'--'],['Parallel',(c.parallel||'Base').substring(0,10)],['Serial #',(c.serialNumber||'--').substring(0,8)]];
+      const stats=[['Est. Value',c.estimatedValue?'$'+c.estimatedValue:'--'],['Grade',c.grade?(c.aiGraded?'AI ':'')+c.grade.overall:'--'],['Parallel',(c.parallel||'Base').substring(0,10)],['Serial #',(c.serialNumber||'--').substring(0,8)],['Team',(c.team||'--').substring(0,12)]];
       stats.forEach(([label,val],si)=>{
         const sx=tx+(si%2)*colHalf,sy=y+16+(Math.floor(si/2)*8);
         cdoc.setFontSize(6); cdoc.setTextColor(...muted); cdoc.text(label,sx,sy);
@@ -2630,7 +2630,7 @@ let slabCameraTarget='front';
 function openSlabCamera(side){slabCameraTarget=side||'front';navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{cameraStream=s;document.getElementById('cameraFeed').srcObject=s;document.getElementById('cameraModal').classList.add('open');document.getElementById('cameraModal').dataset.mode='slab';}).catch(()=>showToast('Camera access denied','error'));}
 function clearSlabScan(){slabScanImageData=null;slabScanImageDataBack=null;certSlabImageData=null;document.getElementById('slabScanPreview').style.display='none';if(document.getElementById('slabScanPreviewBack'))document.getElementById('slabScanPreviewBack').style.display='none';document.getElementById('slabAnalyzeBtn').disabled=true;document.getElementById('slabClearBtn').classList.remove('visible');document.getElementById('slabScanFileInput').value='';if(document.getElementById('slabScanFileInputBack'))document.getElementById('slabScanFileInputBack').value='';document.getElementById('slabScanStatus').textContent='';
   // Clear OCR result fields and hide result panel
-  ['certPlayer','certYear','certBrand','certCardNum','certVariation','certValue'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['certPlayer','certYear','certBrand','certCardNum','certTeam','certVariation','certSerialNum','certValue'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const certNum=document.getElementById('certNum');if(certNum)certNum.textContent='—';
   const certGrade=document.getElementById('certGrade');if(certGrade){certGrade.value='';certGrade.readOnly=false;certGrade.style.opacity='';}
   const certResultData=document.getElementById('certResultData');if(certResultData)certResultData.style.display='none';
@@ -2666,7 +2666,7 @@ async function analyzeSlabPhoto(){
     const b64=normFront.split(',')[1],mt='image/jpeg';
     const imgs=[{type:'image',source:{type:'base64',media_type:mt,data:b64}}];
     if(slabScanImageDataBack){const normBack=await normalizeImageToJpeg(slabScanImageDataBack);const bb=normBack.split(',')[1];const bm='image/jpeg';imgs.push({type:'image',source:{type:'base64',media_type:bm,data:bb}});}
-    const slabPromptText = 'You are an expert graded sports card authenticator. Analyze this graded card slab and respond ONLY with JSON: {"grader":"PSA,BGS,SGC,CGC,Authority,TAG,KSA,HGA or Other","certNumber":"cert number from label","grade":"full grade text e.g. PSA 9 MINT","gradeNumeric":"numeric grade e.g. 9","player":"player name","year":"card year","brand":"brand and set","cardNumber":"card number if visible","variation":"parallel or variation","estimatedValue":"market value USD as number string"}';
+    const slabPromptText = 'You are an expert graded sports card authenticator and dealer with 20 years of experience. Analyze this graded card slab carefully and respond ONLY with JSON. Be precise -- use the exact brand and set name as printed on the card label (do not abbreviate or add words not on the label), the exact parallel or variation name as printed, and read the cert number and grade exactly as shown on the label: {"grader":"PSA,BGS,SGC,CGC,Authority,TAG,KSA,HGA or Other","certNumber":"cert number from label","grade":"full grade text e.g. PSA 9 MINT","gradeNumeric":"numeric grade e.g. 9","player":"player name","year":"card year","brand":"brand and set","cardNumber":"card number if visible","team":"player team name","variation":"parallel or variation","serialNumber":"serial number if present e.g. 47/99 or null","estimatedValue":"market value USD as number string"}';
     let slabRes, slabData;
     if (_slabModel === 'gpt4o') {
       const gptImgs = imgs.map(img => ({ type: 'image_url', image_url: { url: 'data:' + img.source.media_type + ';base64,' + img.source.data } }));
@@ -2697,7 +2697,7 @@ async function analyzeSlabPhoto(){
     const url=GRADERS[gm[result.grader]||currentGrader]?.url(result.certNumber||'')||'#';
     document.getElementById('certPop').innerHTML=`<a href="${url}" target="_blank" style="color:var(--ice-dark);">Verify at registry ↗</a>`;
     document.getElementById('certDate').textContent='—';
-    document.getElementById('certPlayer').value=result.player||'';document.getElementById('certYear').value=result.year||'';document.getElementById('certBrand').value=result.brand||'';document.getElementById('certCardNum').value=result.cardNumber||'';document.getElementById('certVariation').value=result.variation||'';document.getElementById('certValue').value=result.estimatedValue||'';
+    document.getElementById('certPlayer').value=result.player||'';document.getElementById('certYear').value=result.year||'';document.getElementById('certBrand').value=result.brand||'';document.getElementById('certCardNum').value=result.cardNumber||'';document.getElementById('certTeam').value=result.team||'';document.getElementById('certVariation').value=result.variation||'';document.getElementById('certSerialNum').value=result.serialNumber||'';document.getElementById('certValue').value=result.estimatedValue||'';
     if(result.certNumber){document.getElementById('certNumEditInput').value=result.certNumber;updateRegistryLinkFromEdit();}
     certTags=[];renderCertTagRow();st.textContent='✓ Slab read — verify cert # if needed';st.style.color='var(--green)';showToast('Slab analyzed!','success');
   }catch(err){st.textContent='✗ Failed: '+err.message;st.style.color='var(--red)';showToast('Slab read failed: '+err.message,'error');}
@@ -2785,7 +2785,7 @@ function saveCertCard(){
   if(!player){showToast('Enter the player name first','error');return;}
   const gl=currentGrader==='AUT'?'Authority':currentGrader;
   const certEstVal = document.getElementById('certValue').value;
-  const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,team:'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:certEstVal,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,imageDataBack:slabScanImageDataBack||null,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
+  const card={id:Date.now(),player,year:document.getElementById('certYear').value,brand:document.getElementById('certBrand').value,cardNumber:document.getElementById('certCardNum').value,serialNumber:document.getElementById('certSerialNum')?.value.trim()||null,team:document.getElementById('certTeam')?.value.trim()||'',parallel:document.getElementById('certVariation').value||'Base',estimatedValue:certEstVal,collection:document.getElementById('certCollection').value,tags:[...new Set([...certTags,gl])],grade:gn?{overall:gn,centering:gn,corners:gn,edges:gn,surface:gn,rationale:`Official ${gl} grade: ${gt}. Cert #${cn}.`}:null,imageData:certSlabImageData,imageDataBack:slabScanImageDataBack||null,certNumber:cn,certGrader:gl,officialGrade:gt,registryUrl:GRADERS[currentGrader].url(cn),listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
     valueHistory: certEstVal ? [{ value: certEstVal, date: new Date().toISOString(), source: 'scan' }] : []
   };
   // Save to localStorage immediately -- card appears instantly
