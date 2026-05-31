@@ -23,7 +23,7 @@
 | Image storage | Cloudflare R2 | Bucket: `icevault-images`, public URL: `https://pub-8fa31d4e964e401e8d40e2c4244f2868.r2.dev` |
 | Rate limiting | Cloudflare KV | Namespace: `RATE_LIMIT_KV`, ID: `94009b2958714bd88fc369c3a808997e` |
 | Email | Maileroo | 3,000/mo free. From: `noreply@af4c1dd0a43e50da.maileroo.org` |
-| AI | Anthropic Claude (`claude-opus-4-5`), OpenAI GPT-4o, Google Gemini 2.5 Flash, Ximilar Card Grader v2 | card OCR, grading, eBay descriptions |
+| AI | Anthropic Claude (`claude-opus-4-6`), OpenAI GPT-4o, Google Gemini 2.5 Flash, Ximilar Card Grader v2 | card OCR, grading, eBay descriptions |
 | Android app | PWABuilder | TWA wrapper — sideloaded APK |
 | Worker deployment | Wrangler CLI | `C:\Users\civ2g\icevault-worker` -- requires Node.js (v18+) and npm. Install: `npm install -g wrangler`. Authenticate: `wrangler login`. Deploy: `wrangler deploy` from worker directory |
 
@@ -527,7 +527,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > fix.py lives in C:\Users\civ2g\icevault-worker\ — never committed to repo.
 > Git commands run from VSCode. Test frontend with Live Server (http://127.0.0.1:5500).
 >
-> **index.html is ~4500 lines.** Always use fix.py for patches — never rewrite the whole file.
+> **index.html is ~2355 lines, app.js is ~3236 lines.** Always use fix.py for patches — never rewrite the whole file.
 > Views inside .main-content inside .sidebar-shell always.
 > Classic theme: sidebar-shell display:block, sidebar-nav/topbar hidden, main-content display:block.
 >
