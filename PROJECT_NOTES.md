@@ -217,6 +217,17 @@ icevault-worker\            # NOT a git repo
 | 14 | Duplicate card detection -- two-level detection: exact (serial #, cert #, all fields) and possible (player+year+brand fuzzy+cardNumber match, parallel differs). Tips modal with ICV label system. Other copies row in card modal with clickable ICV links. Hooks in saveCard() and saveCertCard(). normYear/normCardNum/brandMatch normalizers for OCR variance. PNG/JPEG media type fix. | ✅ Done |
 | 11 | Account deletion + Legal + OAuth | ⎪ If public -- includes: account deletion (GDPR right to erasure), Terms of Service, Privacy Policy, COPPA 13+ age gate, GDPR consent + data processing disclosure + EU user rights, Google OAuth, cookie/tracking disclosure |
 
+### 🐛 Known Bugs (found code review May 2026)
+
+| # | Bug | File | Status |
+|---|-----|------|--------|
+| B1 | `exportCSV()` header array has 23 columns but row map produces 24 -- ICV ID appended without matching header. Last column has data but no label in Excel | app.js | ⬚ Fix |
+| B2 | Card grid HTML duplicated verbatim between `renderGridFromCollection()` and `_renderFilteredLocal()` -- any grid change requires editing two places | app.js | ⬚ Refactor |
+| B3 | `updateCardCollection()` uses brittle string-replace chain to normalize collection names -- fix by setting correct `value=` attributes on modal select options | app.js | ⬚ Fix |
+| B4 | `triggerRescan()` reads scan tab's `#includeGrade` checkbox -- re-scan is OCR-only so this is dead code reading wrong element (harmless but confusing) | app.js | ⬚ Cleanup |
+| B5 | README project structure still shows `index.html` as single-file app -- `docs/js/app.js` not mentioned | README.md | ⬚ Docs |
+| B6 | Classic theme header shows 3 stats (Cards, Listed, Est. Value) -- sidebar topbar has 4 (adds Sold, Vs Est.) -- drifted out of sync | index.html | ⬚ Low priority |
+
 ---
 
 ## 🗄 D1 Database Schema
@@ -304,6 +315,18 @@ Two PowerShell terminals open side by side in Windows Terminal:
 - Non-ASCII chars: em-dashes, box-drawing chars, unicode minus may corrupt. Use only ASCII in JS patches -- replace with `--`, `-` etc.
 - **Windows CRLF line endings:** app.js uses CRLF (`\r\n`). Always open files in **binary mode** (`rb`/`wb`) in fix.py -- never text mode. Build pattern strings as byte literals (`b"..."`) with explicit `\r\n`. Text mode silently normalizes line endings and str.replace() will never match. This is the most reliable approach for all fix.py patches on this project.
 - **Line count verification:** every fix.py must print lines before, lines after, and lines added/removed. Use `len(content.splitlines())` before and after the replace. If the delta is unexpected, bail with `sys.exit(1)` before writing the file. Note: same-line patches will show 0 lines changed -- for those, verify with a targeted `content.count()` check on the new string instead of relying on line count delta.
+- **Standard fix.py footer:** every fix.py must capture `lines_before` at the top, then end with this block -- capture after, verify checks, print delta, THEN write the file so unexpected deltas are caught before saving:
+```python
+# Standard fix.py footer -- always include
+lines_final = len(content.splitlines())
+print(f'Lines before: {lines_before}')
+print(f'Lines after: {lines_final}')
+print(f'Lines added: {lines_final - lines_before}')
+print(f'Size after: {len(content)} bytes')
+# verify checks here, sys.exit(1) if unexpected
+with open(path, 'wb') as f: f.write(content)
+print('SUCCESS')
+```
 - Aggressive regex: never use `re.sub` with broad patterns on the full file -- it can collapse everything. Use `str.replace()` with exact strings only
 - Always verify line count after saving: `(Get-Content "path").Count` -- if it drops dramatically, run `git checkout docs/index.html` immediately
 - Syntax errors after patching: check F12 console for line number, then `Get-Content "path" | Select-Object -Index (N-3..N+3)` to inspect
@@ -562,6 +585,8 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > - Edit field tooltips -- tooltip on pencil icon on editable card modal fields (except grayed out fields like grade, cert #). Simple title attribute or CSS tooltip
 > - R2 image cleanup on card delete -- deleteCardFromCloud() only removes D1 row, R2 images orphaned. Worker DELETE /collection/:id endpoint needs to also delete cards/{userId}/{cardId}.png and cards/{userId}/{cardId}_back.png from R2. Add rate limiting (100/hr) to DELETE endpoint at same time -- currently has no rate limit. Also need one-time cleanup for existing orphaned images
 > eBay affiliate links only if going public.
+> 
+> **Known bugs (fix in order):** B1 exportCSV missing header, B2 duplicate grid template, B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats drift.
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >
