@@ -1019,10 +1019,24 @@ export default {
     if (path.startsWith('/collection/') && request.method === 'DELETE') {
       const user = await getUser(request, db);
       if (!user) return err('Unauthorized', 401, cors);
+      // Rate limit: 100 deletes/hr
+      const delKey = `rate:delete:${user.id}`;
+      const delCount = parseInt(await env.RATE_LIMIT_KV.get(delKey) || '0');
+      if (delCount >= 100) return err('Rate limit exceeded', 429, cors);
+      await env.RATE_LIMIT_KV.put(delKey, String(delCount + 1), { expirationTtl: 3600 });
       const cardId = path.split('/')[2];
+      // Delete from D1
       await db.prepare(
         'DELETE FROM cards WHERE id = ? AND user_id = ?'
       ).bind(cardId, user.id).run();
+      // Delete R2 images -- try all possible extensions
+      const r2Keys = [
+        `cards/${user.id}/${cardId}.jpg`,
+        `cards/${user.id}/${cardId}.png`,
+        `cards/${user.id}/${cardId}_back.jpg`,
+        `cards/${user.id}/${cardId}_back.png`,
+      ];
+      await Promise.allSettled(r2Keys.map(k => env.IMAGES.delete(k)));
       return json({ ok: true }, 200, cors);
     }
 
