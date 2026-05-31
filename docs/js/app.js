@@ -293,6 +293,61 @@ function openDupeTipsModal(level){
   }
   document.getElementById('icvDupeTipsModal').classList.add('open');
 }
+function openXimilarDetail(cardId){
+  const c=collection.find(x=>x.id===cardId);if(!c)return;
+  const g=c.grades?.ximilar;if(!g||!g.ximilarDetail)return;
+  const d=g.ximilarDetail;
+  const f=d.front,bk=d.back,comb=d.combined||{};
+  const gradeColor=(v)=>v<=6?'#A32D2D':v<=7.5?'#854F0B':'var(--color-text-primary)';
+  const gradeBg=(v)=>v<=6?'rgba(226,75,74,0.08)':v<=7.5?'rgba(186,117,23,0.1)':'var(--color-background-secondary)';
+  const gradeBorder=(v)=>v<=6?'0.5px solid rgba(226,75,74,0.2)':v<=7.5?'0.5px solid rgba(186,117,23,0.25)':'none';
+  const cornerRow=(c)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 6px;background:${gradeBg(c.grade)};border-radius:3px;border:${gradeBorder(c.grade)};margin-bottom:2px;"><span style="color:var(--color-text-secondary);">${c.name.replace('_',' ').toLowerCase()}</span><span style="font-weight:500;color:${gradeColor(c.grade)};">${c.grade}</span></div>`;
+  const edgeRow=(e)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 6px;background:${gradeBg(e.grade)};border-radius:3px;border:${gradeBorder(e.grade)};margin-bottom:2px;"><span style="color:var(--color-text-secondary);">${e.name.toLowerCase()}</span><span style="font-weight:500;color:${gradeColor(e.grade)};">${e.grade}</span></div>`;
+  const imgCol=(img,label)=>img?`
+    <div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px;padding-bottom:4px;border-bottom:0.5px solid var(--color-border-tertiary);text-transform:uppercase;letter-spacing:0.05em;">${label}</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:2px;">Centering <span style="font-weight:500;color:${gradeColor(img.centering)};float:right;">${img.centering}</span></div>
+      <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:8px;padding-left:6px;">${img.centeringRatio}</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;">Corners</div>
+      ${(img.corners||[]).map(cornerRow).join('')}
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;margin-bottom:4px;">Edges</div>
+      ${(img.edges||[]).map(edgeRow).join('')}
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;margin-bottom:2px;">Surface <span style="font-weight:500;color:${gradeColor(img.surface)};float:right;">${img.surface}</span></div>
+      <div style="font-size:10px;color:var(--color-text-secondary);padding-left:6px;">${label} image analyzed</div>
+    </div>`:'<div style="font-size:11px;color:var(--color-text-secondary);">Not scanned</div>';
+  const weakSpots=[];
+  if(f){
+    (f.corners||[]).forEach(x=>{if(x.grade<=6.5)weakSpots.push('Front '+x.name.replace('_',' ').toLowerCase()+' corner ('+x.grade+')')});
+    (f.edges||[]).forEach(x=>{if(x.grade<=6.5)weakSpots.push('Front '+x.name.toLowerCase()+' edge ('+x.grade+')')});
+    if(f.centering<=6.5)weakSpots.push('Front centering off '+f.centeringRatio);
+  }
+  if(bk){
+    (bk.corners||[]).forEach(x=>{if(x.grade<=6.5)weakSpots.push('Back '+x.name.replace('_',' ').toLowerCase()+' corner ('+x.grade+')')});
+    (bk.edges||[]).forEach(x=>{if(x.grade<=6.5)weakSpots.push('Back '+x.name.toLowerCase()+' edge ('+x.grade+')')});
+    if(bk.centering<=6.5)weakSpots.push('Back centering off '+bk.centeringRatio);
+  }
+  // Update modal header with final grade
+  const hdr=document.getElementById('ximilarDetailHeader');
+  if(hdr)hdr.innerHTML=`<span style="font-size:14px;font-weight:500;color:#E1F5EE;">Ximilar — Full Grade Breakdown</span><div style="text-align:right;margin-right:24px;"><div style="font-size:18px;font-weight:500;color:#E1F5EE;">${comb.final??''}</div><div style="font-size:10px;color:#9FE1CB;">${comb.condition||''} · combined</div></div>`;
+  document.getElementById('ximilarDetailModal').classList.add('open');
+  document.getElementById('ximilarDetailContent').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
+      <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px;text-align:center;"><div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;">Centering</div><div style="font-size:20px;font-weight:500;color:${gradeColor(comb.centering)};">${comb.centering??'?'}</div><div style="font-size:10px;color:var(--color-text-secondary);">combined</div></div>
+      <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px;text-align:center;"><div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;">Corners</div><div style="font-size:20px;font-weight:500;color:${gradeColor(comb.corners)};">${comb.corners??'?'}</div><div style="font-size:10px;color:var(--color-text-secondary);">combined</div></div>
+      <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px;text-align:center;"><div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;">Edges</div><div style="font-size:20px;font-weight:500;color:${gradeColor(comb.edges)};">${comb.edges??'?'}</div><div style="font-size:10px;color:var(--color-text-secondary);">combined</div></div>
+      <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px;text-align:center;"><div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;">Surface</div><div style="font-size:20px;font-weight:500;color:${gradeColor(comb.surface)};">${comb.surface??'?'}</div><div style="font-size:10px;color:var(--color-text-secondary);">combined</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      ${imgCol(f,'Front')}${imgCol(bk,'Back')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      ${f?.autograph?`<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px;"><div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;">Autograph (front)</div><div style="font-size:12px;font-weight:500;color:${f.autograph==='Yes'?'var(--color-text-success)':'var(--color-text-secondary)'};">${f.autograph} · ${Math.round((f.autographProb||0)*100)}%</div></div>`:''}
+      ${f?.damaged?`<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px;"><div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;">Damage check</div><div style="font-size:12px;font-weight:500;color:${f.damaged==='OK'?'var(--color-text-success)':'var(--color-text-danger)'};">${f.damaged} · ${Math.round((f.damagedProb||0)*100)}%</div></div>`:''}
+    </div>
+    ${weakSpots.length>0?`<div style="background:var(--color-background-danger);border:0.5px solid var(--color-border-danger);border-radius:var(--border-radius-md);padding:8px 10px;margin-bottom:10px;"><div style="font-size:11px;font-weight:500;color:var(--color-text-danger);margin-bottom:2px;">Weak spots</div><div style="font-size:11px;color:var(--color-text-secondary);">${weakSpots.join(', ')}</div></div>`:''}
+    <div style="padding-top:10px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-secondary);">Combined final grade uses geometric mean across ${bk?'front and back':'front only'} images.</div>
+  `;
+}
 function checkForDuplicates(card){
   // Serial # match -- same serial = definitely same physical card scanned twice
   if(card.serialNumber){
@@ -801,6 +856,7 @@ function renderGradeTabContent(cardId, source, grade) {
       <div class="grade-row"><span>Surface</span><span>${grade.surface}</span></div>
     </div>
     <div class="grade-rationale" style="margin-top:6px;">${grade.rationale||''}</div>
+    ${source==='ximilar'?`<button onclick="openXimilarDetail(${cardId})" style="width:100%;margin:6px 0;padding:6px;border:0.5px solid var(--border);border-radius:6px;background:var(--rink);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="ti ti-chart-bar" style="font-size:13px;margin-right:4px;"></i>View full breakdown</button>`:''}
     <button class="grade-regrade-btn" onclick="regradeCard(${cardId},'${source}')">↺ Re-grade with ${label} (${costHint})</button>
     <button class="grade-set-btn" onclick="setCardGrade(${cardId},'${source}')">✓ Set as card grade</button>`;
 }
@@ -892,14 +948,30 @@ Grade this card condition and respond ONLY with JSON:
       data = await res.json();
       if (data.status && data.status.code !== 200) throw new Error(data.status.text || 'Ximilar error');
       // Map Ximilar response to our grade format
-      const xg = data.records?.[0]?.grades || {};
+      const xg = data.grades || {};
+      // Extract per-image detail from records
+      const xRecords = data.records || [];
+      const xFront = xRecords.find(r => r.card?.[0]?._tags?.Side?.[0]?.name === 'Front') || xRecords[0] || {};
+      const xBack = xRecords.find(r => r.card?.[0]?._tags?.Side?.[0]?.name === 'Back') || null;
+      const buildImageDetail = (rec) => rec ? {
+        centering: rec.grades?.centering ?? null,
+        centeringRatio: (rec.card?.[0]?.centering?.['left/right'] || '') + ' L/R, ' + (rec.card?.[0]?.centering?.['top/bottom'] || '') + ' T/B',
+        surface: rec.card?.[0]?.surface?.grade ?? null,
+        corners: (rec.corners || []).map(c => ({ name: c.name, grade: c.grade })),
+        edges: (rec.edges || []).map(e => ({ name: e.name, grade: e.grade })),
+        autograph: rec.card?.[0]?._tags?.Autograph?.[0]?.name || null,
+        autographProb: rec.card?.[0]?._tags?.Autograph?.[0]?.prob || null,
+        damaged: rec.card?.[0]?._tags?.Damaged?.[0]?.name || null,
+        damagedProb: rec.card?.[0]?._tags?.Damaged?.[0]?.prob || null,
+      } : null;
       grade = {
         overall: String(xg.final ?? '?'),
         centering: String(xg.centering ?? '?'),
         corners: String(xg.corners ?? '?'),
         edges: String(xg.edges ?? '?'),
         surface: String(xg.surface ?? '?'),
-        rationale: 'Ximilar AI grade. Condition: ' + (xg.condition || '?') + '. Final grade ' + (xg.final ?? '?') + '/10 using geometric mean of centering, corners, edges, surface.'
+        rationale: 'Ximilar AI grade. Condition: ' + (xg.condition || '?') + '. Final grade ' + (xg.final ?? '?') + '/10 using geometric mean of centering, corners, edges, surface.',
+        ximilarDetail: { front: buildImageDetail(xFront), back: buildImageDetail(xBack), combined: xg }
       };
     } else if (source === 'gpt4o') {
       if (!keys.openai) throw new Error('Add your OpenAI API key in \u2699 Settings');

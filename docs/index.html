@@ -2300,6 +2300,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="ximilarDetailModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('ximilarDetailModal')">&#x2715;</button>
+    <div id="ximilarDetailHeader" style="background:var(--ice-dark);margin:-28px -28px 16px -28px;padding:12px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:14px;font-weight:500;color:#E1F5EE;">Ximilar — Full Grade Breakdown</span>
+    </div>
+    <div id="ximilarDetailContent" style="max-height:70vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="icvDupeTipsModal" onclick="if(event.target===this)closeModal('icvDupeTipsModal')">
   <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="closeModal('icvDupeTipsModal')">&#x2715;</button>
