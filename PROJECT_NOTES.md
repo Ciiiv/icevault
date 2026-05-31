@@ -180,6 +180,9 @@ icevault-worker\            # NOT a git repo
 | 10 | Sentry error monitoring | ⚪ If public — wrangler tail + F12 dev tools sufficient for personal use |
 | 11 | eBay REST API migration | ⚪ If needed — legacy XML SOAP still functional, migrate only if it breaks |
 | 12 | D1 schema + Google OAuth | ⚪ If public |
+| 13 | Subresource Integrity (SRI) hashes on CDN scripts | ⚪ If public — add integrity= and crossorigin= to Chart.js, jsPDF, and other cdnjs script tags. Pin to specific version URLs. Regenerate hash when upgrading library version. Protects against CDN compromise |
+| 14 | Content Security Policy (CSP) headers | ⚪ If public — GitHub Pages cannot set custom headers. Options: (a) migrate to Cloudflare Pages and use _headers file, or (b) proxy all page requests through worker. Prevents XSS from loading external scripts. Medium complexity |
+| 15 | SessionStorage for API keys instead of localStorage | ⚪ If public — replace localStorage with sessionStorage for key storage only (not card collection). Keys clear on tab close, reducing XSS window. Tradeoff: users re-enter keys every session. Low complexity |
 
 ### Feature Backlog
 
