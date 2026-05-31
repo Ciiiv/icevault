@@ -186,7 +186,7 @@ async function analyzeCard(){
     const ebayF=includeEbay?`,\n  "ebayTitle":"eBay title max 80 chars",\n  "ebayDescription":"Collector eBay description 2-3 paragraphs"`:'';
     const gradeF=includeGrade?`,\n  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}`:'';
     const backN=hasBack?'Second image is the BACK — use it for card number, parallel, serial number, back condition.':'Only front provided.';
-    const prompt=`You are an expert hockey card dealer and collector with 20 years of experience handling hundreds of thousands of cards. ${backN}\nAnalyze this hockey card carefully and respond ONLY with JSON. Be precise and consistent -- use the exact brand and set name as printed on the card (do not abbreviate or add words not printed on the card), the exact parallel name as printed on the card, and the exact card number as printed. If unsure of a field leave it as null rather than guessing:\n{\n  "player":"Full player name",\n  "year":"Card year",\n  "brand":"Brand and set name",\n  "cardNumber":"Card number if visible",\n  "team":"Player team",\n  "parallel":"Parallel or Base",\n  "serialNumber":"Serial number if present e.g. 47/99 or null",\n  "estimatedValue":"Market value USD as number string"${gradeF}${ebayF}\n}`;
+    const prompt=`You are an expert hockey card dealer and collector with 20 years of experience handling hundreds of thousands of cards. ${backN}\nAnalyze this hockey card carefully and respond ONLY with JSON. Read all fields exactly as printed in text on the card -- do not describe visual appearance, do not guess, do not abbreviate, and do not add words not printed on the card. Specifically: brand/set must include any subset name exactly as printed (e.g. insert or parallel set names); parallel must be read exactly as printed in text on the card not from visual appearance; card number must be read exactly as printed; year must be read exactly as printed; serial number must be the actual number printed on the card not inferred. If unsure of any field leave it as null rather than guessing:\n{\n  "player":"Full player name",\n  "year":"Card year",\n  "brand":"Brand and set name",\n  "cardNumber":"Card number if visible",\n  "team":"Player team",\n  "parallel":"Parallel or Base",\n  "serialNumber":"Serial number if present e.g. 47/99 or null",\n  "estimatedValue":"Market value USD as number string"${gradeF}${ebayF}\n}`;
     let res, data, raw;
     if (_scanModel === 'gpt4o') {
       if (!keys.openai) { showToast('Set your OpenAI API key first (\u2699 API Keys)', 'error'); btn.disabled=false; btn.innerHTML='\u2726 &nbsp; Analyze with AI'; return; }
@@ -204,7 +204,7 @@ async function analyzeCard(){
       raw = data.candidates[0].content.parts[0].text.trim().replace(/```json|```/g, '').trim();
     } else {
       if (!keys.anthropic) { showToast('Set your Anthropic API key first (\u2699 API Keys)', 'error'); btn.disabled=false; btn.innerHTML='\u2726 &nbsp; Analyze with AI'; return; }
-      res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: includeEbay ? 2000 : 1200, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
+      res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: includeEbay ? 2000 : 1200, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
       data = await res.json();
       if (data.error) throw new Error(data.error.message);
       raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
@@ -920,7 +920,7 @@ Grade this card condition and respond ONLY with JSON:
     } else {
       // Claude
       if (!keys.anthropic) throw new Error('Add your Anthropic API key in \u2699 Settings');
-      res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
+      res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 400, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
       data = await res.json();
       if (data.error) throw new Error(data.error.message);
       raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
@@ -1047,7 +1047,7 @@ Analyze this hockey card and respond ONLY with JSON:
       if (rescanData.error) throw new Error(rescanData.error.message || JSON.stringify(rescanData.error));
       rescanRaw = rescanData.candidates[0].content.parts[0].text.trim().replace(/```json|```/g, '').trim();
     } else {
-      rescanRes = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 800, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
+      rescanRes = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 800, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: prompt }] }] }) });
       rescanData = await rescanRes.json();
       if (rescanData.error) throw new Error(rescanData.error.message);
       rescanRaw = rescanData.content[0].text.trim().replace(/```json|```/g, '').trim();
@@ -1430,7 +1430,7 @@ async function queueGenerateDesc(id) {
       const data = await res.json(); if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
       desc = data.candidates[0].content.parts[0].text;
     } else {
-      const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] }) });
+      const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] }) });
       const data = await res.json(); if (data.error) throw new Error(data.error.message);
       desc = data.content[0].text;
     }
@@ -1581,7 +1581,7 @@ async function generateListingAI(){
       res=await fetch(WORKER_URL+'/proxy/gemini',{method:'POST',headers:{'Content-Type':'application/json','x-gemini-key':keys.gemini},body:JSON.stringify({model:'gemini-2.5-flash',contents:[{parts:[{text:ebayDescPrompt}]}]})});
       data=await res.json();if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));desc=data.candidates[0].content.parts[0].text;
     }else{
-      res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':keys.anthropic,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:600,messages:[{role:'user',content:ebayDescPrompt}]})});
+      res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':keys.anthropic,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-6',max_tokens:600,messages:[{role:'user',content:ebayDescPrompt}]})});
       data=await res.json();if(data.error)throw new Error(data.error.message);desc=data.content[0].text;
     }
     document.getElementById('ebayDesc').value=desc;
@@ -2679,7 +2679,7 @@ async function analyzeSlabPhoto(){
       slabData = await slabRes.json();
       if (slabData.error) throw new Error(slabData.error.message || JSON.stringify(slabData.error));
     } else {
-      slabRes = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 1000, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: slabPromptText }] }] }) });
+      slabRes = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': keys.anthropic, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 1000, messages: [{ role: 'user', content: [...imgs, { type: 'text', text: slabPromptText }] }] }) });
       slabData = await slabRes.json();
       if (slabData.error) throw new Error(slabData.error.message);
     }
