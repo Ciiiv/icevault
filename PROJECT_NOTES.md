@@ -580,8 +580,6 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > sessions, password_resets, email_verifications, cards(+updated_at), share_tokens, request_logs.
 >
 > **Next priorities:** Item 14 complete (duplicate detection done). Pending:
-> - Edit field tooltips -- tooltip on pencil icon on editable card modal fields (except grayed out fields like grade, cert #). Simple title attribute or CSS tooltip
-> - R2 image cleanup on card delete -- deleteCardFromCloud() only removes D1 row, R2 images orphaned. Worker DELETE /collection/:id endpoint needs to also delete cards/{userId}/{cardId}.png and cards/{userId}/{cardId}_back.png from R2. Add rate limiting (100/hr) to DELETE endpoint at same time -- currently has no rate limit. Also need one-time cleanup for existing orphaned images
 > eBay affiliate links only if going public.
 > 
 > **Known bugs (fix in order):** B2 duplicate grid template, B5 README structure, B6 classic header stats drift. Fixed: B1 exportCSV header, B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan.
