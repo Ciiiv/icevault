@@ -758,7 +758,7 @@ function openCardDetail(id){
   </div>`;
   const tagsHtml=`<div style="margin-top:10px;"><div class="result-label">Tags</div><div id="modalTagRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${(c.tags||[]).map(t=>`<div class="tag">${t} <span class="tag-x" onclick="removeModalTag(${c.id},'${t}')">✕</span></div>`).join('')}<div class="tag-add" onclick="addModalTag(${c.id})">+ Add Tag</div></div></div>`;
   const sharePriceHtml = buildSharePriceHtml(c);
-    const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option ${c.collection==='For Sale'?'selected':''}>For Sale</option><option ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option ${c.collection==='Private'?'selected':''} value="Private">Private Collection — hidden from shared view</option><option ${c.collection==='EbayQueue'?'selected':''} value="EbayQueue">eBay Queue</option><option ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
+    const colHtml=`<div style="margin-top:8px;"><div class="result-label">Collection</div><select class="result-select" onchange="updateCardCollection(${c.id},this.value)"><option value="Personal" ${c.collection==='Personal'?'selected':''}>Personal Collection</option><option value="For Sale" ${c.collection==='For Sale'?'selected':''}>For Sale</option><option value="Trade" ${c.collection==='Trade'?'selected':''}>Trade Binder</option><option value="Graded" ${c.collection==='Graded'?'selected':''}>Graded Cards</option><option value="Wishlist" ${c.collection==='Wishlist'?'selected':''}>Wishlist</option><option value="Private" ${c.collection==='Private'?'selected':''}>Private Collection</option><option value="EbayQueue" ${c.collection==='EbayQueue'?'selected':''}>eBay Queue</option><option value="Sold" ${c.collection==='Sold'?'selected':''}>Sold</option></select></div>`;
   const notesHtml = '<div style="margin-top:10px;"><div class="result-label">Notes</div>'
     + '<div id="cardNotesDisplay_' + c.id + '" style="min-height:32px;padding:6px 0;font-size:13px;color:' + (c.notes ? 'var(--text-primary)' : 'var(--text-muted)') + ';cursor:pointer;border-radius:4px;" onclick="editCardNotes(' + c.id + ')" title="Click to edit">' + (c.notes || '<span style="opacity:0.5">Add notes...</span>') + '</div>'
     + '<div id="cardNotesEdit_' + c.id + '" style="display:none;"><textarea id="cardNotesInput_' + c.id + '" class="result-input" rows="3" style="width:100%;resize:vertical;font-size:13px;" placeholder="Condition notes, purchase info, storage location...">' + (c.notes || '') + '</textarea>'
@@ -805,7 +805,7 @@ function openCardDetail(id){
 
 function addModalTag(id){const t=prompt('Enter tag:');if(!t||!t.trim())return;const c=collection.find(x=>x.id===id);if(!c)return;if(!c.tags)c.tags=[];if(!c.tags.includes(t.trim())){c.tags.push(t.trim());localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}}
 function removeModalTag(id,tag){const c=collection.find(x=>x.id===id);if(!c)return;c.tags=(c.tags||[]).filter(t=>t!==tag);localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);openCardDetail(id);renderTagFilterRow();}
-function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val.replace(' Collection','').replace(' Binder','').replace(' Cards','').replace(' — hidden from shared view','').replace('eBay Queue','EbayQueue');localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
+function updateCardCollection(id,val){const c=collection.find(x=>x.id===id);if(!c)return;c.collection=val;localStorage.setItem('iceVault_cards',JSON.stringify(collection));if(currentUser)syncCardToCloud(c);showToast('Collection updated','success');}
 function resetListingStatus(id){
   const c=collection.find(x=>x.id===id);if(!c)return;
   if(!confirm('Reset listing status? The card will move back to '+
@@ -1072,7 +1072,6 @@ async function triggerRescan(cardId) {
   const rescanKeyLabel = rescanModel === 'gpt4o' ? 'OpenAI' : rescanModel === 'gemini' ? 'Google AI' : 'Anthropic';
   if (!rescanKey) { showToast('Add your ' + rescanKeyLabel + ' API key in ⚙ Settings', 'error'); return; }
 
-  const includeGrade = document.getElementById('includeGrade')?.checked !== false;
   const btn = document.getElementById('rescanBtn_' + cardId);
   const reviewEl = document.getElementById('rescanReview_' + cardId);
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> &nbsp; Scanning...'; }
@@ -1090,8 +1089,6 @@ async function triggerRescan(cardId) {
     }
 
     const hasBack = imgs.length > 1;
-    const gradeField = includeGrade ? `,
-  "grade":{"overall":"1-10","centering":"1-10","corners":"1-10","edges":"1-10","surface":"1-10","rationale":"2-3 sentences"}` : '';
     const prompt = `You are an expert hockey card analyst. ${hasBack ? 'First image is FRONT, second is BACK — use back for card number, parallel, serial number.' : 'Front image only.'}
 Analyze this hockey card and respond ONLY with JSON:
 {
@@ -1102,7 +1099,7 @@ Analyze this hockey card and respond ONLY with JSON:
   "team":"Player team",
   "parallel":"Parallel or Base",
   "serialNumber":"Serial number if present e.g. 47/99 or null",
-  "estimatedValue":"Market value USD as number string"${gradeField}
+  "estimatedValue":"Market value USD as number string"
 }`;
 
     let rescanRes, rescanData, rescanRaw;
@@ -1154,23 +1151,8 @@ Analyze this hockey card and respond ONLY with JSON:
       </div>`;
     }).join('');
 
-    // Add grade row if included
-    let gradeRowHtml = '';
-    if (includeGrade && result.grade) {
-      const oldGrade = c.grade?.overall || '—';
-      const newGrade = result.grade.overall;
-      const gradeChanged = String(oldGrade) !== String(newGrade);
-      if (gradeChanged) changedCount++;
-      gradeRowHtml = `<div class="rescan-review-row full">
-        <div class="rescan-review-label">AI Grade</div>
-        <div class="rescan-review-vals">
-          ${gradeChanged ? `<span class="rescan-old">${oldGrade}</span><span class="rescan-arrow">→</span><div class="rescan-changed-dot"></div><span class="rescan-new changed">${newGrade}</span>` : `<span class="rescan-new same">${newGrade}</span>`}
-          <span style="font-size:10px;color:var(--text-muted);">centering ${result.grade.centering} · corners ${result.grade.corners} · edges ${result.grade.edges} · surface ${result.grade.surface}</span>
-        </div>
-      </div>`;
-    }
 
-    const unchangedCount = fields.length + (includeGrade && result.grade ? 1 : 0) - changedCount;
+    const unchangedCount = fields.length - changedCount;
 
     if (reviewEl) {
       reviewEl.innerHTML = `<div class="rescan-review">
@@ -1178,11 +1160,11 @@ Analyze this hockey card and respond ONLY with JSON:
           <span class="rescan-review-title">Review before saving</span>
           <span class="grade-badge grade-7" style="font-size:10px;padding:2px 8px;">${{claude:'Claude',gpt4o:'GPT-4o',gemini:'Gemini'}[rescanModel]||'Claude'}</span>
         </div>
-        <div class="rescan-review-grid">${rowsHtml}${gradeRowHtml}</div>
+        <div class="rescan-review-grid">${rowsHtml}</div>
         <div class="rescan-summary"><span>●</span> ${changedCount} field${changedCount !== 1 ? 's' : ''} changed · ${unchangedCount} unchanged</div>
         <div class="rescan-review-actions">
           <button class="rescan-cancel-btn" onclick="cancelRescan(${cardId})">Cancel</button>
-          <button class="rescan-confirm-btn" onclick="confirmRescan(${cardId}, ${JSON.stringify(result).replace(/"/g, '&quot;')}, ${includeGrade}, '${rescanModel}')">✓ Save changes</button>
+          <button class="rescan-confirm-btn" onclick="confirmRescan(${cardId}, ${JSON.stringify(result).replace(/"/g, '&quot;')}, '${rescanModel}')">✓ Save changes</button>
         </div>
       </div>`;
       reviewEl.style.display = 'block';
@@ -1199,7 +1181,7 @@ function cancelRescan(cardId) {
   if (reviewEl) reviewEl.style.display = 'none';
 }
 
-function confirmRescan(cardId, result, includeGrade, rescanModel) {
+function confirmRescan(cardId, result, rescanModel) {
   const c = collection.find(x => x.id === cardId);
   if (!c) return;
   rescanModel = rescanModel || 'claude'; // fallback for safety
@@ -1217,14 +1199,6 @@ function confirmRescan(cardId, result, includeGrade, rescanModel) {
       if (!c.valueHistory) c.valueHistory = [];
       c.valueHistory.push({ value: c.estimatedValue, date: new Date().toISOString(), source: 'rescan' });
     }
-  }
-  if (includeGrade && result.grade) {
-    result.grade.gradedAt = new Date().toISOString();
-    result.grade.source = rescanModel;
-    if (!c.grades) c.grades = {};
-    c.grades[rescanModel] = result.grade;
-    c.grade = result.grade;
-    c.aiGraded = true;
   }
   localStorage.setItem('iceVault_cards', JSON.stringify(collection));
   if (currentUser) syncCardToCloud(c);
