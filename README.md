@@ -255,9 +255,11 @@ The Android app is built using **PWABuilder** — a free Microsoft tool that wra
 ```
 icevault/
 ├── docs/                          # GitHub Pages web app (auto-deployed)
-│   ├── index.html                 # Entire app — HTML, CSS, and JS in one file (~2400 lines)
+│   ├── index.html                 # HTML + CSS + theme init only (~2355 lines)
+│   ├── js/
+│   │   └── app.js                 # All application JS (~3282 lines)
 │   ├── manifest.json              # PWA manifest — name, icons, theme colors
-│   ├── sw.js                      # Service worker — network-first caching
+│   ├── sw.js                      # Service worker — v3, caches index.html + js/app.js
 │   └── icons/
 │       ├── icon-192.png           # App icon 192x192
 │       └── icon-512.png           # App icon 512x512
