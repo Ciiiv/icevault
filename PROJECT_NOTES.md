@@ -221,7 +221,7 @@ icevault-worker\            # NOT a git repo
 
 | # | Bug | File | Status |
 |---|-----|------|--------|
-| B1 | `exportCSV()` header array has 23 columns but row map produces 24 -- ICV ID appended without matching header. Last column has data but no label in Excel | app.js | ⬚ Fix |
+| B1 | `exportCSV()` header array has 23 columns but row map produces 24 -- ICV ID appended without matching header. Last column has data but no label in Excel | app.js | ✅ Done |
 | B2 | Card grid HTML duplicated verbatim between `renderGridFromCollection()` and `_renderFilteredLocal()` -- any grid change requires editing two places | app.js | ⬚ Refactor |
 | B3 | `updateCardCollection()` uses brittle string-replace chain to normalize collection names -- fix by setting correct `value=` attributes on modal select options | app.js | ⬚ Fix |
 | B4 | `triggerRescan()` reads scan tab's `#includeGrade` checkbox -- re-scan is OCR-only so this is dead code reading wrong element (harmless but confusing) | app.js | ⬚ Cleanup |
@@ -584,7 +584,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > - R2 image cleanup on card delete -- deleteCardFromCloud() only removes D1 row, R2 images orphaned. Worker DELETE /collection/:id endpoint needs to also delete cards/{userId}/{cardId}.png and cards/{userId}/{cardId}_back.png from R2. Add rate limiting (100/hr) to DELETE endpoint at same time -- currently has no rate limit. Also need one-time cleanup for existing orphaned images
 > eBay affiliate links only if going public.
 > 
-> **Known bugs (fix in order):** B1 exportCSV missing header, B2 duplicate grid template, B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats drift.
+> **Known bugs (fix in order):** B2 duplicate grid template, B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats drift. B1 exportCSV header fixed.
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >

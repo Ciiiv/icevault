@@ -563,7 +563,7 @@ function bulkDelete() {
 function bulkExport() {
   if (selectedCardIds.size === 0) { showToast('Select cards first', 'error'); return; }
   const selected = collection.filter(c => selectedCardIds.has(c.id));
-  const headers = ['IceVault ID','Player','Year','Brand','Card Number','Team','Parallel','Serial Number','Estimated Value','Collection','Tags','AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale','Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes'];
+  const headers = ['Player','Year','Brand','Card Number','Team','Parallel','Serial Number','Estimated Value','Collection','Tags','AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale','Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes','IceVault ID'];
   const esc = v => { if(v===null||v===undefined)return''; const s=String(v); if(s.includes(',')||s.includes('"')||s.includes('\n'))return'"'+s.replace(/"/g,'""')+'"'; return s; };
   const rows = selected.map(c => [c.player,c.year,c.brand,c.cardNumber,c.team,c.parallel,c.serialNumber||'',c.estimatedValue,c.collection,(c.tags||[]).join('; '),c.aiGraded?'Yes':'No',c.grade?.overall||'',c.grade?.centering||'',c.grade?.corners||'',c.grade?.edges||'',c.grade?.surface||'',c.grade?.rationale||'',c.certNumber||'',c.certGrader||'',c.officialGrade||'',c.listedOnEbay?'Yes':'No',c.addedAt?new Date(c.addedAt).toLocaleDateString():'',c.notes||''].map(esc).join(','));
   const csv = [headers.join(','), ...rows].join('\n');
