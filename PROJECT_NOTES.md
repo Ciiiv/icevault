@@ -528,8 +528,6 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 - **Wrangler OAuth expiry:** Use `$env:CLOUDFLARE_API_TOKEN` if deploy fails
 - **R2 CORS:** Re-grade fetches R2 images directly from browser. If CORS policy is removed or origins change, re-grade will fail with "Failed to fetch". Fix: update CORS policy in Cloudflare R2 dashboard → icevault-images → Settings → CORS Policy
 - **Re-grade requires R2 images:** Cards with only local base64 imageData (guest mode, old imports) cannot be re-graded — no imageUrl to fetch. Re-grade button is suppressed for these cards
-- **DELETE /collection/:id has no rate limit:** Card delete endpoint only checks auth, no KV rate limiting. Low risk for personal use. Add 100/hr rate limit when implementing R2 image cleanup on delete
-- **R2 images not cleaned up on card delete:** Deleting a card removes the D1 row but leaves imageUrl and imageUrlBack objects orphaned in R2. Accumulates over time. Fix: worker DELETE endpoint should also call env.IMAGES.delete() for both R2 keys
 
 ---
 
