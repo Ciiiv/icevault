@@ -2205,6 +2205,7 @@ function updateHeaderStats(){
   const s=document.getElementById('sbStatTotal'),sv=document.getElementById('sbStatValue'),badge=document.getElementById('sbBadgeCollection');
   if(s)s.textContent=isServerPaginated?totalCards:activeCards.length;
   if(sv)sv.textContent='$'+val.toFixed(0);
+  const sbListed=document.getElementById('sbStatListed');if(sbListed)sbListed.textContent=collection.filter(c=>c.listedOnEbay).length;
   if(badge){badge.textContent=activeCards.length;badge.style.display=activeCards.length>0?'inline':'none';}
   // Sold + vs est topbar stats
   const totalSoldRev = soldCards.reduce((s,c)=>s+(parseFloat(c.soldPrice)||0),0);
@@ -2223,6 +2224,15 @@ function updateHeaderStats(){
       sbVsEst.style.color = avgPct >= 0 ? 'var(--green)' : 'var(--red)';
     }
   } else if(sbVsEst) { sbVsEst.textContent = '—'; }
+  // Classic header -- Sold + Vs Est.
+  const statSoldEl=document.getElementById('statSold');
+  const statVsEstEl=document.getElementById('statVsEst');
+  if(statSoldEl)statSoldEl.textContent='$'+soldCards.reduce((s,c)=>s+(parseFloat(c.soldPrice)||0),0).toFixed(0);
+  if(statVsEstEl){
+    const sw2=soldCards.filter(c=>c.soldPrice&&c.estimatedValue);
+    if(sw2.length>0){const ap2=sw2.reduce((s,c)=>{return s+((parseFloat(c.soldPrice)-parseFloat(c.estimatedValue))/parseFloat(c.estimatedValue)*100);},0)/sw2.length;statVsEstEl.textContent=(ap2>=0?'+':'')+ap2.toFixed(0)+'%';statVsEstEl.style.color=ap2>=0?'var(--green)':'var(--red)';}
+    else{statVsEstEl.textContent='—';}
+  }
 }
 
 
