@@ -226,7 +226,7 @@ icevault-worker\            # NOT a git repo
 | B3 | `updateCardCollection()` uses brittle string-replace chain to normalize collection names -- fix by setting correct `value=` attributes on modal select options | app.js | ✅ Done |
 | B4 | `triggerRescan()` reads scan tab's `#includeGrade` checkbox -- re-scan is OCR-only so this is dead code reading wrong element (harmless but confusing) | app.js | ✅ Done |
 | B5 | README project structure still shows `index.html` as single-file app -- `docs/js/app.js` not mentioned | README.md | ✅ Done |
-| B6 | Classic theme header shows 3 stats (Cards, Listed, Est. Value) -- sidebar topbar has 4 (adds Sold, Vs Est.) -- drifted out of sync | index.html | ⬚ Low priority |
+| B6 | Classic theme header shows 3 stats (Cards, Listed, Est. Value) -- sidebar topbar has 4 (adds Sold, Vs Est.) -- drifted out of sync | index.html + app.js | ✅ Done |
 
 ---
 
@@ -582,7 +582,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **Next priorities:** Item 14 complete (duplicate detection done). Pending:
 > eBay affiliate links only if going public.
 > 
-> **Known bugs (fix in order):** B2 duplicate grid template, B6 classic header stats drift. Fixed: B1 exportCSV header, B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure.
+> **Known bugs (fix in order):** B2 duplicate grid template. Fixed: B1 exportCSV header, B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats (all themes now show 5 stats).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >
