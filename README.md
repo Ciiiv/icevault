@@ -54,7 +54,7 @@ A $50 card costs $0.04 to properly document with front + back scanning, AI condi
 - **Photography tips** -- tap "Photo tips" near the upload zone for lighting, background, focus, and framing guidance. Separate "Slab tips" variant for graded card scans
 - **Private Collection** -- cards in Private Collection are visible in your own grid but excluded from shared collection URLs
 - **AI grade matrix** -- 4-source grading: Claude, GPT-4o, Gemini, and Ximilar. Ximilar is purpose-built for card condition grading and most accurate. Claude/GPT-4o/Gemini better for card identification. Each source gets its own tab with full breakdown. Set any source as the card active grade. Ximilar tab includes "View full breakdown" button showing per-corner, per-edge, surface, and centering ratio detail for front and back images separately, with weak spot highlighting and autograph/damage detection
-- **Re-scan from collection** -- re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. Optional grade included
+- **Re-scan from collection** -- re-scan any card using its existing stored images. Shows a diff review panel highlighting what changed before saving. OCR field update only -- use the grade matrix for grading
 - **Re-grade from collection** — re-run condition grading only on any card using stored images, without touching other card data
 - **Manual field editing** — click any field in the card detail view to edit inline. Enter or click away to save, Escape to cancel
 - ✕ Clear button to rescan instantly
