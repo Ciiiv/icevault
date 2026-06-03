@@ -427,13 +427,8 @@ async function saveCard(){
 
 let activeTagFilter=null;
 
-function renderGridFromCollection(){
-  const grid=document.getElementById('cardsGrid');
-  if(collection.length===0){
-    grid.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">${currentPage>1?'No cards on this page':'No cards match your filters'}</div></div>`;
-    return;
-  }
-  grid.innerHTML=collection.map(c=>`
+function renderCardItemHtml(c){
+  return `
     <div class="card-item ${c.listedOnEbay?'listed':''}${bulkSelectMode&&selectedCardIds.has(c.id)?' selected':''}" data-id="${c.id}" onclick="${bulkSelectMode?`toggleCardSelect(${c.id},event)`:`openCardDetail(${c.id})`}" style="${bulkSelectMode&&selectedCardIds.has(c.id)?'border-color:var(--gold);':c.listedOnEbay?'':''}cursor:pointer;">
       ${bulkSelectMode?`<input type="checkbox" id="cardCheck_${c.id}" ${selectedCardIds.has(c.id)?'checked':''} onclick="toggleCardSelect(${c.id},event)" style="position:absolute;top:8px;left:8px;width:18px;height:18px;cursor:pointer;z-index:2;accent-color:var(--gold);">`:''}
       ${c.listedOnEbay?'<div class="ebay-indicator">eBay</div>':''}
@@ -447,7 +442,16 @@ function renderGridFromCollection(){
           <span class="card-status ${c.sold?'sold':c.listedOnEbay?'listed':''}">${c.sold?'● Sold $'+c.soldPrice:c.listedOnEbay?'● Listed':c.estimatedValue?'$'+c.estimatedValue:''}</span>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+}
+
+function renderGridFromCollection(){
+  const grid=document.getElementById('cardsGrid');
+  if(collection.length===0){
+    grid.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">${currentPage>1?'No cards on this page':'No cards match your filters'}</div></div>`;
+    return;
+  }
+  grid.innerHTML=collection.map(c=>renderCardItemHtml(c)).join('');
 }
 
 function renderPaginationBar(){
@@ -669,21 +673,7 @@ function _renderFilteredLocal(){
   });
   const grid=document.getElementById('cardsGrid');
   if(filtered.length===0){grid.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🏒</div><div class="empty-state-text">No cards match your filters</div></div>`;return;}
-  grid.innerHTML=filtered.map(c=>`
-    <div class="card-item ${c.listedOnEbay?'listed':''}${bulkSelectMode&&selectedCardIds.has(c.id)?' selected':''}" data-id="${c.id}" onclick="${bulkSelectMode?`toggleCardSelect(${c.id},event)`:`openCardDetail(${c.id})`}" style="${bulkSelectMode&&selectedCardIds.has(c.id)?'border-color:var(--gold);':c.listedOnEbay?'':''}cursor:pointer;">
-      ${bulkSelectMode?`<input type="checkbox" id="cardCheck_${c.id}" ${selectedCardIds.has(c.id)?'checked':''} onclick="toggleCardSelect(${c.id},event)" style="position:absolute;top:8px;left:8px;width:18px;height:18px;cursor:pointer;z-index:2;accent-color:var(--gold);">`:''}
-      ${c.listedOnEbay?'<div class="ebay-indicator">eBay</div>':''}
-      <div class="card-thumb">${(c.imageUrl||c.imageData)?`<img src="${c.imageUrl||c.imageData}" alt="${c.player}">`:'🏒'}</div>
-      <div class="card-info">
-        <div class="card-player">${c.player}</div>
-        <div class="card-meta">${c.year||''} ${c.brand||''}</div>
-        ${c.tags&&c.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${c.tags.map(t=>`<span style="padding:1px 6px;background:rgba(74,156,201,0.12);border:1px solid rgba(74,156,201,0.25);border-radius:10px;font-size:10px;color:var(--ice-dark);">${t}</span>`).join('')}</div>`:''}
-        <div class="card-bottom">
-          ${c.grade?`<span class="card-grade-mini grade-${gradeClass(c.grade.overall)}">${c.aiGraded?'AI Est. ':(c.certGrader||'PSA')+' '}${c.grade.overall}</span>`:'<span></span>'}
-          <span class="card-status ${c.sold?'sold':c.listedOnEbay?'listed':''}">${c.sold?'● Sold $'+c.soldPrice:c.listedOnEbay?'● Listed':c.estimatedValue?'$'+c.estimatedValue:''}</span>
-        </div>
-      </div>
-    </div>`).join('');
+  grid.innerHTML=filtered.map(c=>renderCardItemHtml(c)).join('');
   document.getElementById('paginationBar').style.display='none';
   const rcEl=document.getElementById('resultsCount');
   if(rcEl)rcEl.textContent=filtered.length===1?'Showing 1 result':'Showing '+filtered.length+' results';
