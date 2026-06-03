@@ -222,7 +222,7 @@ icevault-worker\            # NOT a git repo
 | # | Bug | File | Status |
 |---|-----|------|--------|
 | B1 | `exportCSV()` header array has 23 columns but row map produces 24 -- ICV ID appended without matching header. Last column has data but no label in Excel | app.js | ✅ Done |
-| B2 | Card grid HTML duplicated verbatim between `renderGridFromCollection()` and `_renderFilteredLocal()` -- any grid change requires editing two places | app.js | ⬚ Refactor |
+| B2 | Card grid HTML duplicated verbatim between `renderGridFromCollection()` and `_renderFilteredLocal()` -- any grid change requires editing two places | app.js | ✅ Done |
 | B3 | `updateCardCollection()` uses brittle string-replace chain to normalize collection names -- fix by setting correct `value=` attributes on modal select options | app.js | ✅ Done |
 | B4 | `triggerRescan()` reads scan tab's `#includeGrade` checkbox -- re-scan is OCR-only so this is dead code reading wrong element (harmless but confusing) | app.js | ✅ Done |
 | B5 | README project structure still shows `index.html` as single-file app -- `docs/js/app.js` not mentioned | README.md | ✅ Done |
@@ -332,6 +332,7 @@ print('SUCCESS')
 - Syntax errors after patching: check F12 console for line number, then `Get-Content "path" | Select-Object -Index (N-3..N+3)` to inspect
 - `textContent` vs `innerHTML`: setting button text via `textContent` won't render HTML entities -- use `innerHTML` instead
 - **Patch failure discipline:** when a pattern fails to match (found 0 times), STOP -- do not guess or iterate on assumptions. Instead: print exact bytes around the target (`content.find(b'known nearby string')`), build the new pattern from that exact output, then run. Never build a fix.py pattern from memory after a failed attempt
+- **fix.py complexity estimates:** exact byte matching makes "tricky" templates much more manageable than they look. Backticks, nested template literals, and special chars in JS are non-issues for byte matching -- the pattern either matches or it doesn't. Do not over-estimate refactor complexity when the target is a large but static string block -- write the diagnostic, confirm the bytes, build the patch.
 - **Non-ASCII in fix.py string literals:** em-dashes, curly quotes, and other non-ASCII chars in source files cannot be written as Python byte literals directly -- Python will throw `SyntaxError: bytes can only contain ASCII literal characters`. Always print the exact bytes first (`repr(content[idx:idx+200])`) and use the `\xNN` escape sequences shown in the output instead of copy-pasting the visible characters
 
 ## 🛠 Wrangler Quick Reference
@@ -582,7 +583,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **Next priorities:** Item 14 complete (duplicate detection done). Pending:
 > eBay affiliate links only if going public.
 > 
-> **Known bugs (fix in order):** B2 duplicate grid template. Fixed: B1 exportCSV header, B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats (all themes now show 5 stats).
+> **Known bugs (fix in order):** All fixed -- B1 exportCSV header, B2 duplicate grid template (renderCardItemHtml helper), B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats (all themes now show 5 stats).
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >
