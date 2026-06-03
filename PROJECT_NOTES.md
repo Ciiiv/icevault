@@ -227,6 +227,8 @@ icevault-worker\            # NOT a git repo
 | B4 | `triggerRescan()` reads scan tab's `#includeGrade` checkbox -- re-scan is OCR-only so this is dead code reading wrong element (harmless but confusing) | app.js | ✅ Done |
 | B5 | README project structure still shows `index.html` as single-file app -- `docs/js/app.js` not mentioned | README.md | ✅ Done |
 | B6 | Classic theme header shows 3 stats (Cards, Listed, Est. Value) -- sidebar topbar has 4 (adds Sold, Vs Est.) -- drifted out of sync | index.html + app.js | ✅ Done |
+| B7 | "Showing 0 results" in server-paginated mode -- renderPaginationBar used totalCards (0 until fetch) instead of collection.length fallback | app.js | ✅ Done |
+| B8 | Sign out left collection visible and modifiable -- signOut() did not call switchView('scan') after clearing state | app.js | ✅ Done |
 
 ---
 
@@ -583,7 +585,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **Next priorities:** Item 14 complete (duplicate detection done). Pending:
 > eBay affiliate links only if going public.
 > 
-> **Known bugs (fix in order):** All fixed -- B1 exportCSV header, B2 duplicate grid template (renderCardItemHtml helper), B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats (all themes now show 5 stats).
+> **Known bugs (fix in order):** All fixed -- B1 exportCSV header, B2 duplicate grid template (renderCardItemHtml helper), B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats (all themes now show 5 stats), B7 resultsCount showing 0 in server-paginated mode, B8 signOut now redirects to Scan Card view.
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >

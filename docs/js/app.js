@@ -458,7 +458,8 @@ function renderPaginationBar(){
   const bar=document.getElementById('paginationBar');
   // Always update results count
   const rc=document.getElementById('resultsCount');
-  if(rc)rc.textContent=totalCards===1?'Showing 1 result':'Showing '+totalCards+' results';
+  const rcCount=isServerPaginated?totalCards:collection.length;
+  if(rc)rc.textContent=rcCount===1?'Showing 1 result':'Showing '+rcCount+' results';
   if(!isServerPaginated||totalPages<=1){bar.style.display='none';return;}
   bar.style.display='flex';
   const pages=[];
@@ -2550,7 +2551,7 @@ async function signOut(){
   const t=getAuthToken();if(t)fetch(WORKER_URL+'/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+t}}).catch(()=>{});
   clearAuthToken();currentUser=null;
   collection=[];localStorage.removeItem('iceVault_cards');localStorage.removeItem('iceVault_lastSync');isServerPaginated=false;currentPage=1;totalPages=1;totalCards=0;
-  updateAuthUI(null);updateHeaderStats();closeModal('authModal');showToast('Signed out','success');
+  updateAuthUI(null);updateHeaderStats();closeModal('authModal');switchView('scan');showToast('Signed out','success');
 }
 
 
