@@ -451,7 +451,7 @@ wrangler d1 execute icevault --remote --command "UPDATE users SET verified = 1 W
 | Email verification | Confirms real email before account active. Existing accounts pre-verified |
 | No OAuth for now | Current PBKDF2 auth is solid. OAuth adds complexity for no gain at personal scale |
 | No auto-scan | User controls when API call happens — avoids wasted tokens |
-| Single HTML file | No build pipeline, maintainable at current scale |
+| No build pipeline | HTML+CSS in index.html, JS in app.js -- no bundler, no build step, maintainable at current scale |
 | Cloudflare API token for deploy | OAuth token can expire — scoped API token more reliable |
 
 ---
