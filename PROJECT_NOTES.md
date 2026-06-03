@@ -55,7 +55,7 @@ icevault/
 ├── docs/
 │   ├── index.html          # HTML + CSS + theme init only (~2355 lines)
 │   ├── js/
-│   │   └── app.js              # All application JS (~3236 lines)
+│   │   └── app.js              # All application JS (~3283 lines)
 │   ├── manifest.json
 │   ├── sw.js               # v3 -- caches index.html + js/app.js
 │   ├── favicon.svg
@@ -138,7 +138,7 @@ icevault-worker\            # NOT a git repo
 - **Re-scan card** — OCR-only re-scan from existing R2 images. Model picker: Claude/GPT-4o/Gemini. Shows diff review panel before saving — changed fields highlighted teal with old→new, unchanged shown muted. Cancel hides panel, Save applies all changes and syncs to D1. Only available on cards with R2 imageUrl. Re-scan updates card fields only — grading handled separately via grade matrix tabs per source
 - **Value history tracking** — every card has a valueHistory array. First entry created at scan time. Appends on manual Est. Value edit (source: manual), re-scan (source: rescan). Existing cards migrated on init and after cloud sync. Cert cards also get valueHistory at save
 - **Stats tab** — new Stats sidebar nav item. Dashboard with 4 metric cards (collection value, total sold, avg vs estimate, best flip), collection value over time line chart, sold vs estimate bar chart, grade distribution bar chart, collection by bucket bars, recent sales table. All calculated client-side from collection array. Charts use Chart.js stored in _statsCharts and destroyed before re-render
-- **Topbar quick stats** — Cards, Est. Value, Sold, Vs Est. always visible on all tabs. Centered via absolute positioning. Keys and account button right-aligned independently
+- **Topbar quick stats** — Cards, Listed, Est. Value, Sold, Vs Est. always visible on all tabs -- all themes. Centered via absolute positioning. Keys and account button right-aligned independently
 - **Stats PDF export** — jsPDF. Page 1: teal header, 4 metric boxes, 4 charts captured from canvas, bucket bars, recent sales table (always shown with empty state). Page 2+: 3x3 card grid with R2 thumbnail, player/year/brand, stats (truncated to prevent overflow), value history mini bar chart, sold badge
 - **Stats CSV export** — one row per value history entry per card. Columns: Player, Year, Brand, Parallel, Serial #, Collection, Grade, AI Graded, Est. Value, Value Date, Value Source, Sold, Sold Price, Sold Date. Separate from collection backup CSV
 - 6-theme system — Hybrid default
