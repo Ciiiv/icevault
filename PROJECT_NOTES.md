@@ -551,7 +551,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > fix.py lives in C:\Users\civ2g\icevault-worker\ — never committed to repo.
 > Git commands run from VSCode. Test frontend with Live Server (http://127.0.0.1:5500).
 >
-> **index.html is ~2355 lines, app.js is ~3236 lines.** Always use fix.py for patches — never rewrite the whole file.
+> **index.html is ~2355 lines, app.js is ~3283 lines.** Always use fix.py for patches — never rewrite the whole file.
 > Views inside .main-content inside .sidebar-shell always.
 > Classic theme: sidebar-shell display:block, sidebar-nav/topbar hidden, main-content display:block.
 >
@@ -572,10 +572,10 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > sold filter in D1 query + local render, bulk PUT wrapped in D1 batch transaction,
 > manual field editing (inline click-to-edit in card modal),
 > AI grade matrix (4-source tabs: Claude/GPT-4o/Gemini/Ximilar, re-grade from R2 images, set as card grade),
-> re-scan card (diff review panel, include grade option, fetches R2 images),
+> re-scan card (OCR-only, diff review panel, fetches R2 images),
 > value history tracking (valueHistory array, appends on scan/manual/rescan, migration on init),
 > stats tab (collection value, sold, vs estimate, best flip, 4 charts, recent sales table),
-> topbar quick stats (Cards, Est. Value, Sold, Vs Est. on all tabs, centered),
+> topbar quick stats (Cards, Listed, Est. Value, Sold, Vs Est. on all tabs -- all themes),
 > stats PDF export (jsPDF, page 1 summary + charts, page 2+ card grid with thumbnails + value history bars),
 > stats CSV export (one row per value history entry, separate from collection backup).
 >
