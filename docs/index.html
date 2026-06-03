@@ -1608,7 +1608,10 @@
 <body>
 
 <!-- SIDEBAR SHELL — themes 1-5 only (hidden when Classic is active) -->
-<!-- CLASSIC LAYOUT SHELL — visible only when data-theme="classic" -->
+<!-- CLASSIC THEME LAYOUT — header + nav tabs sit outside .sidebar-shell intentionally.
+     In classic theme: header/nav display:flex, sidebar-shell display:block (full width), sidebar-nav/topbar hidden.
+     In all other themes: header/nav display:none, sidebar-shell display:flex (sidebar + main-content).
+     Views always live inside .main-content inside .sidebar-shell -- works in all themes via CSS only, no DOM changes. -->
 <header>
   <div class="logo">
     <span class="logo-icon">🏒</span>
