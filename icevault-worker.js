@@ -348,6 +348,7 @@ export default {
 
     // Probabilistic 7-day log purge — runs ~2% of requests
     maybePurgeLogs(db);
+    maybePurgeSessions(db); // ~5% probabilistic global session purge
 
     // ─── EBAY SOAP PROXY ────────────────────────────────────────────────
     if (path === '/proxy/ebay' && request.method === 'POST') {
@@ -373,7 +374,6 @@ export default {
       }
     }
 
-    // ─── OPENAI PROXY ─────────────────────────────────────────────────────
     // ─── IMAGE PROXY (R2 → base64, mobile re-grade/re-scan fix) ───────────────
     if (path === '/image-proxy' && request.method === 'GET') {
       const user = await getUser(request, db);
