@@ -257,7 +257,7 @@ icevault/
 ├── docs/                          # GitHub Pages web app (auto-deployed)
 │   ├── index.html                 # HTML + CSS + theme init only (~2355 lines)
 │   ├── js/
-│   │   └── app.js                 # All application JS (~3282 lines)
+│   │   └── app.js                 # All application JS (~3283 lines)
 │   ├── manifest.json              # PWA manifest — name, icons, theme colors
 │   ├── sw.js                      # Service worker — v3, caches index.html + js/app.js
 │   └── icons/
@@ -413,7 +413,7 @@ wrangler deploy
 
 ### Step 6 — Update the app to point to your worker
 
-1. In your forked repo, edit `docs/index.html`
+1. In your forked repo, edit `docs/js/app.js`
 2. Find: `const WORKER_URL = 'https://...'`
 3. Replace with your Cloudflare Worker URL (shown after `wrangler deploy`)
 4. Commit — GitHub Pages auto-deploys in ~30 seconds
