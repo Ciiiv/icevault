@@ -221,7 +221,7 @@ icevault-worker\            # NOT a git repo
 
 | # | Bug | File | Status |
 |---|-----|------|--------|
-| B1 | `exportCSV()` header array has 23 columns but row map produces 24 -- ICV ID appended without matching header. Last column has data but no label in Excel | app.js | ✅ Done |
+| B1 | `exportCSV()` header array has 23 columns but row map produces 24 -- ICV ID appended without matching header. Last column has data but no label in Excel. Note: initially marked done but header was still missing -- fully fixed June 2026 | app.js | ✅ Done |
 | B2 | Card grid HTML duplicated verbatim between `renderGridFromCollection()` and `_renderFilteredLocal()` -- any grid change requires editing two places | app.js | ✅ Done |
 | B3 | `updateCardCollection()` uses brittle string-replace chain to normalize collection names -- fix by setting correct `value=` attributes on modal select options | app.js | ✅ Done |
 | B4 | `triggerRescan()` reads scan tab's `#includeGrade` checkbox -- re-scan is OCR-only so this is dead code reading wrong element (harmless but confusing) | app.js | ✅ Done |
@@ -585,7 +585,7 @@ if (path.startsWith('/share/') && token.length === 64) { ... }
 > **Next priorities:** Item 14 complete (duplicate detection done). Pending:
 > eBay affiliate links only if going public.
 > 
-> **Known bugs (fix in order):** All fixed -- B1 exportCSV header, B2 duplicate grid template (renderCardItemHtml helper), B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats (all themes now show 5 stats), B7 resultsCount showing 0 in server-paginated mode, B8 signOut now redirects to Scan Card view.
+> **Known bugs (fix in order):** All fixed -- B1 exportCSV header (IceVault ID column label missing -- fully fixed June 2026), B2 duplicate grid template (renderCardItemHtml helper), B3 updateCardCollection string-replace, B4 dead includeGrade ref in triggerRescan, B5 README structure, B6 classic header stats (all themes now show 5 stats), B7 resultsCount showing 0 in server-paginated mode, B8 signOut now redirects to Scan Card view.
 > Account deletion + Legal + OAuth only if going public.
 > Sentry, eBay REST migration only if needed/public.
 >

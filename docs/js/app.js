@@ -2894,7 +2894,7 @@ function exportCSV() {
     'Player','Year','Brand','Card Number','Team','Parallel',
     'Serial Number','Estimated Value','Collection','Tags',
     'AI Graded','Grade Overall','Centering','Corners','Edges','Surface','Grade Rationale',
-    'Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes'
+    'Cert Number','Cert Grader','Official Grade','Listed on eBay','Date Added','Notes','IceVault ID'
   ];
   const esc = v => {
     if (v === null || v === undefined) return '';
