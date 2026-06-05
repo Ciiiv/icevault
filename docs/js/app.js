@@ -938,17 +938,26 @@ Grade this card condition and respond ONLY with JSON:
     let res, data, raw, grade;
     if (source === 'ximilar') {
       if (!keys.ximilar) throw new Error('Add your Ximilar API key in \u2699 Settings');
-      // Ximilar expects records array with _base64 and Side fields
-      const records = [{ _base64: 'data:' + frontMime + ';base64,' + frontB64, Side: 'Front' }];
-      if (hasBack) records.push({ _base64: 'data:image/jpeg;base64,' + imgs[1].source.data, Side: 'Back' });
+      // Ximilar uses _url with R2 URLs directly -- simpler and more reliable than base64
+      const records = [{ _url: c.imageUrl }];
+      if (hasBack) records.push({ _url: c.imageUrlBack });
       res = await fetch(WORKER_URL + '/proxy/ximilar', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-ximilar-key': keys.ximilar }, body: JSON.stringify({ records }) });
       data = await res.json();
-      if (data.status && data.status.code !== 200) throw new Error(data.status.text || 'Ximilar error');
+      if (data.status && data.status.code !== 200) {
+        // Check if at least the front record succeeded -- back may fail if card not detected
+        const xRecs = data.records || [];
+        const frontOk = xRecs.some(r => r._status?.code === 200);
+        if (!frontOk) throw new Error(data.status.text || 'Ximilar error');
+        // Front succeeded, back failed -- warn user
+        const failedBack = xRecs.find(r => r._status?.code !== 200);
+        if (failedBack) showToast('Ximilar: back image not detected (' + (failedBack._status?.text||'unknown') + ') -- graded front only. Try a clearer back photo.', 'error');
+      }
       // Map Ximilar response to our grade format
-      const xg = data.grades || {};
-      // Extract per-image detail from records
-      const xRecords = data.records || [];
-      const xFront = xRecords.find(r => r.card?.[0]?._tags?.Side?.[0]?.name === 'Front') || xRecords[0] || {};
+      // data.grades is empty when overall status is 500 -- fall back to front record grades
+      const xRecords = (data.records || []).filter(r => r._status?.code === 200);
+      const xFrontRec = xRecords[0] || {};
+      const xg = (data.grades && data.grades.final) ? data.grades : (xFrontRec.grades || {});
+      const xFront = xRecords.find(r => r.card?.[0]?._tags?.Side?.[0]?.name === 'Front') || xFrontRec || {};
       const xBack = xRecords.find(r => r.card?.[0]?._tags?.Side?.[0]?.name === 'Back') || null;
       const buildImageDetail = (rec) => rec ? {
         centering: rec.grades?.centering ?? null,
@@ -2620,7 +2629,7 @@ async function syncCollectionFromCloud(page, params){
       if(metaR.ok){
         const meta=await metaR.json();
         const localCount=isServerPaginated?totalCards:collection.length;
-        if(lastSync && meta.lastUpdated && lastSync >= meta.lastUpdated && localCount === meta.count){
+        if(lastSync && meta.lastUpdated && lastSync >= meta.lastUpdated && localCount === meta.count && localCount > 0){
           console.log('[SYNC] Collection up to date — skipping full pull');
           isServerPaginated=true;
           return;
