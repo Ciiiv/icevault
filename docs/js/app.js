@@ -159,9 +159,12 @@ function normalizeImageToJpeg(dataUrl){
   return new Promise(resolve=>{
     const img=new Image();
     img.onload=()=>{
+      const MAX=1280;
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
       const canvas=document.createElement('canvas');
-      canvas.width=img.width;canvas.height=img.height;
-      canvas.getContext('2d').drawImage(img,0,0);
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
       resolve(canvas.toDataURL('image/jpeg',0.92));
     };
     img.onerror=()=>resolve(dataUrl); // fallback to original
@@ -385,8 +388,11 @@ async function saveCard(){
   if(!player){showToast('Please analyze a card first','error');return;}
   const cardId=Date.now();
   const estimatedValueAtScan = document.getElementById('fieldValue').value;
+  // Normalize images to 1280px JPEG before saving -- prevents localStorage quota errors on large camera photos
+  const _normFront = currentImageData ? await normalizeImageToJpeg(currentImageData) : null;
+  const _normBack = currentBackImageData ? await normalizeImageToJpeg(currentBackImageData) : null;
   // Build card immediately with base64 imageData -- R2 uploads happen in background
-  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,notes:null,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:estimatedValueAtScan,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,grades:currentGrade?{[_scanModel]:Object.assign({},currentGrade,{gradedAt:new Date().toISOString(),source:_scanModel})}:{},imageUrl:null,imageUrlBack:null,imageData:currentImageData,imageDataBack:currentBackImageData||null,listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
+  const card={id:cardId,player,year:document.getElementById('fieldYear').value,brand:document.getElementById('fieldBrand').value,notes:null,cardNumber:document.getElementById('fieldNumber').value,serialNumber:document.getElementById('fieldSerial').value||null,team:document.getElementById('fieldTeam').value,parallel:document.getElementById('fieldParallel').value||'Base',estimatedValue:estimatedValueAtScan,collection:document.getElementById('fieldCollection').value,tags:[...currentTags],grade:currentGrade,aiGraded:!!currentGrade,grades:currentGrade?{[_scanModel]:Object.assign({},currentGrade,{gradedAt:new Date().toISOString(),source:_scanModel})}:{},imageUrl:null,imageUrlBack:null,imageData:_normFront,imageDataBack:_normBack||null,listedOnEbay:false,ebayListingId:null,addedAt:new Date().toISOString(),
     valueHistory: estimatedValueAtScan ? [{ value: estimatedValueAtScan, date: new Date().toISOString(), source: 'scan' }] : []
   };
   // Save to localStorage and reset UI immediately -- card appears instantly
